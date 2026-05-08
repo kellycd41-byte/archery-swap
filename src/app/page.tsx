@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const categories = [
   "Bows",
   "Crossbows",
@@ -33,19 +35,19 @@ export default function Home() {
     <main className="min-h-screen bg-stone-100 text-stone-950">
       <header className="border-b border-stone-300 bg-stone-950 text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <div>
+          <Link href="/" className="block">
             <h1 className="text-2xl font-black tracking-tight">
               Archery Swap
             </h1>
             <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-300">
               Buy • Sell • Archery Gear
             </p>
-          </div>
+          </Link>
 
           <nav className="hidden gap-6 text-sm font-bold md:flex">
-            <a href="#browse" className="hover:text-emerald-300">
+            <Link href="/browse" className="hover:text-emerald-300">
               Browse Gear
-            </a>
+            </Link>
             <a href="#sell" className="hover:text-emerald-300">
               Sell Gear
             </a>
@@ -78,13 +80,19 @@ export default function Home() {
             </p>
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <button className="rounded-xl bg-emerald-600 px-6 py-3 font-black text-white hover:bg-emerald-500">
+              <Link
+                href="/browse"
+                className="rounded-xl bg-emerald-600 px-6 py-3 text-center font-black text-white hover:bg-emerald-500"
+              >
                 Browse Gear
-              </button>
+              </Link>
 
-              <button className="rounded-xl border border-stone-600 px-6 py-3 font-black text-white hover:bg-stone-900">
+              <a
+                href="#sell"
+                className="rounded-xl border border-stone-600 px-6 py-3 text-center font-black text-white hover:bg-stone-900"
+              >
                 Sell Your Gear
-              </button>
+              </a>
             </div>
           </div>
 
