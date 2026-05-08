@@ -48,17 +48,20 @@ export default function Home() {
             <Link href="/browse" className="hover:text-emerald-300">
               Browse Gear
             </Link>
-            <a href="#sell" className="hover:text-emerald-300">
+            <Link href="/sell" className="hover:text-emerald-300">
               Sell Gear
-            </a>
+            </Link>
             <a href="#how" className="hover:text-emerald-300">
               How It Works
             </a>
           </nav>
 
-          <button className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-500">
+          <Link
+            href="/sell"
+            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-500"
+          >
             Sell Your Gear
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -87,12 +90,12 @@ export default function Home() {
                 Browse Gear
               </Link>
 
-              <a
-                href="#sell"
+              <Link
+                href="/sell"
                 className="rounded-xl border border-stone-600 px-6 py-3 text-center font-black text-white hover:bg-stone-900"
               >
                 Sell Your Gear
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -230,9 +233,12 @@ export default function Home() {
             accessories on Archery Swap.
           </p>
 
-          <button className="mt-7 rounded-xl bg-white px-6 py-3 font-black text-emerald-950">
+          <Link
+            href="/sell"
+            className="mt-7 inline-block rounded-xl bg-white px-6 py-3 font-black text-emerald-950"
+          >
             List Your Gear
-          </button>
+          </Link>
         </div>
       </section>
     </main>
