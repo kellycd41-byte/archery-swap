@@ -140,7 +140,9 @@ export default function MessagesPage() {
               Mathews V3X Compound Bow
             </p>
 
-            <h3 className="mt-2 text-2xl font-black">Conversation with BowHunter41</h3>
+            <h3 className="mt-2 text-2xl font-black">
+              Conversation with BowHunter41
+            </h3>
 
             <Link
               href="/listing/1"
