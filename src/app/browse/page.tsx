@@ -7,6 +7,7 @@ const listings = [
     condition: "Excellent",
     category: "Bows",
     location: "Pennsylvania",
+    href: "/listing/1",
   },
   {
     title: "Ravin Crossbow Package",
@@ -14,6 +15,7 @@ const listings = [
     condition: "Very Good",
     category: "Crossbows",
     location: "Ohio",
+    href: "/listing/1",
   },
   {
     title: "Spot Hogg Fast Eddie Sight",
@@ -21,6 +23,7 @@ const listings = [
     condition: "Good",
     category: "Sights",
     location: "Michigan",
+    href: "/listing/1",
   },
   {
     title: "Stan Thumb Release",
@@ -28,6 +31,7 @@ const listings = [
     condition: "Very Good",
     category: "Releases",
     location: "Georgia",
+    href: "/listing/1",
   },
   {
     title: "Easton Axis Arrows - Dozen",
@@ -35,6 +39,7 @@ const listings = [
     condition: "New",
     category: "Arrows",
     location: "New York",
+    href: "/listing/1",
   },
   {
     title: "Plano Bow Case",
@@ -42,6 +47,7 @@ const listings = [
     condition: "Good",
     category: "Cases",
     location: "West Virginia",
+    href: "/listing/1",
   },
 ];
 
@@ -76,14 +82,17 @@ export default function BrowsePage() {
             <Link href="/browse" className="text-emerald-300">
               Browse Gear
             </Link>
-            <a href="/#sell" className="hover:text-emerald-300">
+            <Link href="/sell" className="hover:text-emerald-300">
               Sell Gear
-            </a>
+            </Link>
           </nav>
 
-          <button className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-500">
+          <Link
+            href="/sell"
+            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-500"
+          >
             Sell Your Gear
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -198,9 +207,12 @@ export default function BrowsePage() {
                     <div className="mt-5 flex items-center justify-between">
                       <p className="text-2xl font-black">{item.price}</p>
 
-                      <button className="rounded-xl bg-stone-950 px-4 py-2 text-sm font-black text-white hover:bg-stone-800">
+                      <Link
+                        href={item.href}
+                        className="rounded-xl bg-stone-950 px-4 py-2 text-sm font-black text-white hover:bg-stone-800"
+                      >
                         View
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 </article>
