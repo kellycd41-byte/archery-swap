@@ -48,6 +48,9 @@ export default function AccountPage() {
             <Link href="/sell" className="hover:text-emerald-300">
               Sell Gear
             </Link>
+            <Link href="/messages" className="hover:text-emerald-300">
+              Messages
+            </Link>
             <Link href="/account" className="text-emerald-300">
               Account
             </Link>
@@ -140,6 +143,13 @@ export default function AccountPage() {
                       {item.status}
                     </span>
                   </div>
+
+                  <Link
+                    href="/listing/1"
+                    className="mt-4 inline-block rounded-xl bg-stone-950 px-4 py-2 text-sm font-black text-white hover:bg-stone-800"
+                  >
+                    View Listing
+                  </Link>
                 </div>
               ))}
             </div>
@@ -172,6 +182,36 @@ export default function AccountPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
+            <h3 className="text-2xl font-black">Account tools</h3>
+            <p className="mt-1 text-stone-600">
+              These buttons are placeholders for features we will connect later.
+            </p>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <Link
+                href="/messages"
+                className="rounded-xl border border-stone-300 px-4 py-3 text-center font-black hover:bg-stone-100"
+              >
+                Messages
+              </Link>
+
+              <Link
+                href="/browse"
+                className="rounded-xl border border-stone-300 px-4 py-3 text-center font-black hover:bg-stone-100"
+              >
+                Browse Gear
+              </Link>
+
+              <Link
+                href="/sell"
+                className="rounded-xl border border-stone-300 px-4 py-3 text-center font-black hover:bg-stone-100"
+              >
+                Sell Gear
+              </Link>
             </div>
           </section>
         </div>
