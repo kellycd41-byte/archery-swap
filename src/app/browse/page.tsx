@@ -85,6 +85,9 @@ export default function BrowsePage() {
             <Link href="/sell" className="hover:text-emerald-300">
               Sell Gear
             </Link>
+            <Link href="/account" className="hover:text-emerald-300">
+              Account
+            </Link>
           </nav>
 
           <Link

@@ -51,6 +51,9 @@ export default function Home() {
             <Link href="/sell" className="hover:text-emerald-300">
               Sell Gear
             </Link>
+            <Link href="/account" className="hover:text-emerald-300">
+              Account
+            </Link>
             <a href="#how" className="hover:text-emerald-300">
               How It Works
             </a>
@@ -117,9 +120,12 @@ export default function Home() {
 
               <div className="mt-5 flex items-center justify-between">
                 <p className="text-3xl font-black">$875</p>
-                <button className="rounded-xl bg-white px-4 py-2 text-sm font-black text-stone-950">
+                <Link
+                  href="/listing/1"
+                  className="rounded-xl bg-white px-4 py-2 text-sm font-black text-stone-950"
+                >
                   View Listing
-                </button>
+                </Link>
               </div>
             </div>
           </div>
@@ -177,9 +183,12 @@ export default function Home() {
 
                 <div className="mt-5 flex items-center justify-between">
                   <p className="text-2xl font-black">{item.price}</p>
-                  <button className="rounded-xl bg-stone-950 px-4 py-2 text-sm font-black text-white">
+                  <Link
+                    href="/listing/1"
+                    className="rounded-xl bg-stone-950 px-4 py-2 text-sm font-black text-white"
+                  >
                     View
-                  </button>
+                  </Link>
                 </div>
               </div>
             ))}
