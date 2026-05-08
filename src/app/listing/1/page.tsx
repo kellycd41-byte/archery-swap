@@ -24,6 +24,9 @@ export default function ListingDetailPage() {
             <Link href="/sell" className="hover:text-emerald-300">
               Sell Gear
             </Link>
+            <Link href="/messages" className="hover:text-emerald-300">
+              Messages
+            </Link>
             <Link href="/account" className="hover:text-emerald-300">
               Account
             </Link>
@@ -80,9 +83,12 @@ export default function ListingDetailPage() {
                 Buy Now
               </button>
 
-              <button className="rounded-xl border border-stone-400 px-6 py-3 font-black text-stone-950 hover:bg-stone-100">
+              <Link
+                href="/messages"
+                className="rounded-xl border border-stone-400 px-6 py-3 text-center font-black text-stone-950 hover:bg-stone-100"
+              >
                 Message Seller
-              </button>
+              </Link>
             </div>
 
             <div className="mt-8 rounded-2xl bg-stone-100 p-5">
