@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 const categories = [
@@ -29,6 +29,8 @@ function makeSafeFileName(fileName: string) {
 }
 
 export default function SellPage() {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [condition, setCondition] = useState("");
@@ -46,12 +48,24 @@ export default function SellPage() {
   const [includedAccessories, setIncludedAccessories] = useState("");
   const [shippingAvailable, setShippingAvailable] = useState(false);
 
-  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
+  const [selectedPhotoName, setSelectedPhotoName] = useState("");
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  function validatePhoto(file: File) {
+    if (!file.type.startsWith("image/")) {
+      return "Please choose an image file.";
+    }
+
+    if (file.size > maxPhotoSizeInBytes) {
+      return "Please choose a photo smaller than 5 MB.";
+    }
+
+    return "";
+  }
 
   function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
     setSuccessMessage("");
@@ -60,32 +74,47 @@ export default function SellPage() {
     const file = event.target.files?.[0];
 
     if (!file) {
-      setSelectedPhoto(null);
+      setSelectedPhotoName("");
       setPhotoPreviewUrl("");
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      setSelectedPhoto(null);
+    const photoError = validatePhoto(file);
+
+    if (photoError) {
+      setSelectedPhotoName("");
       setPhotoPreviewUrl("");
-      setErrorMessage("Please choose an image file.");
+      setErrorMessage(photoError);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
       return;
     }
 
-    if (file.size > maxPhotoSizeInBytes) {
-      setSelectedPhoto(null);
-      setPhotoPreviewUrl("");
-      setErrorMessage("Please choose a photo smaller than 5 MB.");
-      return;
-    }
+    setSelectedPhotoName(file.name);
 
-    setSelectedPhoto(file);
-    setPhotoPreviewUrl(URL.createObjectURL(file));
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      setPhotoPreviewUrl(typeof reader.result === "string" ? reader.result : "");
+    };
+
+    reader.readAsDataURL(file);
   }
 
   async function uploadListingPhoto() {
+    const selectedPhoto = fileInputRef.current?.files?.[0];
+
     if (!selectedPhoto) {
       return null;
+    }
+
+    const photoError = validatePhoto(selectedPhoto);
+
+    if (photoError) {
+      throw new Error(photoError);
     }
 
     const safeFileName = makeSafeFileName(selectedPhoto.name);
@@ -99,7 +128,7 @@ export default function SellPage() {
       });
 
     if (uploadError) {
-      throw new Error(uploadError.message);
+      throw new Error(`Photo upload failed: ${uploadError.message}`);
     }
 
     const { data } = supabase.storage
@@ -188,8 +217,12 @@ export default function SellPage() {
       setHandedness("");
       setIncludedAccessories("");
       setShippingAvailable(false);
-      setSelectedPhoto(null);
+      setSelectedPhotoName("");
       setPhotoPreviewUrl("");
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -528,39 +561,45 @@ export default function SellPage() {
               </div>
 
               <div className="mt-5">
-                <label className="text-sm font-black text-stone-700">
-                  Photo
-                </label>
+                <p className="text-sm font-black text-stone-700">Photo</p>
 
-                <div className="mt-2 rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 p-6">
+                <label className="mt-2 block cursor-pointer rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 p-6 text-center hover:border-emerald-700 hover:bg-emerald-50">
                   <input
+                    ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
                     onChange={handlePhotoChange}
-                    className="w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-bold"
+                    className="sr-only"
                   />
 
-                  <p className="mt-3 text-sm text-stone-600">
-                    Upload one clear photo. JPG, PNG, WEBP, or GIF. Max size:
-                    5 MB.
+                  <span className="inline-block rounded-xl bg-stone-950 px-5 py-3 text-sm font-black text-white">
+                    Choose Photo
+                  </span>
+
+                  <span className="mt-3 block text-sm font-bold text-stone-700">
+                    Click here to upload one clear photo.
+                  </span>
+
+                  <span className="mt-1 block text-xs text-stone-500">
+                    JPG, PNG, WEBP, or GIF. Max size: 5 MB.
+                  </span>
+                </label>
+
+                {selectedPhotoName ? (
+                  <p className="mt-3 text-sm font-bold text-stone-700">
+                    Selected: {selectedPhotoName}
                   </p>
+                ) : null}
 
-                  {photoPreviewUrl ? (
-                    <div className="mt-5 overflow-hidden rounded-2xl border border-stone-300 bg-white">
-                      <img
-                        src={photoPreviewUrl}
-                        alt="Selected listing photo preview"
-                        className="h-72 w-full object-cover"
-                      />
-                    </div>
-                  ) : null}
-
-                  {selectedPhoto ? (
-                    <p className="mt-3 text-sm font-bold text-stone-700">
-                      Selected: {selectedPhoto.name}
-                    </p>
-                  ) : null}
-                </div>
+                {photoPreviewUrl ? (
+                  <div className="mt-5 overflow-hidden rounded-2xl border border-stone-300 bg-white">
+                    <img
+                      src={photoPreviewUrl}
+                      alt="Selected listing photo preview"
+                      className="h-72 w-full object-cover"
+                    />
+                  </div>
+                ) : null}
               </div>
             </section>
 
