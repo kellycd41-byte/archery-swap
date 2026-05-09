@@ -15,6 +15,13 @@ type Listing = {
   seller_email: string | null;
   status: string;
   created_at: string;
+  brand: string | null;
+  model: string | null;
+  draw_weight: string | null;
+  draw_length: string | null;
+  handedness: string | null;
+  included_accessories: string | null;
+  shipping_available: boolean;
 };
 
 type ListingDetailPageProps = {
@@ -22,6 +29,10 @@ type ListingDetailPageProps = {
     id: string;
   }>;
 };
+
+function detailValue(value: string | null | undefined) {
+  return value && value.trim() ? value : "Not listed";
+}
 
 export default async function ListingDetailPage({
   params,
@@ -159,31 +170,78 @@ export default async function ListingDetailPage({
               <h3 className="text-xl font-black">Item details</h3>
 
               <div className="mt-4 grid gap-3 text-sm">
-                <div className="flex justify-between border-b border-stone-200 pb-2">
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
                   <span className="font-bold text-stone-600">Condition</span>
-                  <span className="font-black">{item.condition}</span>
+                  <span className="text-right font-black">{item.condition}</span>
                 </div>
 
-                <div className="flex justify-between border-b border-stone-200 pb-2">
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
                   <span className="font-bold text-stone-600">Category</span>
-                  <span className="font-black">{item.category}</span>
+                  <span className="text-right font-black">{item.category}</span>
                 </div>
 
-                <div className="flex justify-between border-b border-stone-200 pb-2">
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Brand</span>
+                  <span className="text-right font-black">
+                    {detailValue(item.brand)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Model</span>
+                  <span className="text-right font-black">
+                    {detailValue(item.model)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Draw weight</span>
+                  <span className="text-right font-black">
+                    {detailValue(item.draw_weight)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Draw length</span>
+                  <span className="text-right font-black">
+                    {detailValue(item.draw_length)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Handedness</span>
+                  <span className="text-right font-black">
+                    {detailValue(item.handedness)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
                   <span className="font-bold text-stone-600">Location</span>
-                  <span className="font-black">
+                  <span className="text-right font-black">
                     {item.location || "Not listed"}
                   </span>
                 </div>
 
-                <div className="flex justify-between border-b border-stone-200 pb-2">
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
                   <span className="font-bold text-stone-600">Shipping</span>
-                  <span className="font-black">Coming later</span>
+                  <span className="text-right font-black">
+                    {item.shipping_available ? "Available" : "Not available"}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {item.included_accessories ? (
+          <section className="mt-8 rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
+            <h3 className="text-2xl font-black">Included accessories</h3>
+
+            <p className="mt-4 max-w-4xl whitespace-pre-line leading-8 text-stone-700">
+              {item.included_accessories}
+            </p>
+          </section>
+        ) : null}
 
         <section className="mt-8 rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
           <h3 className="text-2xl font-black">Description</h3>

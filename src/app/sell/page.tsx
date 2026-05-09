@@ -17,6 +17,8 @@ const categories = [
 
 const conditions = ["New", "Excellent", "Very Good", "Good", "Fair"];
 
+const handednessOptions = ["Right Hand", "Left Hand", "Ambidextrous", "N/A"];
+
 export default function SellPage() {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
@@ -26,6 +28,14 @@ export default function SellPage() {
   const [description, setDescription] = useState("");
   const [sellerName, setSellerName] = useState("");
   const [sellerEmail, setSellerEmail] = useState("");
+
+  const [brand, setBrand] = useState("");
+  const [model, setModel] = useState("");
+  const [drawWeight, setDrawWeight] = useState("");
+  const [drawLength, setDrawLength] = useState("");
+  const [handedness, setHandedness] = useState("");
+  const [includedAccessories, setIncludedAccessories] = useState("");
+  const [shippingAvailable, setShippingAvailable] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -75,6 +85,13 @@ export default function SellPage() {
       location: location.trim() || null,
       seller_name: sellerName.trim() || null,
       seller_email: sellerEmail.trim() || null,
+      brand: brand.trim() || null,
+      model: model.trim() || null,
+      draw_weight: drawWeight.trim() || null,
+      draw_length: drawLength.trim() || null,
+      handedness: handedness || null,
+      included_accessories: includedAccessories.trim() || null,
+      shipping_available: shippingAvailable,
       image_url: null,
       status: "active",
     });
@@ -96,6 +113,13 @@ export default function SellPage() {
     setDescription("");
     setSellerName("");
     setSellerEmail("");
+    setBrand("");
+    setModel("");
+    setDrawWeight("");
+    setDrawLength("");
+    setHandedness("");
+    setIncludedAccessories("");
+    setShippingAvailable(false);
   }
 
   return (
@@ -149,9 +173,8 @@ export default function SellPage() {
           </h2>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
-            Create a real listing and save it to the Archery Swap database.
-            Photo uploads, payments, shipping, and user accounts will be added
-            later.
+            Create a real listing with archery-specific details. Photo uploads,
+            payments, shipping labels, and user accounts will be added later.
           </p>
         </div>
       </section>
@@ -161,7 +184,7 @@ export default function SellPage() {
           <div className="mb-8">
             <h3 className="text-3xl font-black">Create a listing</h3>
             <p className="mt-2 text-stone-600">
-              Add the basic details a buyer needs to understand what you are
+              Add the details a buyer needs to understand exactly what you are
               selling.
             </p>
           </div>
@@ -178,140 +201,267 @@ export default function SellPage() {
             </div>
           ) : null}
 
-          <form onSubmit={handleSubmit} className="space-y-7">
-            <div>
-              <label className="text-sm font-black text-stone-700">
-                Item title
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="Example: Mathews V3X 33 Compound Bow"
-                className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
-              />
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <section className="rounded-2xl border border-stone-200 p-5">
+              <h4 className="text-xl font-black">Basic details</h4>
 
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
+              <div className="mt-5">
                 <label className="text-sm font-black text-stone-700">
-                  Category
-                </label>
-                <select
-                  value={category}
-                  onChange={(event) => setCategory(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 outline-none focus:border-emerald-700"
-                >
-                  <option value="">Select a category</option>
-                  {categories.map((categoryOption) => (
-                    <option key={categoryOption} value={categoryOption}>
-                      {categoryOption}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-sm font-black text-stone-700">
-                  Condition
-                </label>
-                <select
-                  value={condition}
-                  onChange={(event) => setCondition(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 outline-none focus:border-emerald-700"
-                >
-                  <option value="">Select condition</option>
-                  {conditions.map((conditionOption) => (
-                    <option key={conditionOption} value={conditionOption}>
-                      {conditionOption}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-black text-stone-700">
-                  Price
+                  Item title
                 </label>
                 <input
                   type="text"
-                  value={price}
-                  onChange={(event) => setPrice(event.target.value)}
-                  placeholder="$875"
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="Example: Mathews V3X 33 Compound Bow"
                   className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
                 />
               </div>
 
-              <div>
+              <div className="mt-5 grid gap-5 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-black text-stone-700">
+                    Category
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(event) => setCategory(event.target.value)}
+                    className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 outline-none focus:border-emerald-700"
+                  >
+                    <option value="">Select a category</option>
+                    {categories.map((categoryOption) => (
+                      <option key={categoryOption} value={categoryOption}>
+                        {categoryOption}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-black text-stone-700">
+                    Condition
+                  </label>
+                  <select
+                    value={condition}
+                    onChange={(event) => setCondition(event.target.value)}
+                    className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 outline-none focus:border-emerald-700"
+                  >
+                    <option value="">Select condition</option>
+                    {conditions.map((conditionOption) => (
+                      <option key={conditionOption} value={conditionOption}>
+                        {conditionOption}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-5 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-black text-stone-700">
+                    Price
+                  </label>
+                  <input
+                    type="text"
+                    value={price}
+                    onChange={(event) => setPrice(event.target.value)}
+                    placeholder="$875"
+                    className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-black text-stone-700">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={(event) => setLocation(event.target.value)}
+                    placeholder="Pennsylvania"
+                    className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-stone-200 p-5">
+              <h4 className="text-xl font-black">Archery specs</h4>
+              <p className="mt-1 text-sm text-stone-600">
+                These fields help buyers compare gear faster.
+              </p>
+
+              <div className="mt-5 grid gap-5 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-black text-stone-700">
+                    Brand
+                  </label>
+                  <input
+                    type="text"
+                    value={brand}
+                    onChange={(event) => setBrand(event.target.value)}
+                    placeholder="Example: Mathews"
+                    className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-black text-stone-700">
+                    Model
+                  </label>
+                  <input
+                    type="text"
+                    value={model}
+                    onChange={(event) => setModel(event.target.value)}
+                    placeholder="Example: V3X 33"
+                    className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-5 md:grid-cols-3">
+                <div>
+                  <label className="text-sm font-black text-stone-700">
+                    Draw weight
+                  </label>
+                  <input
+                    type="text"
+                    value={drawWeight}
+                    onChange={(event) => setDrawWeight(event.target.value)}
+                    placeholder="Example: 60-70 lbs"
+                    className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-black text-stone-700">
+                    Draw length
+                  </label>
+                  <input
+                    type="text"
+                    value={drawLength}
+                    onChange={(event) => setDrawLength(event.target.value)}
+                    placeholder="Example: 28.5 in"
+                    className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-black text-stone-700">
+                    Handedness
+                  </label>
+                  <select
+                    value={handedness}
+                    onChange={(event) => setHandedness(event.target.value)}
+                    className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 outline-none focus:border-emerald-700"
+                  >
+                    <option value="">Select handedness</option>
+                    {handednessOptions.map((handednessOption) => (
+                      <option key={handednessOption} value={handednessOption}>
+                        {handednessOption}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-5">
                 <label className="text-sm font-black text-stone-700">
-                  Location
+                  Included accessories
                 </label>
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(event) => setLocation(event.target.value)}
-                  placeholder="Pennsylvania"
+                <textarea
+                  value={includedAccessories}
+                  onChange={(event) =>
+                    setIncludedAccessories(event.target.value)
+                  }
+                  placeholder="Example: Sight, rest, quiver, stabilizer, case, arrows."
+                  rows={4}
                   className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
                 />
               </div>
-            </div>
+            </section>
 
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-black text-stone-700">
-                  Seller name
-                </label>
-                <input
-                  type="text"
-                  value={sellerName}
-                  onChange={(event) => setSellerName(event.target.value)}
-                  placeholder="Your name"
-                  className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
-                />
+            <section className="rounded-2xl border border-stone-200 p-5">
+              <h4 className="text-xl font-black">Seller and shipping</h4>
+
+              <div className="mt-5 grid gap-5 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-black text-stone-700">
+                    Seller name
+                  </label>
+                  <input
+                    type="text"
+                    value={sellerName}
+                    onChange={(event) => setSellerName(event.target.value)}
+                    placeholder="Your name"
+                    className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-black text-stone-700">
+                    Seller email
+                  </label>
+                  <input
+                    type="email"
+                    value={sellerEmail}
+                    onChange={(event) => setSellerEmail(event.target.value)}
+                    placeholder="you@example.com"
+                    className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="text-sm font-black text-stone-700">
-                  Seller email
-                </label>
+              <label className="mt-5 flex items-start gap-3 rounded-2xl border border-stone-300 bg-stone-50 p-4">
                 <input
-                  type="email"
-                  value={sellerEmail}
-                  onChange={(event) => setSellerEmail(event.target.value)}
-                  placeholder="you@example.com"
-                  className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
+                  type="checkbox"
+                  checked={shippingAvailable}
+                  onChange={(event) =>
+                    setShippingAvailable(event.target.checked)
+                  }
+                  className="mt-1"
                 />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm font-black text-stone-700">
-                Description
+                <span>
+                  <span className="block font-black">
+                    Shipping is available
+                  </span>
+                  <span className="mt-1 block text-sm text-stone-600">
+                    Check this if you are willing to ship this item to a buyer.
+                  </span>
+                </span>
               </label>
-              <textarea
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Describe the item, condition, included accessories, draw weight, draw length, age, and anything buyers should know."
-                rows={6}
-                className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
-              />
-            </div>
+            </section>
 
-            <div>
-              <label className="text-sm font-black text-stone-700">
-                Photos
-              </label>
+            <section className="rounded-2xl border border-stone-200 p-5">
+              <h4 className="text-xl font-black">Description and photos</h4>
 
-              <div className="mt-2 rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 p-8 text-center">
-                <p className="font-black">Upload photos</p>
-                <p className="mt-2 text-sm text-stone-600">
-                  Photo upload will be connected later. For now this is a
-                  placeholder.
-                </p>
+              <div className="mt-5">
+                <label className="text-sm font-black text-stone-700">
+                  Description
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="Describe the item, condition, included accessories, draw weight, draw length, age, and anything buyers should know."
+                  rows={6}
+                  className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
+                />
               </div>
-            </div>
+
+              <div className="mt-5">
+                <label className="text-sm font-black text-stone-700">
+                  Photos
+                </label>
+
+                <div className="mt-2 rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 p-8 text-center">
+                  <p className="font-black">Upload photos</p>
+                  <p className="mt-2 text-sm text-stone-600">
+                    Photo upload will be connected later. For now this is a
+                    placeholder.
+                  </p>
+                </div>
+              </div>
+            </section>
 
             <div className="rounded-2xl bg-stone-100 p-5">
               <h4 className="font-black">Listing safety checklist</h4>
