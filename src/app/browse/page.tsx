@@ -15,6 +15,12 @@ const categories = [
 
 const conditions = ["New", "Excellent", "Very Good", "Good", "Fair"];
 
+const sortOptions = [
+  { label: "Sort: Newest", value: "newest" },
+  { label: "Price: Low to High", value: "price_asc" },
+  { label: "Price: High to Low", value: "price_desc" },
+];
+
 type Listing = {
   id: string;
   title: string;
@@ -35,6 +41,7 @@ type BrowsePageProps = {
     category?: string;
     conditions?: string;
     search?: string;
+    sort?: string;
   }>;
 };
 
@@ -49,10 +56,21 @@ function getSelectedConditions(conditionsParam: string | undefined) {
     .filter((condition) => conditions.includes(condition));
 }
 
+function getSelectedSort(sortParam: string | undefined) {
+  const validSortValues = sortOptions.map((option) => option.value);
+
+  if (!sortParam || !validSortValues.includes(sortParam)) {
+    return "newest";
+  }
+
+  return sortParam;
+}
+
 function buildBrowseHref(
   category: string,
   selectedConditions: string[],
-  search: string
+  search: string,
+  sort: string
 ) {
   const params = new URLSearchParams();
 
@@ -68,6 +86,10 @@ function buildBrowseHref(
     params.set("search", search.trim());
   }
 
+  if (sort !== "newest") {
+    params.set("sort", sort);
+  }
+
   const queryString = params.toString();
 
   return queryString ? `/browse?${queryString}` : "/browse";
@@ -77,28 +99,33 @@ function toggleCondition(
   condition: string,
   selectedConditions: string[],
   selectedCategory: string,
-  searchTerm: string
+  searchTerm: string,
+  selectedSort: string
 ) {
   const conditionIsSelected = selectedConditions.includes(condition);
 
   const nextConditions = conditionIsSelected
-    ? selectedConditions.filter((selectedCondition) => selectedCondition !== condition)
+    ? selectedConditions.filter(
+        (selectedCondition) => selectedCondition !== condition
+      )
     : [...selectedConditions, condition];
 
-  return buildBrowseHref(selectedCategory, nextConditions, searchTerm);
+  return buildBrowseHref(
+    selectedCategory,
+    nextConditions,
+    searchTerm,
+    selectedSort
+  );
 }
 
 export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const params = await searchParams;
   const selectedCategory = params.category || "All";
   const selectedConditions = getSelectedConditions(params.conditions);
+  const selectedSort = getSelectedSort(params.sort);
   const searchTerm = params.search?.trim() || "";
 
-  let query = supabase
-    .from("listings")
-    .select("*")
-    .eq("status", "active")
-    .order("created_at", { ascending: false });
+  let query = supabase.from("listings").select("*").eq("status", "active");
 
   if (selectedCategory !== "All") {
     query = query.eq("category", selectedCategory);
@@ -114,10 +141,22 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     );
   }
 
+  if (selectedSort === "price_asc") {
+    query = query.order("price", { ascending: true });
+  } else if (selectedSort === "price_desc") {
+    query = query.order("price", { ascending: false });
+  } else {
+    query = query.order("created_at", { ascending: false });
+  }
+
   const { data: listings, error } = await query;
 
   const conditionLabel =
     selectedConditions.length > 0 ? selectedConditions.join(", ") : "All";
+
+  const selectedSortLabel =
+    sortOptions.find((option) => option.value === selectedSort)?.label ||
+    "Sort: Newest";
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
@@ -171,8 +210,8 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
             Browse real listings saved to the Archery Swap database. Search,
-            category filters, and multi-condition filters now work. Photos, user
-            accounts, payments, and shipping will be added later.
+            category filters, multi-condition filters, and sorting now work.
+            Photos, user accounts, payments, and shipping will be added later.
           </p>
         </div>
       </section>
@@ -193,6 +232,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                   name="conditions"
                   value={selectedConditions.join(",")}
                 />
+              ) : null}
+
+              {selectedSort !== "newest" ? (
+                <input type="hidden" name="sort" value={selectedSort} />
               ) : null}
 
               <label className="text-sm font-black text-stone-700">
@@ -219,8 +262,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                   href={buildBrowseHref(
                     selectedCategory,
                     selectedConditions,
-                    ""
+                    "",
+                    selectedSort
                   )}
+                  scroll={false}
                   className="mt-3 block text-center text-sm font-black text-emerald-800 hover:text-emerald-600"
                 >
                   Clear Search
@@ -236,7 +281,8 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                   const href = buildBrowseHref(
                     category,
                     selectedConditions,
-                    searchTerm
+                    searchTerm,
+                    selectedSort
                   );
                   const isSelected = selectedCategory === category;
 
@@ -244,6 +290,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                     <Link
                       key={category}
                       href={href}
+                      scroll={false}
                       className={`block w-full rounded-xl border px-4 py-2 text-left text-sm font-bold ${
                         isSelected
                           ? "border-emerald-700 bg-emerald-50 text-emerald-900"
@@ -267,13 +314,15 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                     condition,
                     selectedConditions,
                     selectedCategory,
-                    searchTerm
+                    searchTerm,
+                    selectedSort
                   );
 
                   return (
                     <Link
                       key={condition}
                       href={href}
+                      scroll={false}
                       className={`flex w-full items-center gap-3 rounded-xl border px-4 py-2 text-left text-sm font-bold ${
                         isSelected
                           ? "border-emerald-700 bg-emerald-50 text-emerald-900"
@@ -297,7 +346,13 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
               {selectedConditions.length > 0 ? (
                 <Link
-                  href={buildBrowseHref(selectedCategory, [], searchTerm)}
+                  href={buildBrowseHref(
+                    selectedCategory,
+                    [],
+                    searchTerm,
+                    selectedSort
+                  )}
+                  scroll={false}
                   className="mt-3 block text-sm font-black text-emerald-800 hover:text-emerald-600"
                 >
                   Clear Conditions
@@ -307,9 +362,11 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
             {(selectedCategory !== "All" ||
               selectedConditions.length > 0 ||
-              searchTerm) ? (
+              searchTerm ||
+              selectedSort !== "newest") ? (
               <Link
                 href="/browse"
+                scroll={false}
                 className="mt-6 block rounded-xl border border-stone-400 px-4 py-3 text-center text-sm font-black text-stone-950 hover:bg-stone-100"
               >
                 Clear All Filters
@@ -324,29 +381,64 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                 <p className="text-stone-600">
                   {selectedCategory === "All" &&
                   selectedConditions.length === 0 &&
-                  !searchTerm
+                  !searchTerm &&
+                  selectedSort === "newest"
                     ? "Showing all real listings from Supabase."
                     : "Showing filtered results from Supabase."}
                 </p>
 
                 {(selectedCategory !== "All" ||
                   selectedConditions.length > 0 ||
-                  searchTerm) ? (
+                  searchTerm ||
+                  selectedSort !== "newest") ? (
                   <p className="mt-1 text-sm font-bold text-stone-500">
-                    Category: {selectedCategory} • Conditions: {conditionLabel}
+                    Category: {selectedCategory} • Conditions: {conditionLabel}{" "}
+                    • {selectedSortLabel}
                     {searchTerm ? ` • Search: “${searchTerm}”` : ""}
                   </p>
                 ) : null}
               </div>
 
-              <select
-                disabled
-                className="rounded-xl border border-stone-300 bg-stone-100 px-4 py-3 text-sm font-bold text-stone-500"
-              >
-                <option>Sort: Newest</option>
-                <option>Price: Low to High</option>
-                <option>Price: High to Low</option>
-              </select>
+              <form action="/browse" className="flex flex-col gap-2 sm:flex-row">
+                {selectedCategory !== "All" ? (
+                  <input
+                    type="hidden"
+                    name="category"
+                    value={selectedCategory}
+                  />
+                ) : null}
+
+                {selectedConditions.length > 0 ? (
+                  <input
+                    type="hidden"
+                    name="conditions"
+                    value={selectedConditions.join(",")}
+                  />
+                ) : null}
+
+                {searchTerm ? (
+                  <input type="hidden" name="search" value={searchTerm} />
+                ) : null}
+
+                <select
+                  name="sort"
+                  defaultValue={selectedSort}
+                  className="rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-bold text-stone-950"
+                >
+                  {sortOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="submit"
+                  className="rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-stone-800"
+                >
+                  Apply
+                </button>
+              </form>
             </div>
 
             {error ? (
@@ -359,13 +451,14 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               <div className="rounded-2xl border border-stone-300 bg-white p-8 text-center shadow-sm">
                 <h4 className="text-2xl font-black">No listings found</h4>
                 <p className="mt-2 text-stone-600">
-                  Try a different search, category, or condition, or be the
-                  first person to list gear that matches this filter.
+                  Try a different search, category, condition, or sort option,
+                  or be the first person to list gear that matches this filter.
                 </p>
 
                 <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
                   <Link
                     href="/browse"
+                    scroll={false}
                     className="inline-block rounded-xl border border-stone-400 px-5 py-3 font-black text-stone-950 hover:bg-stone-100"
                   >
                     Clear Filters
