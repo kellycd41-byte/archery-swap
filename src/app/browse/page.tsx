@@ -162,6 +162,28 @@ function getCompactSpecs(item: Listing) {
   return specs;
 }
 
+function BrowsePhotoPlaceholder() {
+  return (
+    <div className="relative flex h-48 items-center justify-center overflow-hidden bg-gradient-to-br from-stone-900 via-stone-800 to-emerald-950 px-5 text-center">
+      <div className="absolute left-5 top-5 h-16 w-16 rounded-full border border-emerald-300/20" />
+      <div className="absolute bottom-5 right-5 h-20 w-20 rounded-full border border-white/10" />
+      <div className="absolute left-0 top-1/2 h-px w-full bg-white/10" />
+
+      <div className="relative">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-emerald-300/40 bg-white/10 text-2xl">
+          🎯
+        </div>
+        <p className="mt-3 text-xs font-black uppercase tracking-[0.25em] text-emerald-200">
+          No Photo Yet
+        </p>
+        <p className="mt-1 text-xs font-bold text-white/60">
+          Ask seller for pictures
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const params = await searchParams;
   const selectedCategory = params.category || "All";
@@ -536,11 +558,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                           className="h-48 w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-48 items-center justify-center bg-gradient-to-br from-stone-300 to-emerald-900 px-5 text-center">
-                          <p className="text-sm font-black uppercase tracking-[0.2em] text-white/80">
-                            Photo Coming Soon
-                          </p>
-                        </div>
+                        <BrowsePhotoPlaceholder />
                       )}
 
                       <div className="p-5">

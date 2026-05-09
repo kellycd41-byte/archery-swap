@@ -34,6 +34,32 @@ function detailValue(value: string | null | undefined) {
   return value && value.trim() ? value : "Not listed";
 }
 
+function DetailPhotoPlaceholder() {
+  return (
+    <div className="relative flex h-[420px] items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-stone-950 via-stone-800 to-emerald-950 px-6 text-center">
+      <div className="absolute left-8 top-8 h-28 w-28 rounded-full border border-emerald-300/20" />
+      <div className="absolute bottom-8 right-8 h-36 w-36 rounded-full border border-white/10" />
+      <div className="absolute left-0 top-1/2 h-px w-full bg-white/10" />
+      <div className="absolute left-1/2 top-0 h-full w-px bg-white/10" />
+
+      <div className="relative max-w-sm">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-emerald-300/40 bg-white/10 text-4xl">
+          🎯
+        </div>
+
+        <p className="mt-5 text-sm font-black uppercase tracking-[0.3em] text-emerald-200">
+          No Photo Added
+        </p>
+
+        <p className="mt-3 text-sm font-bold leading-6 text-white/70">
+          This listing does not have a photo yet. Message the seller to request
+          clear pictures before buying.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default async function ListingDetailPage({
   params,
 }: ListingDetailPageProps) {
@@ -110,16 +136,7 @@ export default async function ListingDetailPage({
                   className="h-[420px] w-full rounded-2xl object-cover"
                 />
               ) : (
-                <div className="flex h-[420px] items-center justify-center rounded-2xl bg-gradient-to-br from-stone-300 to-emerald-900 px-6 text-center">
-                  <div>
-                    <p className="text-sm font-black uppercase tracking-[0.25em] text-white/80">
-                      Photo Coming Soon
-                    </p>
-                    <p className="mt-3 text-sm font-bold text-white/70">
-                      This seller has not added a photo yet.
-                    </p>
-                  </div>
-                </div>
+                <DetailPhotoPlaceholder />
               )}
             </div>
           </div>
