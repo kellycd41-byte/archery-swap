@@ -13,6 +13,8 @@ const categories = [
   "Accessories",
 ];
 
+const conditions = ["All", "New", "Excellent", "Very Good", "Good", "Fair"];
+
 type Listing = {
   id: string;
   title: string;
@@ -31,15 +33,20 @@ type Listing = {
 type BrowsePageProps = {
   searchParams: Promise<{
     category?: string;
+    condition?: string;
     search?: string;
   }>;
 };
 
-function buildBrowseHref(category: string, search: string) {
+function buildBrowseHref(category: string, condition: string, search: string) {
   const params = new URLSearchParams();
 
   if (category !== "All") {
     params.set("category", category);
+  }
+
+  if (condition !== "All") {
+    params.set("condition", condition);
   }
 
   if (search.trim()) {
@@ -54,6 +61,7 @@ function buildBrowseHref(category: string, search: string) {
 export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const params = await searchParams;
   const selectedCategory = params.category || "All";
+  const selectedCondition = params.condition || "All";
   const searchTerm = params.search?.trim() || "";
 
   let query = supabase
@@ -64,6 +72,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
   if (selectedCategory !== "All") {
     query = query.eq("category", selectedCategory);
+  }
+
+  if (selectedCondition !== "All") {
+    query = query.eq("condition", selectedCondition);
   }
 
   if (searchTerm) {
@@ -125,9 +137,9 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           </h2>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
-            Browse real listings saved to the Archery Swap database. Search and
-            category filters now work. Photos, user accounts, payments, and
-            shipping will be added later.
+            Browse real listings saved to the Archery Swap database. Search,
+            category filters, and condition filters now work. Photos, user
+            accounts, payments, and shipping will be added later.
           </p>
         </div>
       </section>
@@ -140,6 +152,14 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
             <form action="/browse" className="mt-5">
               {selectedCategory !== "All" ? (
                 <input type="hidden" name="category" value={selectedCategory} />
+              ) : null}
+
+              {selectedCondition !== "All" ? (
+                <input
+                  type="hidden"
+                  name="condition"
+                  value={selectedCondition}
+                />
               ) : null}
 
               <label className="text-sm font-black text-stone-700">
@@ -163,13 +183,11 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
               {searchTerm ? (
                 <Link
-                  href={
-                    selectedCategory === "All"
-                      ? "/browse"
-                      : `/browse?category=${encodeURIComponent(
-                          selectedCategory
-                        )}`
-                  }
+                  href={buildBrowseHref(
+                    selectedCategory,
+                    selectedCondition,
+                    ""
+                  )}
                   className="mt-3 block text-center text-sm font-black text-emerald-800 hover:text-emerald-600"
                 >
                   Clear Search
@@ -182,7 +200,11 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
               <div className="mt-3 space-y-2">
                 {categories.map((category) => {
-                  const href = buildBrowseHref(category, searchTerm);
+                  const href = buildBrowseHref(
+                    category,
+                    selectedCondition,
+                    searchTerm
+                  );
                   const isSelected = selectedCategory === category;
 
                   return (
@@ -205,29 +227,42 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
             <div className="mt-6">
               <p className="text-sm font-black text-stone-700">Condition</p>
 
-              <div className="mt-3 space-y-2 text-sm font-bold">
-                <label className="flex items-center gap-2 text-stone-500">
-                  <input type="checkbox" disabled />
-                  New
-                </label>
-                <label className="flex items-center gap-2 text-stone-500">
-                  <input type="checkbox" disabled />
-                  Excellent
-                </label>
-                <label className="flex items-center gap-2 text-stone-500">
-                  <input type="checkbox" disabled />
-                  Very Good
-                </label>
-                <label className="flex items-center gap-2 text-stone-500">
-                  <input type="checkbox" disabled />
-                  Good
-                </label>
-              </div>
+              <div className="mt-3 space-y-2">
+                {conditions.map((condition) => {
+                  const href = buildBrowseHref(
+                    selectedCategory,
+                    condition,
+                    searchTerm
+                  );
+                  const isSelected = selectedCondition === condition;
 
-              <p className="mt-3 text-xs font-bold text-stone-500">
-                Condition filters will be connected later.
-              </p>
+                  return (
+                    <Link
+                      key={condition}
+                      href={href}
+                      className={`block w-full rounded-xl border px-4 py-2 text-left text-sm font-bold ${
+                        isSelected
+                          ? "border-emerald-700 bg-emerald-50 text-emerald-900"
+                          : "border-stone-300 text-stone-700 hover:border-emerald-700 hover:bg-emerald-50"
+                      }`}
+                    >
+                      {condition}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
+
+            {(selectedCategory !== "All" ||
+              selectedCondition !== "All" ||
+              searchTerm) ? (
+              <Link
+                href="/browse"
+                className="mt-6 block rounded-xl border border-stone-400 px-4 py-3 text-center text-sm font-black text-stone-950 hover:bg-stone-100"
+              >
+                Clear All Filters
+              </Link>
+            ) : null}
           </aside>
 
           <div>
@@ -235,14 +270,22 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               <div>
                 <h3 className="text-2xl font-black">Available Gear</h3>
                 <p className="text-stone-600">
-                  {selectedCategory === "All" && !searchTerm
+                  {selectedCategory === "All" &&
+                  selectedCondition === "All" &&
+                  !searchTerm
                     ? "Showing all real listings from Supabase."
-                    : selectedCategory !== "All" && !searchTerm
-                      ? `Showing ${selectedCategory} listings from Supabase.`
-                      : selectedCategory === "All" && searchTerm
-                        ? `Showing results for “${searchTerm}”.`
-                        : `Showing ${selectedCategory} results for “${searchTerm}”.`}
+                    : `Showing filtered results from Supabase.`}
                 </p>
+
+                {(selectedCategory !== "All" ||
+                  selectedCondition !== "All" ||
+                  searchTerm) ? (
+                  <p className="mt-1 text-sm font-bold text-stone-500">
+                    Category: {selectedCategory} • Condition:{" "}
+                    {selectedCondition}
+                    {searchTerm ? ` • Search: “${searchTerm}”` : ""}
+                  </p>
+                ) : null}
               </div>
 
               <select
@@ -265,8 +308,8 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               <div className="rounded-2xl border border-stone-300 bg-white p-8 text-center shadow-sm">
                 <h4 className="text-2xl font-black">No listings found</h4>
                 <p className="mt-2 text-stone-600">
-                  Try a different search or category, or be the first person to
-                  list gear that matches this filter.
+                  Try a different search, category, or condition, or be the
+                  first person to list gear that matches this filter.
                 </p>
 
                 <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
