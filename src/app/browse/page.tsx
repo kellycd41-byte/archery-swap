@@ -34,6 +34,13 @@ type Listing = {
   seller_email: string | null;
   status: string;
   created_at: string;
+  brand: string | null;
+  model: string | null;
+  draw_weight: string | null;
+  draw_length: string | null;
+  handedness: string | null;
+  included_accessories: string | null;
+  shipping_available: boolean;
 };
 
 type BrowsePageProps = {
@@ -118,6 +125,43 @@ function toggleCondition(
   );
 }
 
+function getBrandModelText(item: Listing) {
+  const brand = item.brand?.trim();
+  const model = item.model?.trim();
+
+  if (brand && model) {
+    return `${brand} ${model}`;
+  }
+
+  if (brand) {
+    return brand;
+  }
+
+  if (model) {
+    return model;
+  }
+
+  return null;
+}
+
+function getCompactSpecs(item: Listing) {
+  const specs = [];
+
+  if (item.draw_weight?.trim()) {
+    specs.push(`${item.draw_weight.trim()} draw`);
+  }
+
+  if (item.draw_length?.trim()) {
+    specs.push(`${item.draw_length.trim()} length`);
+  }
+
+  if (item.handedness?.trim()) {
+    specs.push(item.handedness.trim());
+  }
+
+  return specs;
+}
+
 export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const params = await searchParams;
   const selectedCategory = params.category || "All";
@@ -137,7 +181,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
   if (searchTerm) {
     query = query.or(
-      `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,condition.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%`
+      `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,condition.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,model.ilike.%${searchTerm}%,draw_weight.ilike.%${searchTerm}%,draw_length.ilike.%${searchTerm}%,handedness.ilike.%${searchTerm}%`
     );
   }
 
@@ -210,8 +254,8 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
             Browse real listings saved to the Archery Swap database. Search,
-            category filters, multi-condition filters, and sorting now work.
-            Photos, user accounts, payments, and shipping will be added later.
+            category filters, multi-condition filters, sorting, and key gear
+            specs now work.
           </p>
         </div>
       </section>
@@ -360,10 +404,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               ) : null}
             </div>
 
-            {(selectedCategory !== "All" ||
-              selectedConditions.length > 0 ||
-              searchTerm ||
-              selectedSort !== "newest") ? (
+            {selectedCategory !== "All" ||
+            selectedConditions.length > 0 ||
+            searchTerm ||
+            selectedSort !== "newest" ? (
               <Link
                 href="/browse"
                 scroll={false}
@@ -387,10 +431,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                     : "Showing filtered results from Supabase."}
                 </p>
 
-                {(selectedCategory !== "All" ||
-                  selectedConditions.length > 0 ||
-                  searchTerm ||
-                  selectedSort !== "newest") ? (
+                {selectedCategory !== "All" ||
+                selectedConditions.length > 0 ||
+                searchTerm ||
+                selectedSort !== "newest" ? (
                   <p className="mt-1 text-sm font-bold text-stone-500">
                     Category: {selectedCategory} • Conditions: {conditionLabel}{" "}
                     • {selectedSortLabel}
@@ -476,48 +520,89 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
             {!error && listings && listings.length > 0 ? (
               <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {(listings as Listing[]).map((item) => (
-                  <article
-                    key={item.id}
-                    className="overflow-hidden rounded-2xl border border-stone-300 bg-white shadow-sm"
-                  >
-                    <div className="flex h-48 items-center justify-center bg-gradient-to-br from-stone-300 to-emerald-900 px-5 text-center">
-                      <p className="text-sm font-black uppercase tracking-[0.2em] text-white/80">
-                        Photo Coming Soon
-                      </p>
-                    </div>
+                {(listings as Listing[]).map((item) => {
+                  const brandModelText = getBrandModelText(item);
+                  const compactSpecs = getCompactSpecs(item);
 
-                    <div className="p-5">
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-800">
-                        {item.category}
-                      </p>
+                  return (
+                    <article
+                      key={item.id}
+                      className="overflow-hidden rounded-2xl border border-stone-300 bg-white shadow-sm"
+                    >
+                      <div className="flex h-48 items-center justify-center bg-gradient-to-br from-stone-300 to-emerald-900 px-5 text-center">
+                        <p className="text-sm font-black uppercase tracking-[0.2em] text-white/80">
+                          Photo Coming Soon
+                        </p>
+                      </div>
 
-                      <h4 className="mt-2 text-xl font-black">{item.title}</h4>
+                      <div className="p-5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-800">
+                            {item.category}
+                          </p>
 
-                      <p className="mt-2 text-sm font-bold text-stone-500">
-                        {item.condition}
-                        {item.location ? ` • ${item.location}` : ""}
-                      </p>
+                          <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-black text-stone-700">
+                            {item.condition}
+                          </span>
+                        </div>
 
-                      <p className="mt-3 line-clamp-3 text-sm leading-6 text-stone-600">
-                        {item.description}
-                      </p>
+                        <h4 className="mt-2 text-xl font-black">
+                          {item.title}
+                        </h4>
 
-                      <div className="mt-5 flex items-center justify-between">
-                        <p className="text-2xl font-black">
-                          ${Number(item.price).toLocaleString()}
+                        {brandModelText ? (
+                          <p className="mt-1 text-sm font-black text-stone-700">
+                            {brandModelText}
+                          </p>
+                        ) : null}
+
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {compactSpecs.map((spec) => (
+                            <span
+                              key={spec}
+                              className="rounded-full border border-stone-300 bg-stone-50 px-3 py-1 text-xs font-bold text-stone-700"
+                            >
+                              {spec}
+                            </span>
+                          ))}
+
+                          <span
+                            className={`rounded-full border px-3 py-1 text-xs font-bold ${
+                              item.shipping_available
+                                ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                                : "border-stone-300 bg-stone-50 text-stone-700"
+                            }`}
+                          >
+                            {item.shipping_available
+                              ? "Shipping Available"
+                              : "Local Only"}
+                          </span>
+                        </div>
+
+                        <p className="mt-3 text-sm font-bold text-stone-500">
+                          {item.location || "Location not listed"}
                         </p>
 
-                        <Link
-                          href={`/listing/${item.id}`}
-                          className="rounded-xl bg-stone-950 px-4 py-2 text-sm font-black text-white hover:bg-stone-800"
-                        >
-                          View
-                        </Link>
+                        <p className="mt-3 line-clamp-3 text-sm leading-6 text-stone-600">
+                          {item.description}
+                        </p>
+
+                        <div className="mt-5 flex items-center justify-between">
+                          <p className="text-2xl font-black">
+                            ${Number(item.price).toLocaleString()}
+                          </p>
+
+                          <Link
+                            href={`/listing/${item.id}`}
+                            className="rounded-xl bg-stone-950 px-4 py-2 text-sm font-black text-white hover:bg-stone-800"
+                          >
+                            View
+                          </Link>
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
               </div>
             ) : null}
           </div>
