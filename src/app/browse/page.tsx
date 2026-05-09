@@ -28,12 +28,27 @@ type Listing = {
   created_at: string;
 };
 
-export default async function BrowsePage() {
-  const { data: listings, error } = await supabase
+type BrowsePageProps = {
+  searchParams: Promise<{
+    category?: string;
+  }>;
+};
+
+export default async function BrowsePage({ searchParams }: BrowsePageProps) {
+  const params = await searchParams;
+  const selectedCategory = params.category || "All";
+
+  let query = supabase
     .from("listings")
     .select("*")
     .eq("status", "active")
     .order("created_at", { ascending: false });
+
+  if (selectedCategory !== "All") {
+    query = query.eq("category", selectedCategory);
+  }
+
+  const { data: listings, error } = await query;
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
@@ -86,9 +101,9 @@ export default async function BrowsePage() {
           </h2>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
-            Browse real listings saved to the Archery Swap database. Search,
-            advanced filters, photos, user accounts, payments, and shipping will
-            be added later.
+            Browse real listings saved to the Archery Swap database. Category
+            filters now work. Search, photos, user accounts, payments, and
+            shipping will be added later.
           </p>
         </div>
       </section>
@@ -117,16 +132,28 @@ export default async function BrowsePage() {
               <p className="text-sm font-black text-stone-700">Category</p>
 
               <div className="mt-3 space-y-2">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    type="button"
-                    disabled
-                    className="block w-full rounded-xl border border-stone-300 px-4 py-2 text-left text-sm font-bold text-stone-700"
-                  >
-                    {category}
-                  </button>
-                ))}
+                {categories.map((category) => {
+                  const href =
+                    category === "All"
+                      ? "/browse"
+                      : `/browse?category=${encodeURIComponent(category)}`;
+
+                  const isSelected = selectedCategory === category;
+
+                  return (
+                    <Link
+                      key={category}
+                      href={href}
+                      className={`block w-full rounded-xl border px-4 py-2 text-left text-sm font-bold ${
+                        isSelected
+                          ? "border-emerald-700 bg-emerald-50 text-emerald-900"
+                          : "border-stone-300 text-stone-700 hover:border-emerald-700 hover:bg-emerald-50"
+                      }`}
+                    >
+                      {category}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
 
@@ -153,7 +180,7 @@ export default async function BrowsePage() {
               </div>
 
               <p className="mt-3 text-xs font-bold text-stone-500">
-                Filters will be connected later.
+                Condition filters will be connected later.
               </p>
             </div>
           </aside>
@@ -163,7 +190,9 @@ export default async function BrowsePage() {
               <div>
                 <h3 className="text-2xl font-black">Available Gear</h3>
                 <p className="text-stone-600">
-                  Showing real listings from Supabase.
+                  {selectedCategory === "All"
+                    ? "Showing all real listings from Supabase."
+                    : `Showing ${selectedCategory} listings from Supabase.`}
                 </p>
               </div>
 
@@ -185,9 +214,11 @@ export default async function BrowsePage() {
 
             {!error && (!listings || listings.length === 0) ? (
               <div className="rounded-2xl border border-stone-300 bg-white p-8 text-center shadow-sm">
-                <h4 className="text-2xl font-black">No listings yet</h4>
+                <h4 className="text-2xl font-black">No listings found</h4>
                 <p className="mt-2 text-stone-600">
-                  Be the first person to list archery gear on Archery Swap.
+                  {selectedCategory === "All"
+                    ? "Be the first person to list archery gear on Archery Swap."
+                    : `There are no ${selectedCategory} listings yet.`}
                 </p>
                 <Link
                   href="/sell"
