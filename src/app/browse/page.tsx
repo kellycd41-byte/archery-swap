@@ -13,7 +13,7 @@ const categories = [
   "Accessories",
 ];
 
-const conditions = ["All", "New", "Excellent", "Very Good", "Good", "Fair"];
+const conditions = ["New", "Excellent", "Very Good", "Good", "Fair"];
 
 type Listing = {
   id: string;
@@ -33,20 +33,35 @@ type Listing = {
 type BrowsePageProps = {
   searchParams: Promise<{
     category?: string;
-    condition?: string;
+    conditions?: string;
     search?: string;
   }>;
 };
 
-function buildBrowseHref(category: string, condition: string, search: string) {
+function getSelectedConditions(conditionsParam: string | undefined) {
+  if (!conditionsParam) {
+    return [];
+  }
+
+  return conditionsParam
+    .split(",")
+    .map((condition) => condition.trim())
+    .filter((condition) => conditions.includes(condition));
+}
+
+function buildBrowseHref(
+  category: string,
+  selectedConditions: string[],
+  search: string
+) {
   const params = new URLSearchParams();
 
   if (category !== "All") {
     params.set("category", category);
   }
 
-  if (condition !== "All") {
-    params.set("condition", condition);
+  if (selectedConditions.length > 0) {
+    params.set("conditions", selectedConditions.join(","));
   }
 
   if (search.trim()) {
@@ -58,10 +73,25 @@ function buildBrowseHref(category: string, condition: string, search: string) {
   return queryString ? `/browse?${queryString}` : "/browse";
 }
 
+function toggleCondition(
+  condition: string,
+  selectedConditions: string[],
+  selectedCategory: string,
+  searchTerm: string
+) {
+  const conditionIsSelected = selectedConditions.includes(condition);
+
+  const nextConditions = conditionIsSelected
+    ? selectedConditions.filter((selectedCondition) => selectedCondition !== condition)
+    : [...selectedConditions, condition];
+
+  return buildBrowseHref(selectedCategory, nextConditions, searchTerm);
+}
+
 export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const params = await searchParams;
   const selectedCategory = params.category || "All";
-  const selectedCondition = params.condition || "All";
+  const selectedConditions = getSelectedConditions(params.conditions);
   const searchTerm = params.search?.trim() || "";
 
   let query = supabase
@@ -74,8 +104,8 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     query = query.eq("category", selectedCategory);
   }
 
-  if (selectedCondition !== "All") {
-    query = query.eq("condition", selectedCondition);
+  if (selectedConditions.length > 0) {
+    query = query.in("condition", selectedConditions);
   }
 
   if (searchTerm) {
@@ -85,6 +115,9 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   }
 
   const { data: listings, error } = await query;
+
+  const conditionLabel =
+    selectedConditions.length > 0 ? selectedConditions.join(", ") : "All";
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
@@ -138,7 +171,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
             Browse real listings saved to the Archery Swap database. Search,
-            category filters, and condition filters now work. Photos, user
+            category filters, and multi-condition filters now work. Photos, user
             accounts, payments, and shipping will be added later.
           </p>
         </div>
@@ -154,11 +187,11 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                 <input type="hidden" name="category" value={selectedCategory} />
               ) : null}
 
-              {selectedCondition !== "All" ? (
+              {selectedConditions.length > 0 ? (
                 <input
                   type="hidden"
-                  name="condition"
-                  value={selectedCondition}
+                  name="conditions"
+                  value={selectedConditions.join(",")}
                 />
               ) : null}
 
@@ -185,7 +218,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                 <Link
                   href={buildBrowseHref(
                     selectedCategory,
-                    selectedCondition,
+                    selectedConditions,
                     ""
                   )}
                   className="mt-3 block text-center text-sm font-black text-emerald-800 hover:text-emerald-600"
@@ -202,7 +235,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                 {categories.map((category) => {
                   const href = buildBrowseHref(
                     category,
-                    selectedCondition,
+                    selectedConditions,
                     searchTerm
                   );
                   const isSelected = selectedCategory === category;
@@ -229,32 +262,51 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
               <div className="mt-3 space-y-2">
                 {conditions.map((condition) => {
-                  const href = buildBrowseHref(
-                    selectedCategory,
+                  const isSelected = selectedConditions.includes(condition);
+                  const href = toggleCondition(
                     condition,
+                    selectedConditions,
+                    selectedCategory,
                     searchTerm
                   );
-                  const isSelected = selectedCondition === condition;
 
                   return (
                     <Link
                       key={condition}
                       href={href}
-                      className={`block w-full rounded-xl border px-4 py-2 text-left text-sm font-bold ${
+                      className={`flex w-full items-center gap-3 rounded-xl border px-4 py-2 text-left text-sm font-bold ${
                         isSelected
                           ? "border-emerald-700 bg-emerald-50 text-emerald-900"
                           : "border-stone-300 text-stone-700 hover:border-emerald-700 hover:bg-emerald-50"
                       }`}
                     >
+                      <span
+                        className={`flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
+                          isSelected
+                            ? "border-emerald-700 bg-emerald-700 text-white"
+                            : "border-stone-400 bg-white"
+                        }`}
+                      >
+                        {isSelected ? "✓" : ""}
+                      </span>
                       {condition}
                     </Link>
                   );
                 })}
               </div>
+
+              {selectedConditions.length > 0 ? (
+                <Link
+                  href={buildBrowseHref(selectedCategory, [], searchTerm)}
+                  className="mt-3 block text-sm font-black text-emerald-800 hover:text-emerald-600"
+                >
+                  Clear Conditions
+                </Link>
+              ) : null}
             </div>
 
             {(selectedCategory !== "All" ||
-              selectedCondition !== "All" ||
+              selectedConditions.length > 0 ||
               searchTerm) ? (
               <Link
                 href="/browse"
@@ -271,18 +323,17 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                 <h3 className="text-2xl font-black">Available Gear</h3>
                 <p className="text-stone-600">
                   {selectedCategory === "All" &&
-                  selectedCondition === "All" &&
+                  selectedConditions.length === 0 &&
                   !searchTerm
                     ? "Showing all real listings from Supabase."
-                    : `Showing filtered results from Supabase.`}
+                    : "Showing filtered results from Supabase."}
                 </p>
 
                 {(selectedCategory !== "All" ||
-                  selectedCondition !== "All" ||
+                  selectedConditions.length > 0 ||
                   searchTerm) ? (
                   <p className="mt-1 text-sm font-bold text-stone-500">
-                    Category: {selectedCategory} • Condition:{" "}
-                    {selectedCondition}
+                    Category: {selectedCategory} • Conditions: {conditionLabel}
                     {searchTerm ? ` • Search: “${searchTerm}”` : ""}
                   </p>
                 ) : null}
