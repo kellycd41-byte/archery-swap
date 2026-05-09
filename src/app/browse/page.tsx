@@ -31,12 +31,30 @@ type Listing = {
 type BrowsePageProps = {
   searchParams: Promise<{
     category?: string;
+    search?: string;
   }>;
 };
+
+function buildBrowseHref(category: string, search: string) {
+  const params = new URLSearchParams();
+
+  if (category !== "All") {
+    params.set("category", category);
+  }
+
+  if (search.trim()) {
+    params.set("search", search.trim());
+  }
+
+  const queryString = params.toString();
+
+  return queryString ? `/browse?${queryString}` : "/browse";
+}
 
 export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const params = await searchParams;
   const selectedCategory = params.category || "All";
+  const searchTerm = params.search?.trim() || "";
 
   let query = supabase
     .from("listings")
@@ -46,6 +64,12 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
   if (selectedCategory !== "All") {
     query = query.eq("category", selectedCategory);
+  }
+
+  if (searchTerm) {
+    query = query.or(
+      `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,condition.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%`
+    );
   }
 
   const { data: listings, error } = await query;
@@ -101,8 +125,8 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           </h2>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
-            Browse real listings saved to the Archery Swap database. Category
-            filters now work. Search, photos, user accounts, payments, and
+            Browse real listings saved to the Archery Swap database. Search and
+            category filters now work. Photos, user accounts, payments, and
             shipping will be added later.
           </p>
         </div>
@@ -113,31 +137,52 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           <aside className="rounded-2xl border border-stone-300 bg-white p-5 shadow-sm">
             <h3 className="text-lg font-black">Filters</h3>
 
-            <div className="mt-5">
+            <form action="/browse" className="mt-5">
+              {selectedCategory !== "All" ? (
+                <input type="hidden" name="category" value={selectedCategory} />
+              ) : null}
+
               <label className="text-sm font-black text-stone-700">
                 Search
               </label>
+
               <input
                 type="text"
+                name="search"
+                defaultValue={searchTerm}
                 placeholder="Search gear..."
-                disabled
-                className="mt-2 w-full rounded-xl border border-stone-300 bg-stone-100 px-4 py-3 text-sm outline-none"
+                className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 text-sm outline-none focus:border-emerald-700"
               />
-              <p className="mt-2 text-xs font-bold text-stone-500">
-                Search will be connected later.
-              </p>
-            </div>
+
+              <button
+                type="submit"
+                className="mt-3 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-500"
+              >
+                Search
+              </button>
+
+              {searchTerm ? (
+                <Link
+                  href={
+                    selectedCategory === "All"
+                      ? "/browse"
+                      : `/browse?category=${encodeURIComponent(
+                          selectedCategory
+                        )}`
+                  }
+                  className="mt-3 block text-center text-sm font-black text-emerald-800 hover:text-emerald-600"
+                >
+                  Clear Search
+                </Link>
+              ) : null}
+            </form>
 
             <div className="mt-6">
               <p className="text-sm font-black text-stone-700">Category</p>
 
               <div className="mt-3 space-y-2">
                 {categories.map((category) => {
-                  const href =
-                    category === "All"
-                      ? "/browse"
-                      : `/browse?category=${encodeURIComponent(category)}`;
-
+                  const href = buildBrowseHref(category, searchTerm);
                   const isSelected = selectedCategory === category;
 
                   return (
@@ -190,9 +235,13 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               <div>
                 <h3 className="text-2xl font-black">Available Gear</h3>
                 <p className="text-stone-600">
-                  {selectedCategory === "All"
+                  {selectedCategory === "All" && !searchTerm
                     ? "Showing all real listings from Supabase."
-                    : `Showing ${selectedCategory} listings from Supabase.`}
+                    : selectedCategory !== "All" && !searchTerm
+                      ? `Showing ${selectedCategory} listings from Supabase.`
+                      : selectedCategory === "All" && searchTerm
+                        ? `Showing results for “${searchTerm}”.`
+                        : `Showing ${selectedCategory} results for “${searchTerm}”.`}
                 </p>
               </div>
 
@@ -216,16 +265,25 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               <div className="rounded-2xl border border-stone-300 bg-white p-8 text-center shadow-sm">
                 <h4 className="text-2xl font-black">No listings found</h4>
                 <p className="mt-2 text-stone-600">
-                  {selectedCategory === "All"
-                    ? "Be the first person to list archery gear on Archery Swap."
-                    : `There are no ${selectedCategory} listings yet.`}
+                  Try a different search or category, or be the first person to
+                  list gear that matches this filter.
                 </p>
-                <Link
-                  href="/sell"
-                  className="mt-5 inline-block rounded-xl bg-emerald-600 px-5 py-3 font-black text-white hover:bg-emerald-500"
-                >
-                  Sell Your Gear
-                </Link>
+
+                <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
+                  <Link
+                    href="/browse"
+                    className="inline-block rounded-xl border border-stone-400 px-5 py-3 font-black text-stone-950 hover:bg-stone-100"
+                  >
+                    Clear Filters
+                  </Link>
+
+                  <Link
+                    href="/sell"
+                    className="inline-block rounded-xl bg-emerald-600 px-5 py-3 font-black text-white hover:bg-emerald-500"
+                  >
+                    Sell Your Gear
+                  </Link>
+                </div>
               </div>
             ) : null}
 
