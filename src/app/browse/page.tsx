@@ -254,8 +254,8 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
             Browse real listings saved to the Archery Swap database. Search,
-            category filters, multi-condition filters, sorting, and key gear
-            specs now work.
+            category filters, multi-condition filters, sorting, specs, and
+            listing photos now work.
           </p>
         </div>
       </section>
@@ -529,11 +529,19 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                       key={item.id}
                       className="overflow-hidden rounded-2xl border border-stone-300 bg-white shadow-sm"
                     >
-                      <div className="flex h-48 items-center justify-center bg-gradient-to-br from-stone-300 to-emerald-900 px-5 text-center">
-                        <p className="text-sm font-black uppercase tracking-[0.2em] text-white/80">
-                          Photo Coming Soon
-                        </p>
-                      </div>
+                      {item.image_url ? (
+                        <img
+                          src={item.image_url}
+                          alt={item.title}
+                          className="h-48 w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-48 items-center justify-center bg-gradient-to-br from-stone-300 to-emerald-900 px-5 text-center">
+                          <p className="text-sm font-black uppercase tracking-[0.2em] text-white/80">
+                            Photo Coming Soon
+                          </p>
+                        </div>
+                      )}
 
                       <div className="p-5">
                         <div className="flex flex-wrap items-center gap-2">

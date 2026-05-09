@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 const categories = [
@@ -18,6 +18,15 @@ const categories = [
 const conditions = ["New", "Excellent", "Very Good", "Good", "Fair"];
 
 const handednessOptions = ["Right Hand", "Left Hand", "Ambidextrous", "N/A"];
+
+const maxPhotoSizeInBytes = 5 * 1024 * 1024;
+
+function makeSafeFileName(fileName: string) {
+  return fileName
+    .toLowerCase()
+    .replace(/[^a-z0-9.]/g, "-")
+    .replace(/-+/g, "-");
+}
 
 export default function SellPage() {
   const [title, setTitle] = useState("");
@@ -37,9 +46,68 @@ export default function SellPage() {
   const [includedAccessories, setIncludedAccessories] = useState("");
   const [shippingAvailable, setShippingAvailable] = useState(false);
 
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState("");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
+    setSuccessMessage("");
+    setErrorMessage("");
+
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      setSelectedPhoto(null);
+      setPhotoPreviewUrl("");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setSelectedPhoto(null);
+      setPhotoPreviewUrl("");
+      setErrorMessage("Please choose an image file.");
+      return;
+    }
+
+    if (file.size > maxPhotoSizeInBytes) {
+      setSelectedPhoto(null);
+      setPhotoPreviewUrl("");
+      setErrorMessage("Please choose a photo smaller than 5 MB.");
+      return;
+    }
+
+    setSelectedPhoto(file);
+    setPhotoPreviewUrl(URL.createObjectURL(file));
+  }
+
+  async function uploadListingPhoto() {
+    if (!selectedPhoto) {
+      return null;
+    }
+
+    const safeFileName = makeSafeFileName(selectedPhoto.name);
+    const filePath = `public/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("listing-photos")
+      .upload(filePath, selectedPhoto, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (uploadError) {
+      throw new Error(uploadError.message);
+    }
+
+    const { data } = supabase.storage
+      .from("listing-photos")
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,50 +144,61 @@ export default function SellPage() {
 
     setIsSubmitting(true);
 
-    const { error } = await supabase.from("listings").insert({
-      title: title.trim(),
-      description: description.trim(),
-      price: cleanedPrice,
-      category,
-      condition,
-      location: location.trim() || null,
-      seller_name: sellerName.trim() || null,
-      seller_email: sellerEmail.trim() || null,
-      brand: brand.trim() || null,
-      model: model.trim() || null,
-      draw_weight: drawWeight.trim() || null,
-      draw_length: drawLength.trim() || null,
-      handedness: handedness || null,
-      included_accessories: includedAccessories.trim() || null,
-      shipping_available: shippingAvailable,
-      image_url: null,
-      status: "active",
-    });
+    try {
+      const photoUrl = await uploadListingPhoto();
 
-    setIsSubmitting(false);
+      const { error } = await supabase.from("listings").insert({
+        title: title.trim(),
+        description: description.trim(),
+        price: cleanedPrice,
+        category,
+        condition,
+        location: location.trim() || null,
+        seller_name: sellerName.trim() || null,
+        seller_email: sellerEmail.trim() || null,
+        brand: brand.trim() || null,
+        model: model.trim() || null,
+        draw_weight: drawWeight.trim() || null,
+        draw_length: drawLength.trim() || null,
+        handedness: handedness || null,
+        included_accessories: includedAccessories.trim() || null,
+        shipping_available: shippingAvailable,
+        image_url: photoUrl,
+        status: "active",
+      });
 
-    if (error) {
-      setErrorMessage(error.message);
-      return;
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setSuccessMessage("Your listing was saved successfully.");
+
+      setTitle("");
+      setCategory("");
+      setCondition("");
+      setPrice("");
+      setLocation("");
+      setDescription("");
+      setSellerName("");
+      setSellerEmail("");
+      setBrand("");
+      setModel("");
+      setDrawWeight("");
+      setDrawLength("");
+      setHandedness("");
+      setIncludedAccessories("");
+      setShippingAvailable(false);
+      setSelectedPhoto(null);
+      setPhotoPreviewUrl("");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while saving your listing."
+      );
     }
 
-    setSuccessMessage("Your listing was saved successfully.");
-
-    setTitle("");
-    setCategory("");
-    setCondition("");
-    setPrice("");
-    setLocation("");
-    setDescription("");
-    setSellerName("");
-    setSellerEmail("");
-    setBrand("");
-    setModel("");
-    setDrawWeight("");
-    setDrawLength("");
-    setHandedness("");
-    setIncludedAccessories("");
-    setShippingAvailable(false);
+    setIsSubmitting(false);
   }
 
   return (
@@ -173,8 +252,8 @@ export default function SellPage() {
           </h2>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
-            Create a real listing with archery-specific details. Photo uploads,
-            payments, shipping labels, and user accounts will be added later.
+            Create a real listing with archery-specific details and upload one
+            listing photo.
           </p>
         </div>
       </section>
@@ -433,7 +512,7 @@ export default function SellPage() {
             </section>
 
             <section className="rounded-2xl border border-stone-200 p-5">
-              <h4 className="text-xl font-black">Description and photos</h4>
+              <h4 className="text-xl font-black">Description and photo</h4>
 
               <div className="mt-5">
                 <label className="text-sm font-black text-stone-700">
@@ -450,15 +529,37 @@ export default function SellPage() {
 
               <div className="mt-5">
                 <label className="text-sm font-black text-stone-700">
-                  Photos
+                  Photo
                 </label>
 
-                <div className="mt-2 rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 p-8 text-center">
-                  <p className="font-black">Upload photos</p>
-                  <p className="mt-2 text-sm text-stone-600">
-                    Photo upload will be connected later. For now this is a
-                    placeholder.
+                <div className="mt-2 rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 p-6">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-bold"
+                  />
+
+                  <p className="mt-3 text-sm text-stone-600">
+                    Upload one clear photo. JPG, PNG, WEBP, or GIF. Max size:
+                    5 MB.
                   </p>
+
+                  {photoPreviewUrl ? (
+                    <div className="mt-5 overflow-hidden rounded-2xl border border-stone-300 bg-white">
+                      <img
+                        src={photoPreviewUrl}
+                        alt="Selected listing photo preview"
+                        className="h-72 w-full object-cover"
+                      />
+                    </div>
+                  ) : null}
+
+                  {selectedPhoto ? (
+                    <p className="mt-3 text-sm font-bold text-stone-700">
+                      Selected: {selectedPhoto.name}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </section>

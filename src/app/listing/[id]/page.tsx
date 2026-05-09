@@ -103,25 +103,24 @@ export default async function ListingDetailPage({
         <div className="mt-6 grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
           <div>
             <div className="rounded-3xl border border-stone-300 bg-white p-4 shadow-sm">
-              <div className="flex h-[420px] items-center justify-center rounded-2xl bg-gradient-to-br from-stone-300 to-emerald-900 px-6 text-center">
-                <div>
-                  <p className="text-sm font-black uppercase tracking-[0.25em] text-white/80">
-                    Photo Coming Soon
-                  </p>
-                  <p className="mt-3 text-sm font-bold text-white/70">
-                    Real photo uploads will be added later.
-                  </p>
+              {item.image_url ? (
+                <img
+                  src={item.image_url}
+                  alt={item.title}
+                  className="h-[420px] w-full rounded-2xl object-cover"
+                />
+              ) : (
+                <div className="flex h-[420px] items-center justify-center rounded-2xl bg-gradient-to-br from-stone-300 to-emerald-900 px-6 text-center">
+                  <div>
+                    <p className="text-sm font-black uppercase tracking-[0.25em] text-white/80">
+                      Photo Coming Soon
+                    </p>
+                    <p className="mt-3 text-sm font-bold text-white/70">
+                      This seller has not added a photo yet.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            <div className="mt-4 grid grid-cols-4 gap-3">
-              <div className="flex h-24 items-center justify-center rounded-2xl bg-gradient-to-br from-stone-300 to-emerald-900 text-xs font-black uppercase tracking-[0.15em] text-white/70">
-                Photo
-              </div>
-              <div className="h-24 rounded-2xl bg-stone-300" />
-              <div className="h-24 rounded-2xl bg-stone-400" />
-              <div className="h-24 rounded-2xl bg-stone-500" />
+              )}
             </div>
           </div>
 
