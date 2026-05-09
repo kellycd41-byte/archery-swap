@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { FormEvent, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const categories = [
   "Bows",
@@ -14,6 +18,86 @@ const categories = [
 const conditions = ["New", "Excellent", "Very Good", "Good", "Fair"];
 
 export default function SellPage() {
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("");
+  const [condition, setCondition] = useState("");
+  const [price, setPrice] = useState("");
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
+  const [sellerName, setSellerName] = useState("");
+  const [sellerEmail, setSellerEmail] = useState("");
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setSuccessMessage("");
+    setErrorMessage("");
+
+    const cleanedPrice = Number(price.replace(/[^0-9.]/g, ""));
+
+    if (!title.trim()) {
+      setErrorMessage("Please enter an item title.");
+      return;
+    }
+
+    if (!category) {
+      setErrorMessage("Please select a category.");
+      return;
+    }
+
+    if (!condition) {
+      setErrorMessage("Please select a condition.");
+      return;
+    }
+
+    if (!cleanedPrice || cleanedPrice <= 0) {
+      setErrorMessage("Please enter a valid price.");
+      return;
+    }
+
+    if (!description.trim()) {
+      setErrorMessage("Please enter a description.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const { error } = await supabase.from("listings").insert({
+      title: title.trim(),
+      description: description.trim(),
+      price: cleanedPrice,
+      category,
+      condition,
+      location: location.trim() || null,
+      seller_name: sellerName.trim() || null,
+      seller_email: sellerEmail.trim() || null,
+      image_url: null,
+      status: "active",
+    });
+
+    setIsSubmitting(false);
+
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+
+    setSuccessMessage("Your listing was saved successfully.");
+
+    setTitle("");
+    setCategory("");
+    setCondition("");
+    setPrice("");
+    setLocation("");
+    setDescription("");
+    setSellerName("");
+    setSellerEmail("");
+  }
+
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
       <header className="border-b border-stone-300 bg-stone-950 text-white">
@@ -65,8 +149,9 @@ export default function SellPage() {
           </h2>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
-            This is the first version of the listing form. Later, we’ll connect
-            it to user accounts, photo uploads, Supabase, payments, and shipping.
+            Create a real listing and save it to the Archery Swap database.
+            Photo uploads, payments, shipping, and user accounts will be added
+            later.
           </p>
         </div>
       </section>
@@ -81,13 +166,27 @@ export default function SellPage() {
             </p>
           </div>
 
-          <form className="space-y-7">
+          {successMessage ? (
+            <div className="mb-6 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">
+              {successMessage}
+            </div>
+          ) : null}
+
+          {errorMessage ? (
+            <div className="mb-6 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm font-bold text-red-800">
+              {errorMessage}
+            </div>
+          ) : null}
+
+          <form onSubmit={handleSubmit} className="space-y-7">
             <div>
               <label className="text-sm font-black text-stone-700">
                 Item title
               </label>
               <input
                 type="text"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
                 placeholder="Example: Mathews V3X 33 Compound Bow"
                 className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
               />
@@ -98,10 +197,16 @@ export default function SellPage() {
                 <label className="text-sm font-black text-stone-700">
                   Category
                 </label>
-                <select className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 outline-none focus:border-emerald-700">
-                  <option>Select a category</option>
-                  {categories.map((category) => (
-                    <option key={category}>{category}</option>
+                <select
+                  value={category}
+                  onChange={(event) => setCategory(event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 outline-none focus:border-emerald-700"
+                >
+                  <option value="">Select a category</option>
+                  {categories.map((categoryOption) => (
+                    <option key={categoryOption} value={categoryOption}>
+                      {categoryOption}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -110,10 +215,16 @@ export default function SellPage() {
                 <label className="text-sm font-black text-stone-700">
                   Condition
                 </label>
-                <select className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 outline-none focus:border-emerald-700">
-                  <option>Select condition</option>
-                  {conditions.map((condition) => (
-                    <option key={condition}>{condition}</option>
+                <select
+                  value={condition}
+                  onChange={(event) => setCondition(event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 outline-none focus:border-emerald-700"
+                >
+                  <option value="">Select condition</option>
+                  {conditions.map((conditionOption) => (
+                    <option key={conditionOption} value={conditionOption}>
+                      {conditionOption}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -126,6 +237,8 @@ export default function SellPage() {
                 </label>
                 <input
                   type="text"
+                  value={price}
+                  onChange={(event) => setPrice(event.target.value)}
                   placeholder="$875"
                   className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
                 />
@@ -137,7 +250,37 @@ export default function SellPage() {
                 </label>
                 <input
                   type="text"
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value)}
                   placeholder="Pennsylvania"
+                  className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-2">
+              <div>
+                <label className="text-sm font-black text-stone-700">
+                  Seller name
+                </label>
+                <input
+                  type="text"
+                  value={sellerName}
+                  onChange={(event) => setSellerName(event.target.value)}
+                  placeholder="Your name"
+                  className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-black text-stone-700">
+                  Seller email
+                </label>
+                <input
+                  type="email"
+                  value={sellerEmail}
+                  onChange={(event) => setSellerEmail(event.target.value)}
+                  placeholder="you@example.com"
                   className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
                 />
               </div>
@@ -148,6 +291,8 @@ export default function SellPage() {
                 Description
               </label>
               <textarea
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
                 placeholder="Describe the item, condition, included accessories, draw weight, draw length, age, and anything buyers should know."
                 rows={6}
                 className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
@@ -180,17 +325,18 @@ export default function SellPage() {
 
             <div className="flex flex-col gap-3 sm:flex-row">
               <button
-                type="button"
-                className="rounded-xl bg-emerald-600 px-6 py-3 font-black text-white hover:bg-emerald-500"
+                type="submit"
+                disabled={isSubmitting}
+                className="rounded-xl bg-emerald-600 px-6 py-3 font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-stone-400"
               >
-                Preview Listing
+                {isSubmitting ? "Saving Listing..." : "Save Listing"}
               </button>
 
               <button
                 type="button"
                 className="rounded-xl border border-stone-400 px-6 py-3 font-black text-stone-950 hover:bg-stone-100"
               >
-                Save Draft
+                Save Draft Later
               </button>
             </div>
           </form>

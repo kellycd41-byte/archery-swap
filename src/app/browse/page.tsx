@@ -1,55 +1,5 @@
 import Link from "next/link";
-
-const listings = [
-  {
-    title: "Mathews V3X Compound Bow",
-    price: "$875",
-    condition: "Excellent",
-    category: "Bows",
-    location: "Pennsylvania",
-    href: "/listing/1",
-  },
-  {
-    title: "Ravin Crossbow Package",
-    price: "$1,050",
-    condition: "Very Good",
-    category: "Crossbows",
-    location: "Ohio",
-    href: "/listing/1",
-  },
-  {
-    title: "Spot Hogg Fast Eddie Sight",
-    price: "$265",
-    condition: "Good",
-    category: "Sights",
-    location: "Michigan",
-    href: "/listing/1",
-  },
-  {
-    title: "Stan Thumb Release",
-    price: "$210",
-    condition: "Very Good",
-    category: "Releases",
-    location: "Georgia",
-    href: "/listing/1",
-  },
-  {
-    title: "Easton Axis Arrows - Dozen",
-    price: "$115",
-    condition: "New",
-    category: "Arrows",
-    location: "New York",
-    href: "/listing/1",
-  },
-  {
-    title: "Plano Bow Case",
-    price: "$85",
-    condition: "Good",
-    category: "Cases",
-    location: "West Virginia",
-    href: "/listing/1",
-  },
-];
+import { supabase } from "@/lib/supabase";
 
 const categories = [
   "All",
@@ -59,9 +9,32 @@ const categories = [
   "Releases",
   "Arrows",
   "Cases",
+  "Targets",
+  "Accessories",
 ];
 
-export default function BrowsePage() {
+type Listing = {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  condition: string;
+  location: string | null;
+  image_url: string | null;
+  seller_name: string | null;
+  seller_email: string | null;
+  status: string;
+  created_at: string;
+};
+
+export default async function BrowsePage() {
+  const { data: listings, error } = await supabase
+    .from("listings")
+    .select("*")
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
       <header className="border-b border-stone-300 bg-stone-950 text-white">
@@ -113,9 +86,9 @@ export default function BrowsePage() {
           </h2>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
-            This is the first version of the marketplace browse page. Later,
-            we’ll connect it to a real database, real photos, search, filters,
-            user accounts, and payments.
+            Browse real listings saved to the Archery Swap database. Search,
+            advanced filters, photos, user accounts, payments, and shipping will
+            be added later.
           </p>
         </div>
       </section>
@@ -132,8 +105,12 @@ export default function BrowsePage() {
               <input
                 type="text"
                 placeholder="Search gear..."
-                className="mt-2 w-full rounded-xl border border-stone-300 px-4 py-3 text-sm outline-none focus:border-emerald-700"
+                disabled
+                className="mt-2 w-full rounded-xl border border-stone-300 bg-stone-100 px-4 py-3 text-sm outline-none"
               />
+              <p className="mt-2 text-xs font-bold text-stone-500">
+                Search will be connected later.
+              </p>
             </div>
 
             <div className="mt-6">
@@ -143,7 +120,9 @@ export default function BrowsePage() {
                 {categories.map((category) => (
                   <button
                     key={category}
-                    className="block w-full rounded-xl border border-stone-300 px-4 py-2 text-left text-sm font-bold hover:border-emerald-700 hover:bg-emerald-50"
+                    type="button"
+                    disabled
+                    className="block w-full rounded-xl border border-stone-300 px-4 py-2 text-left text-sm font-bold text-stone-700"
                   >
                     {category}
                   </button>
@@ -155,23 +134,27 @@ export default function BrowsePage() {
               <p className="text-sm font-black text-stone-700">Condition</p>
 
               <div className="mt-3 space-y-2 text-sm font-bold">
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" />
+                <label className="flex items-center gap-2 text-stone-500">
+                  <input type="checkbox" disabled />
                   New
                 </label>
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" />
+                <label className="flex items-center gap-2 text-stone-500">
+                  <input type="checkbox" disabled />
                   Excellent
                 </label>
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" />
+                <label className="flex items-center gap-2 text-stone-500">
+                  <input type="checkbox" disabled />
                   Very Good
                 </label>
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" />
+                <label className="flex items-center gap-2 text-stone-500">
+                  <input type="checkbox" disabled />
                   Good
                 </label>
               </div>
+
+              <p className="mt-3 text-xs font-bold text-stone-500">
+                Filters will be connected later.
+              </p>
             </div>
           </aside>
 
@@ -180,50 +163,87 @@ export default function BrowsePage() {
               <div>
                 <h3 className="text-2xl font-black">Available Gear</h3>
                 <p className="text-stone-600">
-                  Showing sample listings for the first prototype.
+                  Showing real listings from Supabase.
                 </p>
               </div>
 
-              <select className="rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-bold">
+              <select
+                disabled
+                className="rounded-xl border border-stone-300 bg-stone-100 px-4 py-3 text-sm font-bold text-stone-500"
+              >
                 <option>Sort: Newest</option>
                 <option>Price: Low to High</option>
                 <option>Price: High to Low</option>
               </select>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {listings.map((item) => (
-                <article
-                  key={item.title}
-                  className="overflow-hidden rounded-2xl border border-stone-300 bg-white shadow-sm"
+            {error ? (
+              <div className="rounded-2xl border border-red-300 bg-red-50 p-5 text-sm font-bold text-red-800">
+                Could not load listings: {error.message}
+              </div>
+            ) : null}
+
+            {!error && (!listings || listings.length === 0) ? (
+              <div className="rounded-2xl border border-stone-300 bg-white p-8 text-center shadow-sm">
+                <h4 className="text-2xl font-black">No listings yet</h4>
+                <p className="mt-2 text-stone-600">
+                  Be the first person to list archery gear on Archery Swap.
+                </p>
+                <Link
+                  href="/sell"
+                  className="mt-5 inline-block rounded-xl bg-emerald-600 px-5 py-3 font-black text-white hover:bg-emerald-500"
                 >
-                  <div className="h-48 bg-gradient-to-br from-stone-300 to-emerald-900" />
+                  Sell Your Gear
+                </Link>
+              </div>
+            ) : null}
 
-                  <div className="p-5">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-800">
-                      {item.category}
-                    </p>
-
-                    <h4 className="mt-2 text-xl font-black">{item.title}</h4>
-
-                    <p className="mt-2 text-sm font-bold text-stone-500">
-                      {item.condition} • {item.location}
-                    </p>
-
-                    <div className="mt-5 flex items-center justify-between">
-                      <p className="text-2xl font-black">{item.price}</p>
-
-                      <Link
-                        href={item.href}
-                        className="rounded-xl bg-stone-950 px-4 py-2 text-sm font-black text-white hover:bg-stone-800"
-                      >
-                        View
-                      </Link>
+            {!error && listings && listings.length > 0 ? (
+              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {(listings as Listing[]).map((item) => (
+                  <article
+                    key={item.id}
+                    className="overflow-hidden rounded-2xl border border-stone-300 bg-white shadow-sm"
+                  >
+                    <div className="flex h-48 items-center justify-center bg-gradient-to-br from-stone-300 to-emerald-900 px-5 text-center">
+                      <p className="text-sm font-black uppercase tracking-[0.2em] text-white/80">
+                        Photo Coming Soon
+                      </p>
                     </div>
-                  </div>
-                </article>
-              ))}
-            </div>
+
+                    <div className="p-5">
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-800">
+                        {item.category}
+                      </p>
+
+                      <h4 className="mt-2 text-xl font-black">{item.title}</h4>
+
+                      <p className="mt-2 text-sm font-bold text-stone-500">
+                        {item.condition}
+                        {item.location ? ` • ${item.location}` : ""}
+                      </p>
+
+                      <p className="mt-3 line-clamp-3 text-sm leading-6 text-stone-600">
+                        {item.description}
+                      </p>
+
+                      <div className="mt-5 flex items-center justify-between">
+                        <p className="text-2xl font-black">
+                          ${Number(item.price).toLocaleString()}
+                        </p>
+
+                        <Link
+                          href={`/listing/${item.id}`}
+                          className="rounded-xl bg-stone-950 px-4 py-2 text-sm font-black text-white hover:bg-stone-800"
+                        >
+                          View
+                        </Link>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
