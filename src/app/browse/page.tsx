@@ -52,6 +52,100 @@ type BrowsePageProps = {
   }>;
 };
 
+function Header() {
+  return (
+    <header className="border-b border-stone-800 bg-stone-950 text-white">
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+        <div className="flex items-center justify-between gap-4">
+          <Link href="/" className="min-w-0">
+            <h1 className="text-xl font-black tracking-tight sm:text-2xl">
+              Archery Swap
+            </h1>
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-300 sm:text-xs">
+              Buy • Sell • Archery Gear
+            </p>
+          </Link>
+
+          <nav className="hidden items-center gap-6 text-sm font-bold md:flex">
+            <Link href="/" className="hover:text-emerald-300">
+              Home
+            </Link>
+            <Link href="/browse" className="text-emerald-300">
+              Browse Gear
+            </Link>
+            <Link href="/sell" className="hover:text-emerald-300">
+              Sell Gear
+            </Link>
+            <Link href="/messages" className="hover:text-emerald-300">
+              Messages
+            </Link>
+            <Link href="/account" className="hover:text-emerald-300">
+              Account
+            </Link>
+            <Link href="/admin" className="hover:text-emerald-300">
+              Admin
+            </Link>
+          </nav>
+
+          <div className="hidden md:block">
+            <Link
+              href="/sell"
+              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-500"
+            >
+              Sell Your Gear
+            </Link>
+          </div>
+
+          <details className="relative md:hidden">
+            <summary className="cursor-pointer list-none rounded-xl border border-stone-700 px-4 py-2 text-sm font-black text-white">
+              Menu
+            </summary>
+
+            <div className="absolute right-0 z-20 mt-3 w-56 overflow-hidden rounded-2xl border border-stone-700 bg-stone-900 shadow-2xl">
+              <Link
+                href="/"
+                className="block border-b border-stone-800 px-4 py-3 text-sm font-bold hover:bg-stone-800"
+              >
+                Home
+              </Link>
+              <Link
+                href="/browse"
+                className="block border-b border-stone-800 bg-stone-800 px-4 py-3 text-sm font-bold text-emerald-300"
+              >
+                Browse Gear
+              </Link>
+              <Link
+                href="/sell"
+                className="block border-b border-stone-800 px-4 py-3 text-sm font-bold hover:bg-stone-800"
+              >
+                Sell Gear
+              </Link>
+              <Link
+                href="/messages"
+                className="block border-b border-stone-800 px-4 py-3 text-sm font-bold hover:bg-stone-800"
+              >
+                Messages
+              </Link>
+              <Link
+                href="/account"
+                className="block border-b border-stone-800 px-4 py-3 text-sm font-bold hover:bg-stone-800"
+              >
+                Account
+              </Link>
+              <Link
+                href="/admin"
+                className="block px-4 py-3 text-sm font-bold hover:bg-stone-800"
+              >
+                Admin
+              </Link>
+            </div>
+          </details>
+        </div>
+      </div>
+    </header>
+  );
+}
+
 function getSelectedConditions(conditionsParam: string | undefined) {
   if (!conditionsParam) {
     return [];
@@ -226,64 +320,28 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
-      <header className="border-b border-stone-300 bg-stone-950 text-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <Link href="/" className="block">
-            <h1 className="text-2xl font-black tracking-tight">
-              Archery Swap
-            </h1>
-            <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-300">
-              Buy • Sell • Archery Gear
-            </p>
-          </Link>
+      <Header />
 
-          <nav className="hidden gap-6 text-sm font-bold md:flex">
-            <Link href="/" className="hover:text-emerald-300">
-              Home
-            </Link>
-            <Link href="/browse" className="text-emerald-300">
-              Browse Gear
-            </Link>
-            <Link href="/sell" className="hover:text-emerald-300">
-              Sell Gear
-            </Link>
-            <Link href="/messages" className="hover:text-emerald-300">
-              Messages
-            </Link>
-            <Link href="/account" className="hover:text-emerald-300">
-              Account
-            </Link>
-          </nav>
-
-          <Link
-            href="/sell"
-            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-500"
-          >
-            Sell Your Gear
-          </Link>
-        </div>
-      </header>
-
-      <section className="bg-stone-950 px-6 py-16 text-white">
+      <section className="bg-stone-950 px-4 py-14 text-white sm:px-6 md:py-16">
         <div className="mx-auto max-w-7xl">
           <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-300">
             Browse Gear
           </p>
 
-          <h2 className="mt-4 max-w-4xl text-5xl font-black tracking-tight">
-            Find bows, crossbows, sights, releases, arrows, and accessories.
+          <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">
+            Find approved archery gear from other sellers.
           </h2>
 
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
-            Browse real listings saved to the Archery Swap database. Search,
-            category filters, multi-condition filters, sorting, specs, and
-            listing photos now work.
+          <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
+            Search by gear type, condition, brand, model, location, draw
+            weight, draw length, and handedness. Only approved active listings
+            appear here.
           </p>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-10">
-        <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
           <aside className="rounded-2xl border border-stone-300 bg-white p-5 shadow-sm">
             <h3 className="text-lg font-black">Filters</h3>
 
@@ -339,7 +397,40 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               ) : null}
             </form>
 
-            <div className="mt-6">
+            <details className="mt-6 rounded-2xl border border-stone-300 bg-stone-50 p-4 lg:hidden">
+              <summary className="cursor-pointer list-none text-sm font-black text-stone-800">
+                Category: {selectedCategory}
+              </summary>
+
+              <div className="mt-3 space-y-2">
+                {categories.map((category) => {
+                  const href = buildBrowseHref(
+                    category,
+                    selectedConditions,
+                    searchTerm,
+                    selectedSort
+                  );
+                  const isSelected = selectedCategory === category;
+
+                  return (
+                    <Link
+                      key={category}
+                      href={href}
+                      scroll={false}
+                      className={`block w-full rounded-xl border px-4 py-2 text-left text-sm font-bold ${
+                        isSelected
+                          ? "border-emerald-700 bg-emerald-50 text-emerald-900"
+                          : "border-stone-300 bg-white text-stone-700 hover:border-emerald-700 hover:bg-emerald-50"
+                      }`}
+                    >
+                      {category}
+                    </Link>
+                  );
+                })}
+              </div>
+            </details>
+
+            <div className="mt-6 hidden lg:block">
               <p className="text-sm font-black text-stone-700">Category</p>
 
               <div className="mt-3 space-y-2">
@@ -370,7 +461,65 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               </div>
             </div>
 
-            <div className="mt-6">
+            <details className="mt-4 rounded-2xl border border-stone-300 bg-stone-50 p-4 lg:hidden">
+              <summary className="cursor-pointer list-none text-sm font-black text-stone-800">
+                Conditions: {conditionLabel}
+              </summary>
+
+              <div className="mt-3 space-y-2">
+                {conditions.map((condition) => {
+                  const isSelected = selectedConditions.includes(condition);
+                  const href = toggleCondition(
+                    condition,
+                    selectedConditions,
+                    selectedCategory,
+                    searchTerm,
+                    selectedSort
+                  );
+
+                  return (
+                    <Link
+                      key={condition}
+                      href={href}
+                      scroll={false}
+                      className={`flex w-full items-center gap-3 rounded-xl border px-4 py-2 text-left text-sm font-bold ${
+                        isSelected
+                          ? "border-emerald-700 bg-emerald-50 text-emerald-900"
+                          : "border-stone-300 bg-white text-stone-700 hover:border-emerald-700 hover:bg-emerald-50"
+                      }`}
+                    >
+                      <span
+                        className={`flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
+                          isSelected
+                            ? "border-emerald-700 bg-emerald-700 text-white"
+                            : "border-stone-400 bg-white"
+                        }`}
+                      >
+                        {isSelected ? "✓" : ""}
+                      </span>
+                      {condition}
+                    </Link>
+                  );
+                })}
+
+                {selectedConditions.length > 0 ? (
+                  <Link
+                    href={buildBrowseHref(
+                      selectedCategory,
+                      [],
+                      searchTerm,
+                      selectedSort
+                    )}
+                    scroll={false}
+                    className="block text-sm font-black text-emerald-800 hover:text-emerald-600"
+                  >
+                    Clear Conditions
+                  </Link>
+                ) : null}
+              </div>
+            </details>
+
+            <div className="mt-6 hidden lg:block">
               <p className="text-sm font-black text-stone-700">Condition</p>
 
               <div className="mt-3 space-y-2">
@@ -449,8 +598,8 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                   selectedConditions.length === 0 &&
                   !searchTerm &&
                   selectedSort === "newest"
-                    ? "Showing all real listings from Supabase."
-                    : "Showing filtered results from Supabase."}
+                    ? "Showing all approved active listings."
+                    : "Showing filtered approved listings."}
                 </p>
 
                 {selectedCategory !== "All" ||
