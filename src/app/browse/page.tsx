@@ -82,9 +82,6 @@ function Header() {
             <Link href="/account" className="hover:text-emerald-300">
               Account
             </Link>
-            <Link href="/admin" className="hover:text-emerald-300">
-              Admin
-            </Link>
           </nav>
 
           <div className="hidden md:block">
@@ -128,15 +125,9 @@ function Header() {
               </Link>
               <Link
                 href="/account"
-                className="block border-b border-stone-800 px-4 py-3 text-sm font-bold hover:bg-stone-800"
-              >
-                Account
-              </Link>
-              <Link
-                href="/admin"
                 className="block px-4 py-3 text-sm font-bold hover:bg-stone-800"
               >
-                Admin
+                Account
               </Link>
             </div>
           </details>
