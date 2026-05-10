@@ -119,6 +119,41 @@ export default function AdminPage() {
     await loadListings();
   }
 
+  async function deleteListingForever(listingId: string, listingTitle: string) {
+    const confirmed = window.confirm(
+      `Permanently delete this listing?\n\n${listingTitle}\n\nThis cannot be undone. Only inactive listings should be deleted forever.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const confirmedAgain = window.confirm(
+      `Are you absolutely sure?\n\n"${listingTitle}" will be permanently deleted from the database.`
+    );
+
+    if (!confirmedAgain) {
+      return;
+    }
+
+    setActionMessage("");
+    setErrorMessage("");
+
+    const { error } = await supabase
+      .from("listings")
+      .delete()
+      .eq("id", listingId)
+      .neq("status", "active");
+
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+
+    setActionMessage(`Permanently deleted "${listingTitle}".`);
+    await loadListings();
+  }
+
   function handleAdminLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -329,9 +364,9 @@ export default function AdminPage() {
           </h2>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
-            Review listings, hide test posts from the marketplace, and restore
-            listings when needed. This page is protected by a temporary password
-            gate while the site is in development.
+            Review listings, hide test posts from the marketplace, restore
+            listings when needed, and permanently delete inactive listings when
+            cleanup is necessary.
           </p>
         </div>
       </section>
@@ -388,8 +423,8 @@ export default function AdminPage() {
             <div>
               <h3 className="text-2xl font-black">All listings</h3>
               <p className="text-stone-600">
-                Mark test listings inactive to remove them from Browse without
-                permanently deleting them.
+                Active listings can be removed from Browse. Inactive listings
+                can be restored or permanently deleted.
               </p>
               <p className="mt-1 text-sm font-bold text-stone-500">
                 Listings without photos: {listingsWithoutPhotos.length}
@@ -525,15 +560,27 @@ export default function AdminPage() {
                           Remove
                         </button>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            restoreListing(listing.id, listing.title)
-                          }
-                          className="rounded-xl border border-emerald-300 px-4 py-2 text-sm font-black text-emerald-800 hover:bg-emerald-50"
-                        >
-                          Restore
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              restoreListing(listing.id, listing.title)
+                            }
+                            className="rounded-xl border border-emerald-300 px-4 py-2 text-sm font-black text-emerald-800 hover:bg-emerald-50"
+                          >
+                            Restore
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              deleteListingForever(listing.id, listing.title)
+                            }
+                            className="rounded-xl border border-red-400 bg-red-50 px-4 py-2 text-sm font-black text-red-800 hover:bg-red-100"
+                          >
+                            Delete Forever
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -546,9 +593,9 @@ export default function AdminPage() {
         <div className="mt-8 rounded-3xl bg-stone-950 p-6 text-white">
           <h3 className="text-2xl font-black">Admin note</h3>
           <p className="mt-3 max-w-4xl leading-8 text-stone-300">
-            This admin page is protected with a temporary password gate. Later
-            we will replace this with real admin login protection so only
-            approved admins can remove or restore listings.
+            This admin page is protected with a temporary password gate. Active
+            listings should be removed first, then inactive listings can be
+            restored or permanently deleted.
           </p>
         </div>
       </section>
