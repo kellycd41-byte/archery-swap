@@ -16,6 +16,7 @@ type Listing = {
   seller_name: string | null;
   seller_email: string | null;
   status: string;
+  denial_reason: string | null;
   created_at: string;
   brand: string | null;
   model: string | null;
@@ -33,6 +34,7 @@ type EditForm = {
   brand: string;
   model: string;
   status: string;
+  denial_reason: string;
 };
 
 function formatDate(dateValue: string) {
@@ -61,8 +63,25 @@ function makeEditForm(listing: Listing): EditForm {
     seller_email: listing.seller_email || "",
     brand: listing.brand || "",
     model: listing.model || "",
-    status: listing.status || "active",
+    status: listing.status || "pending",
+    denial_reason: listing.denial_reason || "",
   };
+}
+
+function getStatusBadgeClasses(status: string) {
+  if (status === "active") {
+    return "bg-emerald-50 text-emerald-900";
+  }
+
+  if (status === "pending") {
+    return "bg-yellow-100 text-yellow-900";
+  }
+
+  if (status === "denied") {
+    return "bg-red-100 text-red-900";
+  }
+
+  return "bg-stone-200 text-stone-700";
 }
 
 export default function AdminPage() {
@@ -107,6 +126,79 @@ export default function AdminPage() {
     setIsLoading(false);
   }
 
+  async function approveListing(listingId: string, listingTitle: string) {
+    const confirmed = window.confirm(
+      `Approve this listing?\n\n${listingTitle}\n\nThis will make it visible on Browse.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setActionMessage("");
+    setErrorMessage("");
+
+    const { error } = await supabase
+      .from("listings")
+      .update({
+        status: "active",
+        denial_reason: null,
+      })
+      .eq("id", listingId);
+
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+
+    setActionMessage(`Approved "${listingTitle}". It is now visible on Browse.`);
+    await loadListings();
+  }
+
+  async function denyListing(listingId: string, listingTitle: string) {
+    const reason = window.prompt(
+      `Why are you denying this listing?\n\n${listingTitle}\n\nExample: Photo is blurry. Please upload a clearer photo.`
+    );
+
+    if (reason === null) {
+      return;
+    }
+
+    const cleanedReason = reason.trim();
+
+    if (!cleanedReason) {
+      setErrorMessage("A denial reason is required.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Deny this listing?\n\n${listingTitle}\n\nReason:\n${cleanedReason}`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setActionMessage("");
+    setErrorMessage("");
+
+    const { error } = await supabase
+      .from("listings")
+      .update({
+        status: "denied",
+        denial_reason: cleanedReason,
+      })
+      .eq("id", listingId);
+
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+
+    setActionMessage(`Denied "${listingTitle}".`);
+    await loadListings();
+  }
+
   async function markListingInactive(listingId: string, listingTitle: string) {
     const confirmed = window.confirm(
       `Remove this listing from Browse?\n\n${listingTitle}\n\nThis will mark it inactive instead of permanently deleting it.`
@@ -121,7 +213,10 @@ export default function AdminPage() {
 
     const { error } = await supabase
       .from("listings")
-      .update({ status: "inactive" })
+      .update({
+        status: "inactive",
+        denial_reason: null,
+      })
       .eq("id", listingId);
 
     if (error) {
@@ -147,7 +242,10 @@ export default function AdminPage() {
 
     const { error } = await supabase
       .from("listings")
-      .update({ status: "active" })
+      .update({
+        status: "active",
+        denial_reason: null,
+      })
       .eq("id", listingId);
 
     if (error) {
@@ -161,7 +259,7 @@ export default function AdminPage() {
 
   async function deleteListingForever(listingId: string, listingTitle: string) {
     const confirmed = window.confirm(
-      `Permanently delete this listing?\n\n${listingTitle}\n\nThis cannot be undone. Only inactive listings should be deleted forever.`
+      `Permanently delete this listing?\n\n${listingTitle}\n\nThis cannot be undone. Active listings should be removed first.`
     );
 
     if (!confirmed) {
@@ -230,6 +328,7 @@ export default function AdminPage() {
     const cleanedCategory = editForm.category.trim();
     const cleanedCondition = editForm.condition.trim();
     const cleanedStatus = editForm.status.trim();
+    const cleanedDenialReason = editForm.denial_reason.trim();
 
     setActionMessage("");
     setErrorMessage("");
@@ -254,8 +353,18 @@ export default function AdminPage() {
       return;
     }
 
-    if (cleanedStatus !== "active" && cleanedStatus !== "inactive") {
-      setErrorMessage("Status must be active or inactive.");
+    if (
+      cleanedStatus !== "pending" &&
+      cleanedStatus !== "active" &&
+      cleanedStatus !== "inactive" &&
+      cleanedStatus !== "denied"
+    ) {
+      setErrorMessage("Status must be pending, active, inactive, or denied.");
+      return;
+    }
+
+    if (cleanedStatus === "denied" && !cleanedDenialReason) {
+      setErrorMessage("Denied listings need a denial reason.");
       return;
     }
 
@@ -275,6 +384,8 @@ export default function AdminPage() {
         brand: editForm.brand.trim() || null,
         model: editForm.model.trim() || null,
         status: cleanedStatus,
+        denial_reason:
+          cleanedStatus === "denied" ? cleanedDenialReason : null,
       })
       .eq("id", listingId);
 
@@ -361,8 +472,14 @@ export default function AdminPage() {
   const activeListings = listings.filter(
     (listing) => listing.status === "active"
   );
+  const pendingListings = listings.filter(
+    (listing) => listing.status === "pending"
+  );
+  const deniedListings = listings.filter(
+    (listing) => listing.status === "denied"
+  );
   const inactiveListings = listings.filter(
-    (listing) => listing.status !== "active"
+    (listing) => listing.status === "inactive"
   );
   const listingsWithPhotos = listings.filter((listing) => listing.image_url);
   const listingsWithoutPhotos = listings.filter((listing) => !listing.image_url);
@@ -390,6 +507,7 @@ export default function AdminPage() {
       listing.brand || "",
       listing.model || "",
       listing.status,
+      listing.denial_reason || "",
     ]
       .join(" ")
       .toLowerCase();
@@ -575,13 +693,12 @@ export default function AdminPage() {
           </p>
 
           <h2 className="mt-4 max-w-4xl text-5xl font-black tracking-tight">
-            Manage real Archery Swap listings.
+            Review and manage Archery Swap listings.
           </h2>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
-            Review listings, edit listing details, hide test posts from the
-            marketplace, restore listings when needed, and permanently delete
-            inactive listings.
+            Pending listings can be approved or denied. Active listings appear
+            on Browse. Denied listings can store a reason for the seller.
           </p>
         </div>
       </section>
@@ -599,36 +716,41 @@ export default function AdminPage() {
           </div>
         ) : null}
 
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-5">
           <div className="rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
             <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-800">
-              Total listings
+              Total
             </p>
             <p className="mt-3 text-4xl font-black">{listings.length}</p>
           </div>
 
           <div className="rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-yellow-800">
+              Pending
+            </p>
+            <p className="mt-3 text-4xl font-black">{pendingListings.length}</p>
+          </div>
+
+          <div className="rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
             <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-800">
-              Active listings
+              Active
             </p>
             <p className="mt-3 text-4xl font-black">{activeListings.length}</p>
           </div>
 
           <div className="rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
-            <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-800">
-              Inactive listings
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-red-800">
+              Denied
             </p>
-            <p className="mt-3 text-4xl font-black">
-              {inactiveListings.length}
-            </p>
+            <p className="mt-3 text-4xl font-black">{deniedListings.length}</p>
           </div>
 
           <div className="rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
-            <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-800">
-              With photos
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-stone-700">
+              Inactive
             </p>
             <p className="mt-3 text-4xl font-black">
-              {listingsWithPhotos.length}
+              {inactiveListings.length}
             </p>
           </div>
         </div>
@@ -707,7 +829,9 @@ export default function AdminPage() {
                 className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
               >
                 <option value="all">All statuses</option>
+                <option value="pending">Pending only</option>
                 <option value="active">Active only</option>
+                <option value="denied">Denied only</option>
                 <option value="inactive">Inactive only</option>
               </select>
             </div>
@@ -758,6 +882,8 @@ export default function AdminPage() {
 
           <p className="mt-4 text-sm font-bold text-stone-500">
             Showing {filteredListings.length} of {listings.length} listings.
+            Listings without photos: {listingsWithoutPhotos.length}. Listings
+            with photos: {listingsWithPhotos.length}.
           </p>
         </div>
 
@@ -766,12 +892,9 @@ export default function AdminPage() {
             <div>
               <h3 className="text-2xl font-black">All listings</h3>
               <p className="text-stone-600">
-                Use Edit to correct listing details. Active listings can be
-                removed from Browse. Inactive listings can be restored or
-                permanently deleted.
-              </p>
-              <p className="mt-1 text-sm font-bold text-stone-500">
-                Listings without photos: {listingsWithoutPhotos.length}
+                Pending listings can be approved or denied. Active listings can
+                be removed from Browse. Inactive and denied listings can be
+                deleted forever.
               </p>
             </div>
 
@@ -1014,9 +1137,29 @@ export default function AdminPage() {
                                   }
                                   className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
                                 >
+                                  <option value="pending">Pending</option>
                                   <option value="active">Active</option>
                                   <option value="inactive">Inactive</option>
+                                  <option value="denied">Denied</option>
                                 </select>
+                              </div>
+
+                              <div className="md:col-span-2">
+                                <label className="text-sm font-black uppercase tracking-[0.14em] text-stone-700">
+                                  Denial Reason
+                                </label>
+                                <textarea
+                                  value={editForm.denial_reason}
+                                  onChange={(event) =>
+                                    updateEditForm(
+                                      "denial_reason",
+                                      event.target.value
+                                    )
+                                  }
+                                  rows={3}
+                                  placeholder="Only needed if status is denied."
+                                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                                />
                               </div>
 
                               <div className="md:col-span-2">
@@ -1078,6 +1221,13 @@ export default function AdminPage() {
                             <p className="mt-1 text-xs font-bold text-stone-400">
                               Photo: {listing.image_url ? "Yes" : "No"}
                             </p>
+
+                            {listing.status === "denied" &&
+                            listing.denial_reason ? (
+                              <p className="mt-2 rounded-xl bg-red-50 p-3 text-xs font-bold text-red-800">
+                                Denial reason: {listing.denial_reason}
+                              </p>
+                            ) : null}
                           </div>
 
                           <div>
@@ -1101,11 +1251,9 @@ export default function AdminPage() {
                               Status
                             </p>
                             <span
-                              className={`inline-block rounded-full px-3 py-1 text-xs font-black ${
-                                listing.status === "active"
-                                  ? "bg-emerald-50 text-emerald-900"
-                                  : "bg-stone-200 text-stone-700"
-                              }`}
+                              className={`inline-block rounded-full px-3 py-1 text-xs font-black ${getStatusBadgeClasses(
+                                listing.status
+                              )}`}
                             >
                               {listing.status}
                             </span>
@@ -1129,29 +1277,68 @@ export default function AdminPage() {
                               Edit
                             </button>
 
-                            {listing.status === "active" ? (
-                              <Link
-                                href={`/listing/${listing.id}`}
-                                className="rounded-xl bg-emerald-600 px-4 py-2 text-center text-sm font-black text-white hover:bg-emerald-500"
-                              >
-                                View
-                              </Link>
+                            {listing.status === "pending" ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    approveListing(listing.id, listing.title)
+                                  }
+                                  className="rounded-xl bg-emerald-600 px-4 py-2 text-center text-sm font-black text-white hover:bg-emerald-500"
+                                >
+                                  Approve
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    denyListing(listing.id, listing.title)
+                                  }
+                                  className="rounded-xl border border-red-300 px-4 py-2 text-sm font-black text-red-700 hover:bg-red-50"
+                                >
+                                  Deny
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    deleteListingForever(
+                                      listing.id,
+                                      listing.title
+                                    )
+                                  }
+                                  className="rounded-xl border border-red-400 bg-red-50 px-4 py-2 text-sm font-black text-red-800 hover:bg-red-100"
+                                >
+                                  Delete Forever
+                                </button>
+                              </>
                             ) : null}
 
                             {listing.status === "active" ? (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  markListingInactive(
-                                    listing.id,
-                                    listing.title
-                                  )
-                                }
-                                className="rounded-xl border border-red-300 px-4 py-2 text-sm font-black text-red-700 hover:bg-red-50"
-                              >
-                                Remove
-                              </button>
-                            ) : (
+                              <>
+                                <Link
+                                  href={`/listing/${listing.id}`}
+                                  className="rounded-xl bg-emerald-600 px-4 py-2 text-center text-sm font-black text-white hover:bg-emerald-500"
+                                >
+                                  View
+                                </Link>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    markListingInactive(
+                                      listing.id,
+                                      listing.title
+                                    )
+                                  }
+                                  className="rounded-xl border border-red-300 px-4 py-2 text-sm font-black text-red-700 hover:bg-red-50"
+                                >
+                                  Remove
+                                </button>
+                              </>
+                            ) : null}
+
+                            {listing.status === "inactive" ? (
                               <>
                                 <button
                                   type="button"
@@ -1176,7 +1363,34 @@ export default function AdminPage() {
                                   Delete Forever
                                 </button>
                               </>
-                            )}
+                            ) : null}
+
+                            {listing.status === "denied" ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    approveListing(listing.id, listing.title)
+                                  }
+                                  className="rounded-xl bg-emerald-600 px-4 py-2 text-center text-sm font-black text-white hover:bg-emerald-500"
+                                >
+                                  Approve
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    deleteListingForever(
+                                      listing.id,
+                                      listing.title
+                                    )
+                                  }
+                                  className="rounded-xl border border-red-400 bg-red-50 px-4 py-2 text-sm font-black text-red-800 hover:bg-red-100"
+                                >
+                                  Delete Forever
+                                </button>
+                              </>
+                            ) : null}
                           </div>
                         </>
                       )}
@@ -1191,11 +1405,9 @@ export default function AdminPage() {
         <div className="mt-8 rounded-3xl bg-stone-950 p-6 text-white">
           <h3 className="text-2xl font-black">Admin note</h3>
           <p className="mt-3 max-w-4xl leading-8 text-stone-300">
-            This admin page is protected with a temporary password gate. Active
-            listings should be removed first, then inactive listings can be
-            restored or permanently deleted. Search and filters only change what
-            you see on this page. The Edit button changes the selected listing
-            in the database after you click Save Changes.
+            Pending listings do not appear on Browse until approved. Denied
+            listings keep a denial reason so you can later message the seller
+            with what needs to be fixed.
           </p>
         </div>
       </section>

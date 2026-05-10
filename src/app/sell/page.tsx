@@ -193,14 +193,17 @@ export default function SellPage() {
         included_accessories: includedAccessories.trim() || null,
         shipping_available: shippingAvailable,
         image_url: photoUrl,
-        status: "active",
+        status: "pending",
+        denial_reason: null,
       });
 
       if (error) {
         throw new Error(error.message);
       }
 
-      setSuccessMessage("Your listing was saved successfully.");
+      setSuccessMessage(
+        "Your listing was submitted successfully and is waiting for admin approval."
+      );
 
       setTitle("");
       setCategory("");
@@ -227,7 +230,7 @@ export default function SellPage() {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Something went wrong while saving your listing."
+          : "Something went wrong while submitting your listing."
       );
     }
 
@@ -285,8 +288,8 @@ export default function SellPage() {
           </h2>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
-            Create a real listing with archery-specific details and upload one
-            listing photo.
+            Submit your listing with archery-specific details and one clear
+            photo. Listings are reviewed before they appear in Browse.
           </p>
         </div>
       </section>
@@ -297,7 +300,8 @@ export default function SellPage() {
             <h3 className="text-3xl font-black">Create a listing</h3>
             <p className="mt-2 text-stone-600">
               Add the details a buyer needs to understand exactly what you are
-              selling.
+              selling. After submitting, your listing will wait for admin
+              approval before it appears in Browse.
             </p>
           </div>
 
@@ -609,6 +613,7 @@ export default function SellPage() {
                 <li>• Use clear photos from multiple angles.</li>
                 <li>• Be honest about wear, damage, or missing parts.</li>
                 <li>• Include important bow specs when possible.</li>
+                <li>• Your listing will be reviewed before it appears in Browse.</li>
                 <li>• Do not share payment info outside the platform.</li>
               </ul>
             </div>
@@ -619,7 +624,7 @@ export default function SellPage() {
                 disabled={isSubmitting}
                 className="rounded-xl bg-emerald-600 px-6 py-3 font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-stone-400"
               >
-                {isSubmitting ? "Saving Listing..." : "Save Listing"}
+                {isSubmitting ? "Submitting Listing..." : "Submit Listing"}
               </button>
 
               <button
