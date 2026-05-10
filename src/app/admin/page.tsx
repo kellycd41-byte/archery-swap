@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type Listing = {
@@ -36,10 +36,16 @@ function formatDate(dateValue: string) {
 }
 
 export default function AdminPage() {
+  const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "";
+
   const [listings, setListings] = useState<Listing[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
 
   async function loadListings() {
     setIsLoading(true);
@@ -113,9 +119,56 @@ export default function AdminPage() {
     await loadListings();
   }
 
+  function handleAdminLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const typedPassword = passwordInput.trim();
+    const savedPassword = adminPassword.trim();
+
+    setPasswordError("");
+
+    if (!savedPassword) {
+      setPasswordError(
+        "Admin password is missing. Check NEXT_PUBLIC_ADMIN_PASSWORD in .env.local, then restart npm run dev."
+      );
+      return;
+    }
+
+    if (typedPassword !== savedPassword) {
+      setPasswordError("Incorrect password. Please try again.");
+      return;
+    }
+
+    window.sessionStorage.setItem("archerySwapAdminUnlocked", "true");
+    setIsAdminUnlocked(true);
+    setPasswordInput("");
+  }
+
+  function handleAdminLogout() {
+    window.sessionStorage.removeItem("archerySwapAdminUnlocked");
+    setIsAdminUnlocked(false);
+    setListings([]);
+    setActionMessage("");
+    setErrorMessage("");
+    setPasswordInput("");
+    setPasswordError("");
+  }
+
   useEffect(() => {
-    loadListings();
+    const savedAdminAccess = window.sessionStorage.getItem(
+      "archerySwapAdminUnlocked"
+    );
+
+    if (savedAdminAccess === "true") {
+      setIsAdminUnlocked(true);
+    }
   }, []);
+
+  useEffect(() => {
+    if (isAdminUnlocked) {
+      loadListings();
+    }
+  }, [isAdminUnlocked]);
 
   const activeListings = listings.filter(
     (listing) => listing.status === "active"
@@ -125,6 +178,92 @@ export default function AdminPage() {
   );
   const listingsWithPhotos = listings.filter((listing) => listing.image_url);
   const listingsWithoutPhotos = listings.filter((listing) => !listing.image_url);
+
+  if (!isAdminUnlocked) {
+    return (
+      <main className="min-h-screen bg-stone-100 text-stone-950">
+        <header className="border-b border-stone-300 bg-stone-950 text-white">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+            <Link href="/" className="block">
+              <h1 className="text-2xl font-black tracking-tight">
+                Archery Swap
+              </h1>
+              <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-300">
+                Buy • Sell • Archery Gear
+              </p>
+            </Link>
+
+            <Link
+              href="/"
+              className="rounded-xl border border-stone-500 px-4 py-2 text-sm font-black text-white hover:bg-stone-800"
+            >
+              Back Home
+            </Link>
+          </div>
+        </header>
+
+        <section className="flex min-h-[calc(100vh-82px)] items-center justify-center px-6 py-12">
+          <div className="w-full max-w-md rounded-3xl border border-stone-300 bg-white p-8 shadow-sm">
+            <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-800">
+              Admin Access
+            </p>
+
+            <h2 className="mt-4 text-4xl font-black tracking-tight">
+              Enter admin password.
+            </h2>
+
+            <p className="mt-4 leading-7 text-stone-600">
+              This temporary password gate keeps casual visitors away from the
+              admin dashboard while Archery Swap is still in development.
+            </p>
+
+            <form onSubmit={handleAdminLogin} className="mt-6 space-y-4">
+              <div>
+                <label
+                  htmlFor="admin-password"
+                  className="text-sm font-black uppercase tracking-[0.14em] text-stone-700"
+                >
+                  Password
+                </label>
+
+                <input
+                  id="admin-password"
+                  type="password"
+                  value={passwordInput}
+                  onChange={(event) => setPasswordInput(event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                  placeholder="Enter password"
+                />
+              </div>
+
+              {passwordError ? (
+                <div className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm font-bold text-red-800">
+                  {passwordError}
+                </div>
+              ) : null}
+
+              <button
+                type="submit"
+                className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-500"
+              >
+                Unlock Admin
+              </button>
+            </form>
+
+            <div className="mt-5 rounded-2xl bg-stone-100 p-4 text-sm font-bold text-stone-600">
+              Admin password setting:{" "}
+              {adminPassword ? "Loaded" : "Missing from .env.local"}
+            </div>
+
+            <p className="mt-5 text-sm font-bold text-stone-500">
+              Later, this will be replaced with real admin accounts using
+              Supabase Auth.
+            </p>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
@@ -160,12 +299,22 @@ export default function AdminPage() {
             </Link>
           </nav>
 
-          <Link
-            href="/sell"
-            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-500"
-          >
-            Sell Your Gear
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleAdminLogout}
+              className="rounded-xl border border-stone-500 px-4 py-2 text-sm font-black text-white hover:bg-stone-800"
+            >
+              Lock Admin
+            </button>
+
+            <Link
+              href="/sell"
+              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-500"
+            >
+              Sell Your Gear
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -181,8 +330,8 @@ export default function AdminPage() {
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
             Review listings, hide test posts from the marketplace, and restore
-            listings when needed. This page will be protected by admin login
-            later.
+            listings when needed. This page is protected by a temporary password
+            gate while the site is in development.
           </p>
         </div>
       </section>
@@ -397,9 +546,9 @@ export default function AdminPage() {
         <div className="mt-8 rounded-3xl bg-stone-950 p-6 text-white">
           <h3 className="text-2xl font-black">Admin note</h3>
           <p className="mt-3 max-w-4xl leading-8 text-stone-300">
-            This admin page is currently for development only. Later we will add
-            real admin login protection so only approved admins can remove or
-            restore listings.
+            This admin page is protected with a temporary password gate. Later
+            we will replace this with real admin login protection so only
+            approved admins can remove or restore listings.
           </p>
         </div>
       </section>
