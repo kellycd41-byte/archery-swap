@@ -1,53 +1,10 @@
 import Link from "next/link";
 
-const conversations = [
-  {
-    name: "BowHunter41",
-    item: "Mathews V3X Compound Bow",
-    lastMessage: "Is the bow still available?",
-    time: "10:42 AM",
-    active: true,
-  },
-  {
-    name: "CrossbowCrew",
-    item: "Ravin Crossbow Package",
-    lastMessage: "Would you consider $975?",
-    time: "Yesterday",
-    active: false,
-  },
-  {
-    name: "TargetTime",
-    item: "Easton Axis Arrows - Dozen",
-    lastMessage: "Can you ship to Pennsylvania?",
-    time: "Monday",
-    active: false,
-  },
-];
-
-const messages = [
-  {
-    sender: "buyer",
-    text: "Hey, is the Mathews V3X still available?",
-  },
-  {
-    sender: "seller",
-    text: "Yes, it is still available.",
-  },
-  {
-    sender: "buyer",
-    text: "Great. Any damage or issues I should know about?",
-  },
-  {
-    sender: "seller",
-    text: "No damage. It has normal wear from hunting season, but everything works well.",
-  },
-];
-
 export default function MessagesPage() {
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
       <header className="border-b border-stone-300 bg-stone-950 text-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-5">
           <Link href="/" className="block">
             <h1 className="text-2xl font-black tracking-tight">
               Archery Swap
@@ -75,12 +32,53 @@ export default function MessagesPage() {
             </Link>
           </nav>
 
-          <Link
-            href="/sell"
-            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-500"
-          >
-            Sell Your Gear
-          </Link>
+          <div className="hidden md:block">
+            <Link
+              href="/sell"
+              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-500"
+            >
+              Sell Your Gear
+            </Link>
+          </div>
+
+          <details className="relative md:hidden">
+            <summary className="cursor-pointer list-none rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-500">
+              Menu
+            </summary>
+
+            <div className="absolute right-0 z-50 mt-3 w-56 rounded-2xl border border-stone-700 bg-stone-950 p-3 shadow-xl">
+              <Link
+                href="/"
+                className="block rounded-xl px-4 py-3 text-sm font-bold text-white hover:bg-stone-800 hover:text-emerald-300"
+              >
+                Home
+              </Link>
+              <Link
+                href="/browse"
+                className="block rounded-xl px-4 py-3 text-sm font-bold text-white hover:bg-stone-800 hover:text-emerald-300"
+              >
+                Browse Gear
+              </Link>
+              <Link
+                href="/sell"
+                className="block rounded-xl px-4 py-3 text-sm font-bold text-white hover:bg-stone-800 hover:text-emerald-300"
+              >
+                Sell Gear
+              </Link>
+              <Link
+                href="/messages"
+                className="block rounded-xl bg-stone-800 px-4 py-3 text-sm font-bold text-emerald-300"
+              >
+                Messages
+              </Link>
+              <Link
+                href="/account"
+                className="block rounded-xl px-4 py-3 text-sm font-bold text-white hover:bg-stone-800 hover:text-emerald-300"
+              >
+                Account
+              </Link>
+            </div>
+          </details>
         </div>
       </header>
 
@@ -90,111 +88,112 @@ export default function MessagesPage() {
             Messages
           </p>
 
-          <h2 className="mt-4 max-w-4xl text-5xl font-black tracking-tight">
-            Keep buyer and seller conversations in one place.
+          <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">
+            Direct buyer and seller messaging is coming soon.
           </h2>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
-            This is the first version of messaging. Later, we’ll connect this to
-            real user accounts, listings, notifications, and database messages.
+            We are preparing a safer messaging system for Archery Swap. Once it
+            is ready, buyers and sellers will be able to contact each other
+            directly from listings.
           </p>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-6 px-6 py-10 lg:grid-cols-[340px_1fr]">
-        <aside className="rounded-3xl border border-stone-300 bg-white p-4 shadow-sm">
-          <h3 className="px-2 pb-4 text-2xl font-black">Inbox</h3>
-
-          <div className="space-y-3">
-            {conversations.map((conversation) => (
-              <button
-                key={conversation.name}
-                className={`w-full rounded-2xl border p-4 text-left ${
-                  conversation.active
-                    ? "border-emerald-700 bg-emerald-50"
-                    : "border-stone-300 bg-stone-50 hover:bg-stone-100"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-black">{conversation.name}</p>
-                  <p className="text-xs font-bold text-stone-500">
-                    {conversation.time}
-                  </p>
-                </div>
-
-                <p className="mt-1 text-sm font-bold text-emerald-800">
-                  {conversation.item}
-                </p>
-
-                <p className="mt-2 line-clamp-1 text-sm text-stone-600">
-                  {conversation.lastMessage}
-                </p>
-              </button>
-            ))}
-          </div>
-        </aside>
-
-        <section className="rounded-3xl border border-stone-300 bg-white shadow-sm">
-          <div className="border-b border-stone-300 p-6">
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-800">
-              Mathews V3X Compound Bow
+      <section className="mx-auto grid max-w-7xl gap-6 px-6 py-10 lg:grid-cols-[1fr_380px]">
+        <div className="rounded-3xl border border-stone-300 bg-white p-8 shadow-sm">
+          <div className="rounded-3xl border border-dashed border-emerald-700 bg-emerald-50 p-8">
+            <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-800">
+              Coming Soon
             </p>
 
-            <h3 className="mt-2 text-2xl font-black">
-              Conversation with BowHunter41
+            <h3 className="mt-4 text-3xl font-black tracking-tight text-stone-950">
+              Messaging is not active yet.
             </h3>
 
-            <Link
-              href="/listing/1"
-              className="mt-3 inline-block text-sm font-black text-emerald-800 hover:text-emerald-600"
-            >
-              View listing →
-            </Link>
-          </div>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-stone-700">
+              This page is ready for the future messaging feature, but real
+              conversations are not connected yet. We removed the fake inbox so
+              the site feels cleaner and more honest while we finish the
+              marketplace.
+            </p>
 
-          <div className="space-y-4 p-6">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${
-                  message.sender === "buyer" ? "justify-end" : "justify-start"
-                }`}
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              <Link
+                href="/browse"
+                className="rounded-2xl bg-stone-950 px-5 py-4 text-center text-sm font-black text-white hover:bg-stone-800"
               >
-                <div
-                  className={`max-w-xl rounded-2xl px-5 py-3 ${
-                    message.sender === "buyer"
-                      ? "bg-emerald-600 text-white"
-                      : "bg-stone-100 text-stone-950"
-                  }`}
-                >
-                  <p>{message.text}</p>
-                </div>
-              </div>
-            ))}
+                Browse Gear
+              </Link>
+
+              <Link
+                href="/sell"
+                className="rounded-2xl bg-emerald-600 px-5 py-4 text-center text-sm font-black text-white hover:bg-emerald-500"
+              >
+                List Your Gear
+              </Link>
+            </div>
           </div>
 
-          <div className="border-t border-stone-300 p-6">
-            <label className="text-sm font-black text-stone-700">
-              New message
-            </label>
-
-            <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-              <input
-                type="text"
-                placeholder="Type your message..."
-                className="flex-1 rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-emerald-700"
-              />
-
-              <button className="rounded-xl bg-emerald-600 px-6 py-3 font-black text-white hover:bg-emerald-500">
-                Send
-              </button>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-stone-300 bg-stone-50 p-5">
+              <p className="text-lg font-black">Buyer questions</p>
+              <p className="mt-2 text-sm leading-6 text-stone-600">
+                Buyers will be able to ask about condition, included gear, and
+                shipping before making a deal.
+              </p>
             </div>
 
-            <p className="mt-3 text-sm text-stone-500">
-              Sending messages will be connected later.
-            </p>
+            <div className="rounded-2xl border border-stone-300 bg-stone-50 p-5">
+              <p className="text-lg font-black">Seller replies</p>
+              <p className="mt-2 text-sm leading-6 text-stone-600">
+                Sellers will be able to respond from one inbox instead of
+                managing messages across different places.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-stone-300 bg-stone-50 p-5">
+              <p className="text-lg font-black">Safer deals</p>
+              <p className="mt-2 text-sm leading-6 text-stone-600">
+                Messaging will be built with account support so conversations
+                can be tied to real listings and users.
+              </p>
+            </div>
           </div>
-        </section>
+        </div>
+
+        <aside className="rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
+          <h3 className="text-2xl font-black">What to do for now</h3>
+
+          <div className="mt-5 space-y-4">
+            <div className="rounded-2xl bg-stone-100 p-5">
+              <p className="font-black">Looking to buy?</p>
+              <p className="mt-2 text-sm leading-6 text-stone-600">
+                Browse available listings and review the item details,
+                description, photos, and seller information shown on the
+                listing page.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-stone-100 p-5">
+              <p className="font-black">Looking to sell?</p>
+              <p className="mt-2 text-sm leading-6 text-stone-600">
+                Create a detailed listing with clear photos, specs, condition,
+                location, and shipping information so buyers know what you are
+                offering.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-stone-950 p-5 text-white">
+              <p className="font-black text-emerald-300">Next major step</p>
+              <p className="mt-2 text-sm leading-6 text-stone-300">
+                Real messaging will work best after account sign-in is added, so
+                messages can be connected to the correct buyer, seller, and
+                listing.
+              </p>
+            </div>
+          </div>
+        </aside>
       </section>
     </main>
   );
