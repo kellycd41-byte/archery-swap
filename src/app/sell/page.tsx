@@ -28,6 +28,91 @@ function makeSafeFileName(fileName: string) {
     .replace(/-+/g, "-");
 }
 
+function Header() {
+  return (
+    <header className="border-b border-stone-800 bg-stone-950 text-white">
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+        <div className="flex items-center justify-between gap-4">
+          <Link href="/" className="min-w-0">
+            <h1 className="text-xl font-black tracking-tight sm:text-2xl">
+              Archery Swap
+            </h1>
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-300 sm:text-xs">
+              Buy • Sell • Archery Gear
+            </p>
+          </Link>
+
+          <nav className="hidden items-center gap-6 text-sm font-bold md:flex">
+            <Link href="/" className="hover:text-emerald-300">
+              Home
+            </Link>
+            <Link href="/browse" className="hover:text-emerald-300">
+              Browse Gear
+            </Link>
+            <Link href="/sell" className="text-emerald-300">
+              Sell Gear
+            </Link>
+            <Link href="/messages" className="hover:text-emerald-300">
+              Messages
+            </Link>
+            <Link href="/account" className="hover:text-emerald-300">
+              Account
+            </Link>
+          </nav>
+
+          <div className="hidden md:block">
+            <Link
+              href="/browse"
+              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-500"
+            >
+              Browse Gear
+            </Link>
+          </div>
+
+          <details className="relative md:hidden">
+            <summary className="cursor-pointer list-none rounded-xl border border-stone-700 px-4 py-2 text-sm font-black text-white">
+              Menu
+            </summary>
+
+            <div className="absolute right-0 z-20 mt-3 w-56 overflow-hidden rounded-2xl border border-stone-700 bg-stone-900 shadow-2xl">
+              <Link
+                href="/"
+                className="block border-b border-stone-800 px-4 py-3 text-sm font-bold hover:bg-stone-800"
+              >
+                Home
+              </Link>
+              <Link
+                href="/browse"
+                className="block border-b border-stone-800 px-4 py-3 text-sm font-bold hover:bg-stone-800"
+              >
+                Browse Gear
+              </Link>
+              <Link
+                href="/sell"
+                className="block border-b border-stone-800 bg-stone-800 px-4 py-3 text-sm font-bold text-emerald-300"
+              >
+                Sell Gear
+              </Link>
+              <Link
+                href="/messages"
+                className="block border-b border-stone-800 px-4 py-3 text-sm font-bold hover:bg-stone-800"
+              >
+                Messages
+              </Link>
+              <Link
+                href="/account"
+                className="block px-4 py-3 text-sm font-bold hover:bg-stone-800"
+              >
+                Account
+              </Link>
+            </div>
+          </details>
+        </div>
+      </div>
+    </header>
+  );
+}
+
 export default function SellPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -202,7 +287,7 @@ export default function SellPage() {
       }
 
       setSuccessMessage(
-        "Your listing was submitted successfully and is waiting for admin approval."
+        "Your listing was submitted successfully and is waiting for approval."
       );
 
       setTitle("");
@@ -239,69 +324,33 @@ export default function SellPage() {
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
-      <header className="border-b border-stone-300 bg-stone-950 text-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <Link href="/" className="block">
-            <h1 className="text-2xl font-black tracking-tight">
-              Archery Swap
-            </h1>
-            <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-300">
-              Buy • Sell • Archery Gear
-            </p>
-          </Link>
+      <Header />
 
-          <nav className="hidden gap-6 text-sm font-bold md:flex">
-            <Link href="/" className="hover:text-emerald-300">
-              Home
-            </Link>
-            <Link href="/browse" className="hover:text-emerald-300">
-              Browse Gear
-            </Link>
-            <Link href="/sell" className="text-emerald-300">
-              Sell Gear
-            </Link>
-            <Link href="/messages" className="hover:text-emerald-300">
-              Messages
-            </Link>
-            <Link href="/account" className="hover:text-emerald-300">
-              Account
-            </Link>
-          </nav>
-
-          <Link
-            href="/browse"
-            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-500"
-          >
-            Browse Gear
-          </Link>
-        </div>
-      </header>
-
-      <section className="bg-stone-950 px-6 py-16 text-white">
+      <section className="bg-stone-950 px-4 py-14 text-white sm:px-6 md:py-16">
         <div className="mx-auto max-w-7xl">
           <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-300">
             Sell Gear
           </p>
 
-          <h2 className="mt-4 max-w-4xl text-5xl font-black tracking-tight">
+          <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">
             List your archery gear for sale.
           </h2>
 
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
+          <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
             Submit your listing with archery-specific details and one clear
             photo. Listings are reviewed before they appear in Browse.
           </p>
         </div>
       </section>
 
-      <section className="mx-auto max-w-5xl px-6 py-10">
-        <div className="rounded-3xl border border-stone-300 bg-white p-6 shadow-sm md:p-8">
+      <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6 md:p-8">
           <div className="mb-8">
             <h3 className="text-3xl font-black">Create a listing</h3>
             <p className="mt-2 text-stone-600">
               Add the details a buyer needs to understand exactly what you are
-              selling. After submitting, your listing will wait for admin
-              approval before it appears in Browse.
+              selling. After submitting, your listing will wait for approval
+              before it appears in Browse.
             </p>
           </div>
 
@@ -610,30 +659,21 @@ export default function SellPage() {
             <div className="rounded-2xl bg-stone-100 p-5">
               <h4 className="font-black">Listing safety checklist</h4>
               <ul className="mt-3 space-y-2 text-sm text-stone-700">
-                <li>• Use clear photos from multiple angles.</li>
+                <li>• Use a clear photo that shows the item well.</li>
                 <li>• Be honest about wear, damage, or missing parts.</li>
                 <li>• Include important bow specs when possible.</li>
                 <li>• Your listing will be reviewed before it appears in Browse.</li>
-                <li>• Do not share payment info outside the platform.</li>
+                <li>• Do not share payment information in your listing.</li>
               </ul>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="rounded-xl bg-emerald-600 px-6 py-3 font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-stone-400"
-              >
-                {isSubmitting ? "Submitting Listing..." : "Submit Listing"}
-              </button>
-
-              <button
-                type="button"
-                className="rounded-xl border border-stone-400 px-6 py-3 font-black text-stone-950 hover:bg-stone-100"
-              >
-                Save Draft Later
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full rounded-xl bg-emerald-600 px-6 py-3 font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-stone-400 sm:w-auto"
+            >
+              {isSubmitting ? "Submitting Listing..." : "Submit Listing"}
+            </button>
           </form>
         </div>
       </section>
