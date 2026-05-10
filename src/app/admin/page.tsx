@@ -21,6 +21,20 @@ type Listing = {
   model: string | null;
 };
 
+type EditForm = {
+  title: string;
+  description: string;
+  price: string;
+  category: string;
+  condition: string;
+  location: string;
+  seller_name: string;
+  seller_email: string;
+  brand: string;
+  model: string;
+  status: string;
+};
+
 function formatDate(dateValue: string) {
   const date = new Date(dateValue);
 
@@ -33,6 +47,22 @@ function formatDate(dateValue: string) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function makeEditForm(listing: Listing): EditForm {
+  return {
+    title: listing.title || "",
+    description: listing.description || "",
+    price: String(listing.price || ""),
+    category: listing.category || "",
+    condition: listing.condition || "",
+    location: listing.location || "",
+    seller_name: listing.seller_name || "",
+    seller_email: listing.seller_email || "",
+    brand: listing.brand || "",
+    model: listing.model || "",
+    status: listing.status || "active",
+  };
 }
 
 export default function AdminPage() {
@@ -52,6 +82,10 @@ export default function AdminPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [photoFilter, setPhotoFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+
+  const [editingListingId, setEditingListingId] = useState("");
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   async function loadListings() {
     setIsLoading(true);
@@ -160,6 +194,103 @@ export default function AdminPage() {
     await loadListings();
   }
 
+  function startEditingListing(listing: Listing) {
+    setActionMessage("");
+    setErrorMessage("");
+    setEditingListingId(listing.id);
+    setEditForm(makeEditForm(listing));
+  }
+
+  function cancelEditingListing() {
+    setEditingListingId("");
+    setEditForm(null);
+    setIsSavingEdit(false);
+  }
+
+  function updateEditForm(field: keyof EditForm, value: string) {
+    setEditForm((currentForm) => {
+      if (!currentForm) {
+        return currentForm;
+      }
+
+      return {
+        ...currentForm,
+        [field]: value,
+      };
+    });
+  }
+
+  async function saveListingEdits(listingId: string) {
+    if (!editForm) {
+      return;
+    }
+
+    const cleanedTitle = editForm.title.trim();
+    const cleanedPrice = Number(editForm.price);
+    const cleanedCategory = editForm.category.trim();
+    const cleanedCondition = editForm.condition.trim();
+    const cleanedStatus = editForm.status.trim();
+
+    setActionMessage("");
+    setErrorMessage("");
+
+    if (!cleanedTitle) {
+      setErrorMessage("Title is required.");
+      return;
+    }
+
+    if (!editForm.price.trim() || Number.isNaN(cleanedPrice) || cleanedPrice < 0) {
+      setErrorMessage("Price must be a valid number.");
+      return;
+    }
+
+    if (!cleanedCategory) {
+      setErrorMessage("Category is required.");
+      return;
+    }
+
+    if (!cleanedCondition) {
+      setErrorMessage("Condition is required.");
+      return;
+    }
+
+    if (cleanedStatus !== "active" && cleanedStatus !== "inactive") {
+      setErrorMessage("Status must be active or inactive.");
+      return;
+    }
+
+    setIsSavingEdit(true);
+
+    const { error } = await supabase
+      .from("listings")
+      .update({
+        title: cleanedTitle,
+        description: editForm.description.trim(),
+        price: cleanedPrice,
+        category: cleanedCategory,
+        condition: cleanedCondition,
+        location: editForm.location.trim() || null,
+        seller_name: editForm.seller_name.trim() || null,
+        seller_email: editForm.seller_email.trim() || null,
+        brand: editForm.brand.trim() || null,
+        model: editForm.model.trim() || null,
+        status: cleanedStatus,
+      })
+      .eq("id", listingId);
+
+    setIsSavingEdit(false);
+
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+
+    setActionMessage(`Updated "${cleanedTitle}".`);
+    setEditingListingId("");
+    setEditForm(null);
+    await loadListings();
+  }
+
   function handleAdminLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -198,6 +329,9 @@ export default function AdminPage() {
     setStatusFilter("all");
     setPhotoFilter("all");
     setCategoryFilter("all");
+    setEditingListingId("");
+    setEditForm(null);
+    setIsSavingEdit(false);
   }
 
   function clearFilters() {
@@ -445,9 +579,9 @@ export default function AdminPage() {
           </h2>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
-            Review listings, hide test posts from the marketplace, restore
-            listings when needed, permanently delete inactive listings, and
-            quickly search for the exact listing you need.
+            Review listings, edit listing details, hide test posts from the
+            marketplace, restore listings when needed, and permanently delete
+            inactive listings.
           </p>
         </div>
       </section>
@@ -632,8 +766,9 @@ export default function AdminPage() {
             <div>
               <h3 className="text-2xl font-black">All listings</h3>
               <p className="text-stone-600">
-                Active listings can be removed from Browse. Inactive listings
-                can be restored or permanently deleted.
+                Use Edit to correct listing details. Active listings can be
+                removed from Browse. Inactive listings can be restored or
+                permanently deleted.
               </p>
               <p className="mt-1 text-sm font-bold text-stone-500">
                 Listings without photos: {listingsWithoutPhotos.length}
@@ -694,115 +829,360 @@ export default function AdminPage() {
               </div>
 
               <div className="divide-y divide-stone-300 bg-white">
-                {filteredListings.map((listing) => (
-                  <div
-                    key={listing.id}
-                    className="grid gap-4 px-4 py-5 md:grid-cols-[1.2fr_0.7fr_0.6fr_0.6fr_0.7fr_0.8fr] md:items-center"
-                  >
-                    <div>
-                      <p className="text-lg font-black">{listing.title}</p>
+                {filteredListings.map((listing) => {
+                  const isEditingThisListing = editingListingId === listing.id;
 
-                      <p className="mt-1 text-sm font-bold text-stone-500">
-                        {listing.brand || "No brand"}
-                        {listing.model ? ` ${listing.model}` : ""} •{" "}
-                        {listing.condition}
-                      </p>
+                  return (
+                    <div
+                      key={listing.id}
+                      className="grid gap-4 px-4 py-5 md:grid-cols-[1.2fr_0.7fr_0.6fr_0.6fr_0.7fr_0.8fr] md:items-center"
+                    >
+                      {isEditingThisListing && editForm ? (
+                        <div className="md:col-span-6">
+                          <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-5">
+                            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                              <div>
+                                <h4 className="text-xl font-black">
+                                  Edit Listing
+                                </h4>
+                                <p className="text-sm font-bold text-stone-600">
+                                  Update the listing details, then save.
+                                </p>
+                              </div>
 
-                      <p className="mt-1 text-xs font-bold text-stone-400">
-                        Seller: {listing.seller_name || "Not listed"}
-                      </p>
+                              <button
+                                type="button"
+                                onClick={cancelEditingListing}
+                                className="rounded-xl border border-stone-400 bg-white px-4 py-2 text-sm font-black hover:bg-stone-100"
+                                disabled={isSavingEdit}
+                              >
+                                Cancel
+                              </button>
+                            </div>
 
-                      <p className="mt-1 text-xs font-bold text-stone-400">
-                        Photo: {listing.image_url ? "Yes" : "No"}
-                      </p>
-                    </div>
+                            <div className="mt-5 grid gap-4 md:grid-cols-2">
+                              <div>
+                                <label className="text-sm font-black uppercase tracking-[0.14em] text-stone-700">
+                                  Title
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editForm.title}
+                                  onChange={(event) =>
+                                    updateEditForm("title", event.target.value)
+                                  }
+                                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                                />
+                              </div>
 
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500 md:hidden">
-                        Category
-                      </p>
-                      <p className="font-bold">{listing.category}</p>
-                    </div>
+                              <div>
+                                <label className="text-sm font-black uppercase tracking-[0.14em] text-stone-700">
+                                  Price
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={editForm.price}
+                                  onChange={(event) =>
+                                    updateEditForm("price", event.target.value)
+                                  }
+                                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                                />
+                              </div>
 
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500 md:hidden">
-                        Price
-                      </p>
-                      <p className="font-black">
-                        ${Number(listing.price).toLocaleString()}
-                      </p>
-                    </div>
+                              <div>
+                                <label className="text-sm font-black uppercase tracking-[0.14em] text-stone-700">
+                                  Category
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editForm.category}
+                                  onChange={(event) =>
+                                    updateEditForm(
+                                      "category",
+                                      event.target.value
+                                    )
+                                  }
+                                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                                />
+                              </div>
 
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500 md:hidden">
-                        Status
-                      </p>
-                      <span
-                        className={`inline-block rounded-full px-3 py-1 text-xs font-black ${
-                          listing.status === "active"
-                            ? "bg-emerald-50 text-emerald-900"
-                            : "bg-stone-200 text-stone-700"
-                        }`}
-                      >
-                        {listing.status}
-                      </span>
-                    </div>
+                              <div>
+                                <label className="text-sm font-black uppercase tracking-[0.14em] text-stone-700">
+                                  Condition
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editForm.condition}
+                                  onChange={(event) =>
+                                    updateEditForm(
+                                      "condition",
+                                      event.target.value
+                                    )
+                                  }
+                                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                                />
+                              </div>
 
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500 md:hidden">
-                        Created
-                      </p>
-                      <p className="text-sm font-bold text-stone-600">
-                        {formatDate(listing.created_at)}
-                      </p>
-                    </div>
+                              <div>
+                                <label className="text-sm font-black uppercase tracking-[0.14em] text-stone-700">
+                                  Brand
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editForm.brand}
+                                  onChange={(event) =>
+                                    updateEditForm("brand", event.target.value)
+                                  }
+                                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                                />
+                              </div>
 
-                    <div className="flex flex-col gap-2">
-                      {listing.status === "active" ? (
-                        <Link
-                          href={`/listing/${listing.id}`}
-                          className="rounded-xl bg-emerald-600 px-4 py-2 text-center text-sm font-black text-white hover:bg-emerald-500"
-                        >
-                          View
-                        </Link>
-                      ) : null}
+                              <div>
+                                <label className="text-sm font-black uppercase tracking-[0.14em] text-stone-700">
+                                  Model
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editForm.model}
+                                  onChange={(event) =>
+                                    updateEditForm("model", event.target.value)
+                                  }
+                                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                                />
+                              </div>
 
-                      {listing.status === "active" ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            markListingInactive(listing.id, listing.title)
-                          }
-                          className="rounded-xl border border-red-300 px-4 py-2 text-sm font-black text-red-700 hover:bg-red-50"
-                        >
-                          Remove
-                        </button>
+                              <div>
+                                <label className="text-sm font-black uppercase tracking-[0.14em] text-stone-700">
+                                  Seller Name
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editForm.seller_name}
+                                  onChange={(event) =>
+                                    updateEditForm(
+                                      "seller_name",
+                                      event.target.value
+                                    )
+                                  }
+                                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-sm font-black uppercase tracking-[0.14em] text-stone-700">
+                                  Seller Email
+                                </label>
+                                <input
+                                  type="email"
+                                  value={editForm.seller_email}
+                                  onChange={(event) =>
+                                    updateEditForm(
+                                      "seller_email",
+                                      event.target.value
+                                    )
+                                  }
+                                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-sm font-black uppercase tracking-[0.14em] text-stone-700">
+                                  Location
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editForm.location}
+                                  onChange={(event) =>
+                                    updateEditForm(
+                                      "location",
+                                      event.target.value
+                                    )
+                                  }
+                                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-sm font-black uppercase tracking-[0.14em] text-stone-700">
+                                  Status
+                                </label>
+                                <select
+                                  value={editForm.status}
+                                  onChange={(event) =>
+                                    updateEditForm("status", event.target.value)
+                                  }
+                                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                                >
+                                  <option value="active">Active</option>
+                                  <option value="inactive">Inactive</option>
+                                </select>
+                              </div>
+
+                              <div className="md:col-span-2">
+                                <label className="text-sm font-black uppercase tracking-[0.14em] text-stone-700">
+                                  Description
+                                </label>
+                                <textarea
+                                  value={editForm.description}
+                                  onChange={(event) =>
+                                    updateEditForm(
+                                      "description",
+                                      event.target.value
+                                    )
+                                  }
+                                  rows={4}
+                                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                              <button
+                                type="button"
+                                onClick={() => saveListingEdits(listing.id)}
+                                className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                disabled={isSavingEdit}
+                              >
+                                {isSavingEdit ? "Saving..." : "Save Changes"}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={cancelEditingListing}
+                                className="rounded-xl border border-stone-400 bg-white px-5 py-3 text-sm font-black hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                disabled={isSavingEdit}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       ) : (
                         <>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              restoreListing(listing.id, listing.title)
-                            }
-                            className="rounded-xl border border-emerald-300 px-4 py-2 text-sm font-black text-emerald-800 hover:bg-emerald-50"
-                          >
-                            Restore
-                          </button>
+                          <div>
+                            <p className="text-lg font-black">
+                              {listing.title}
+                            </p>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              deleteListingForever(listing.id, listing.title)
-                            }
-                            className="rounded-xl border border-red-400 bg-red-50 px-4 py-2 text-sm font-black text-red-800 hover:bg-red-100"
-                          >
-                            Delete Forever
-                          </button>
+                            <p className="mt-1 text-sm font-bold text-stone-500">
+                              {listing.brand || "No brand"}
+                              {listing.model ? ` ${listing.model}` : ""} •{" "}
+                              {listing.condition}
+                            </p>
+
+                            <p className="mt-1 text-xs font-bold text-stone-400">
+                              Seller: {listing.seller_name || "Not listed"}
+                            </p>
+
+                            <p className="mt-1 text-xs font-bold text-stone-400">
+                              Photo: {listing.image_url ? "Yes" : "No"}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500 md:hidden">
+                              Category
+                            </p>
+                            <p className="font-bold">{listing.category}</p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500 md:hidden">
+                              Price
+                            </p>
+                            <p className="font-black">
+                              ${Number(listing.price).toLocaleString()}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500 md:hidden">
+                              Status
+                            </p>
+                            <span
+                              className={`inline-block rounded-full px-3 py-1 text-xs font-black ${
+                                listing.status === "active"
+                                  ? "bg-emerald-50 text-emerald-900"
+                                  : "bg-stone-200 text-stone-700"
+                              }`}
+                            >
+                              {listing.status}
+                            </span>
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500 md:hidden">
+                              Created
+                            </p>
+                            <p className="text-sm font-bold text-stone-600">
+                              {formatDate(listing.created_at)}
+                            </p>
+                          </div>
+
+                          <div className="flex flex-col gap-2">
+                            <button
+                              type="button"
+                              onClick={() => startEditingListing(listing)}
+                              className="rounded-xl border border-stone-400 px-4 py-2 text-center text-sm font-black hover:bg-stone-100"
+                            >
+                              Edit
+                            </button>
+
+                            {listing.status === "active" ? (
+                              <Link
+                                href={`/listing/${listing.id}`}
+                                className="rounded-xl bg-emerald-600 px-4 py-2 text-center text-sm font-black text-white hover:bg-emerald-500"
+                              >
+                                View
+                              </Link>
+                            ) : null}
+
+                            {listing.status === "active" ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  markListingInactive(
+                                    listing.id,
+                                    listing.title
+                                  )
+                                }
+                                className="rounded-xl border border-red-300 px-4 py-2 text-sm font-black text-red-700 hover:bg-red-50"
+                              >
+                                Remove
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    restoreListing(listing.id, listing.title)
+                                  }
+                                  className="rounded-xl border border-emerald-300 px-4 py-2 text-sm font-black text-emerald-800 hover:bg-emerald-50"
+                                >
+                                  Restore
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    deleteListingForever(
+                                      listing.id,
+                                      listing.title
+                                    )
+                                  }
+                                  className="rounded-xl border border-red-400 bg-red-50 px-4 py-2 text-sm font-black text-red-800 hover:bg-red-100"
+                                >
+                                  Delete Forever
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : null}
@@ -814,7 +1194,8 @@ export default function AdminPage() {
             This admin page is protected with a temporary password gate. Active
             listings should be removed first, then inactive listings can be
             restored or permanently deleted. Search and filters only change what
-            you see on this page; they do not change the database.
+            you see on this page. The Edit button changes the selected listing
+            in the database after you click Save Changes.
           </p>
         </div>
       </section>
