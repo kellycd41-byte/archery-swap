@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 const categories = [
   "Bows",
@@ -9,26 +10,24 @@ const categories = [
   "Cases",
 ];
 
-const listings = [
-  {
-    title: "Mathews V3X Compound Bow",
-    price: "$875",
-    condition: "Excellent",
-    location: "Pennsylvania",
-  },
-  {
-    title: "Ravin Crossbow Package",
-    price: "$1,050",
-    condition: "Very Good",
-    location: "Ohio",
-  },
-  {
-    title: "Spot Hogg Fast Eddie Sight",
-    price: "$265",
-    condition: "Good",
-    location: "Michigan",
-  },
-];
+type Listing = {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  condition: string;
+  location: string | null;
+  image_url: string | null;
+  status: string;
+  created_at: string;
+  brand: string | null;
+  model: string | null;
+  draw_weight: string | null;
+  draw_length: string | null;
+  handedness: string | null;
+  shipping_available: boolean;
+};
 
 function Header() {
   return (
@@ -117,15 +116,86 @@ function Header() {
 
 function PhotoPlaceholder() {
   return (
-    <div className="relative h-44 overflow-hidden rounded-2xl bg-gradient-to-br from-stone-300 to-emerald-900">
-      <div className="absolute left-5 top-5 h-16 w-16 rounded-full border border-white/20" />
-      <div className="absolute bottom-5 right-5 h-20 w-20 rounded-full border border-emerald-200/20" />
-      <div className="absolute left-0 top-1/2 h-px w-full bg-white/20" />
+    <div className="relative flex h-44 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-stone-900 via-stone-800 to-emerald-950 px-5 text-center">
+      <div className="absolute left-5 top-5 h-16 w-16 rounded-full border border-emerald-300/20" />
+      <div className="absolute bottom-5 right-5 h-20 w-20 rounded-full border border-white/10" />
+      <div className="absolute left-0 top-1/2 h-px w-full bg-white/10" />
+
+      <div className="relative">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-emerald-300/40 bg-white/10 text-2xl">
+          🎯
+        </div>
+        <p className="mt-3 text-xs font-black uppercase tracking-[0.25em] text-emerald-200">
+          No Photo Yet
+        </p>
+      </div>
     </div>
   );
 }
 
-export default function Home() {
+function HeroPhotoPlaceholder() {
+  return (
+    <div className="mb-5 flex h-56 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-stone-700 to-emerald-950 px-5 text-center">
+      <div>
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-emerald-300/30 bg-white/10 text-3xl">
+          🎯
+        </div>
+        <p className="mt-3 text-xs font-black uppercase tracking-[0.25em] text-emerald-200">
+          Featured Gear
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function getBrandModelText(item: Listing) {
+  const brand = item.brand?.trim();
+  const model = item.model?.trim();
+
+  if (brand && model) {
+    return `${brand} ${model}`;
+  }
+
+  if (brand) {
+    return brand;
+  }
+
+  if (model) {
+    return model;
+  }
+
+  return null;
+}
+
+function getCompactSpecs(item: Listing) {
+  const specs = [];
+
+  if (item.draw_weight?.trim()) {
+    specs.push(`${item.draw_weight.trim()} draw`);
+  }
+
+  if (item.draw_length?.trim()) {
+    specs.push(`${item.draw_length.trim()} length`);
+  }
+
+  if (item.handedness?.trim()) {
+    specs.push(item.handedness.trim());
+  }
+
+  return specs;
+}
+
+export default async function Home() {
+  const { data, error } = await supabase
+    .from("listings")
+    .select("*")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(3);
+
+  const featuredListings = (data || []) as Listing[];
+  const heroListing = featuredListings[0] || null;
+
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
       <Header />
@@ -174,27 +244,65 @@ export default function Home() {
               Featured Listing
             </p>
 
-            <div className="rounded-2xl bg-stone-800 p-6">
-              <div className="mb-5 h-56 rounded-2xl bg-gradient-to-br from-stone-700 to-emerald-950" />
+            {heroListing ? (
+              <div className="rounded-2xl bg-stone-800 p-6">
+                {heroListing.image_url ? (
+                  <img
+                    src={heroListing.image_url}
+                    alt={heroListing.title}
+                    className="mb-5 h-56 w-full rounded-2xl object-cover"
+                  />
+                ) : (
+                  <HeroPhotoPlaceholder />
+                )}
 
-              <h3 className="text-2xl font-black">
-                Mathews V3X Compound Bow
-              </h3>
+                <h3 className="text-2xl font-black">{heroListing.title}</h3>
 
-              <p className="mt-2 text-stone-300">
-                Excellent condition • Pennsylvania
-              </p>
+                <p className="mt-2 text-stone-300">
+                  {heroListing.condition} •{" "}
+                  {heroListing.location || "Location not listed"}
+                </p>
 
-              <div className="mt-5 flex items-center justify-between gap-4">
-                <p className="text-3xl font-black">$875</p>
-                <Link
-                  href="/browse"
-                  className="rounded-xl bg-white px-4 py-2 text-sm font-black text-stone-950"
-                >
-                  Browse Gear
-                </Link>
+                <div className="mt-5 flex items-center justify-between gap-4">
+                  <p className="text-3xl font-black">
+                    ${Number(heroListing.price).toLocaleString()}
+                  </p>
+                  <Link
+                    href={`/listing/${heroListing.id}`}
+                    className="rounded-xl bg-white px-4 py-2 text-sm font-black text-stone-950 hover:bg-stone-200"
+                  >
+                    View Listing
+                  </Link>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="rounded-2xl bg-stone-800 p-6">
+                <HeroPhotoPlaceholder />
+
+                <h3 className="text-2xl font-black">No featured listing yet</h3>
+
+                <p className="mt-2 text-stone-300">
+                  Approved listings will appear here once gear is active on the
+                  marketplace.
+                </p>
+
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                  <Link
+                    href="/browse"
+                    className="rounded-xl bg-white px-4 py-2 text-center text-sm font-black text-stone-950 hover:bg-stone-200"
+                  >
+                    Browse Gear
+                  </Link>
+
+                  <Link
+                    href="/sell"
+                    className="rounded-xl border border-stone-600 px-4 py-2 text-center text-sm font-black text-white hover:bg-stone-900"
+                  >
+                    List Gear
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -213,7 +321,7 @@ export default function Home() {
           {categories.map((category) => (
             <Link
               key={category}
-              href="/browse"
+              href={`/browse?category=${encodeURIComponent(category)}`}
               className="rounded-2xl border border-stone-300 bg-white p-6 shadow-sm hover:border-emerald-700"
             >
               <h3 className="text-xl font-black">{category}</h3>
@@ -237,37 +345,112 @@ export default function Home() {
             </h2>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
-            {listings.map((item) => (
-              <div
-                key={item.title}
-                className="rounded-2xl border border-stone-300 bg-stone-50 p-5 shadow-sm"
+          {error ? (
+            <div className="rounded-2xl border border-red-300 bg-red-50 p-5 text-sm font-bold text-red-800">
+              Could not load featured listings: {error.message}
+            </div>
+          ) : null}
+
+          {!error && featuredListings.length === 0 ? (
+            <div className="rounded-2xl border border-stone-300 bg-stone-50 p-8 text-center shadow-sm">
+              <h3 className="text-2xl font-black">No active listings yet</h3>
+              <p className="mt-2 text-stone-600">
+                Once listings are approved, featured gear will appear here.
+              </p>
+
+              <Link
+                href="/sell"
+                className="mt-5 inline-block rounded-xl bg-emerald-600 px-5 py-3 font-black text-white hover:bg-emerald-500"
               >
-                <PhotoPlaceholder />
+                List Your Gear
+              </Link>
+            </div>
+          ) : null}
 
-                <h3 className="mt-5 text-xl font-black">{item.title}</h3>
+          {!error && featuredListings.length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-3">
+              {featuredListings.map((item) => {
+                const brandModelText = getBrandModelText(item);
+                const compactSpecs = getCompactSpecs(item);
 
-                <p className="mt-2 text-sm font-bold text-stone-500">
-                  {item.condition} • {item.location}
-                </p>
-
-                <div className="mt-5 flex items-center justify-between gap-4">
-                  <p className="text-2xl font-black">{item.price}</p>
-                  <Link
-                    href="/browse"
-                    className="rounded-xl bg-stone-950 px-4 py-2 text-sm font-black text-white"
+                return (
+                  <div
+                    key={item.id}
+                    className="overflow-hidden rounded-2xl border border-stone-300 bg-stone-50 shadow-sm"
                   >
-                    Browse
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
+                    {item.image_url ? (
+                      <img
+                        src={item.image_url}
+                        alt={item.title}
+                        className="h-44 w-full object-cover"
+                      />
+                    ) : (
+                      <PhotoPlaceholder />
+                    )}
 
-          <p className="mt-5 text-sm font-bold text-stone-500">
-            Featured examples are for layout only. Real approved listings are on
-            the Browse Gear page.
-          </p>
+                    <div className="p-5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-800">
+                          {item.category}
+                        </p>
+
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-stone-700">
+                          {item.condition}
+                        </span>
+                      </div>
+
+                      <h3 className="mt-3 text-xl font-black">{item.title}</h3>
+
+                      {brandModelText ? (
+                        <p className="mt-1 text-sm font-black text-stone-700">
+                          {brandModelText}
+                        </p>
+                      ) : null}
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {compactSpecs.map((spec) => (
+                          <span
+                            key={spec}
+                            className="rounded-full border border-stone-300 bg-white px-3 py-1 text-xs font-bold text-stone-700"
+                          >
+                            {spec}
+                          </span>
+                        ))}
+
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-bold ${
+                            item.shipping_available
+                              ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                              : "border-stone-300 bg-white text-stone-700"
+                          }`}
+                        >
+                          {item.shipping_available
+                            ? "Shipping Available"
+                            : "Local Only"}
+                        </span>
+                      </div>
+
+                      <p className="mt-3 text-sm font-bold text-stone-500">
+                        {item.location || "Location not listed"}
+                      </p>
+
+                      <div className="mt-5 flex items-center justify-between gap-4">
+                        <p className="text-2xl font-black">
+                          ${Number(item.price).toLocaleString()}
+                        </p>
+                        <Link
+                          href={`/listing/${item.id}`}
+                          className="rounded-xl bg-stone-950 px-4 py-2 text-sm font-black text-white hover:bg-stone-800"
+                        >
+                          View Listing
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       </section>
 
