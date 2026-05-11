@@ -310,6 +310,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   }
 
   const { data: listings, error } = await query;
+  const listingCount = listings?.length || 0;
 
   const conditionLabel =
     selectedConditions.length > 0 ? selectedConditions.join(", ") : "All";
@@ -594,12 +595,9 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               <div>
                 <h3 className="text-2xl font-black">Available Gear</h3>
                 <p className="text-stone-600">
-                  {selectedCategory === "All" &&
-                  selectedConditions.length === 0 &&
-                  !searchTerm &&
-                  selectedSort === "newest"
-                    ? "Showing all approved active listings."
-                    : "Showing filtered approved listings."}
+                  {listingCount === 1
+                    ? "Showing 1 approved active listing."
+                    : `Showing ${listingCount} approved active listings.`}
                 </p>
 
                 {selectedCategory !== "All" ||
@@ -612,6 +610,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                     {searchTerm ? ` • Search: “${searchTerm}”` : ""}
                   </p>
                 ) : null}
+
+                <p className="mt-2 text-sm font-bold text-stone-500">
+                  Listings are reviewed before they appear here.
+                </p>
               </div>
 
               <form action="/browse" className="flex flex-col gap-2 sm:flex-row">
@@ -690,7 +692,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
             ) : null}
 
             {!error && listings && listings.length > 0 ? (
-              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid items-stretch gap-6 md:grid-cols-2 xl:grid-cols-3">
                 {(listings as Listing[]).map((item) => {
                   const brandModelText = getBrandModelText(item);
                   const compactSpecs = getCompactSpecs(item);
@@ -699,7 +701,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                   return (
                     <article
                       key={item.id}
-                      className="overflow-hidden rounded-2xl border border-stone-300 bg-white shadow-sm"
+                      className="flex h-full flex-col overflow-hidden rounded-2xl border border-stone-300 bg-white shadow-sm"
                     >
                       {photoUrl ? (
                         <div className="flex h-48 items-center justify-center bg-stone-200 p-3">
@@ -713,7 +715,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                         <BrowsePhotoPlaceholder />
                       )}
 
-                      <div className="p-5">
+                      <div className="flex flex-1 flex-col p-5">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-800">
                             {item.category}
@@ -765,16 +767,16 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                           {item.description}
                         </p>
 
-                        <div className="mt-5 flex items-center justify-between">
+                        <div className="mt-auto flex flex-col gap-3 pt-5 sm:flex-row sm:items-center sm:justify-between">
                           <p className="text-2xl font-black">
                             ${Number(item.price).toLocaleString()}
                           </p>
 
                           <Link
                             href={`/listing/${item.id}`}
-                            className="rounded-xl bg-stone-950 px-4 py-2 text-sm font-black text-white hover:bg-stone-800"
+                            className="rounded-xl bg-stone-950 px-4 py-2 text-center text-sm font-black text-white hover:bg-stone-800"
                           >
-                            View
+                            View Listing
                           </Link>
                         </div>
                       </div>
