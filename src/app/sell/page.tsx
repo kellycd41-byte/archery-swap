@@ -20,6 +20,12 @@ const conditions = ["New", "Excellent", "Very Good", "Good", "Fair"];
 const handednessOptions = ["Right Hand", "Left Hand", "Ambidextrous", "N/A"];
 
 const maxPhotoSizeInBytes = 5 * 1024 * 1024;
+const maxPhotoCount = 8;
+
+type PhotoPreview = {
+  name: string;
+  url: string;
+};
 
 function makeSafeFileName(fileName: string) {
   return fileName
@@ -133,8 +139,8 @@ export default function SellPage() {
   const [includedAccessories, setIncludedAccessories] = useState("");
   const [shippingAvailable, setShippingAvailable] = useState(false);
 
-  const [selectedPhotoName, setSelectedPhotoName] = useState("");
-  const [photoPreviewUrl, setPhotoPreviewUrl] = useState("");
+  const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
+  const [photoPreviewUrls, setPhotoPreviewUrls] = useState<PhotoPreview[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -142,85 +148,145 @@ export default function SellPage() {
 
   function validatePhoto(file: File) {
     if (!file.type.startsWith("image/")) {
-      return "Please choose an image file.";
+      return "Please choose image files only.";
     }
 
     if (file.size > maxPhotoSizeInBytes) {
-      return "Please choose a photo smaller than 5 MB.";
+      return "Each photo must be smaller than 5 MB.";
     }
 
     return "";
+  }
+
+  function resetFileInput() {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  function resetPhotoSelection() {
+    setSelectedPhotos([]);
+    setPhotoPreviewUrls([]);
+    resetFileInput();
+  }
+
+  function removePhoto(indexToRemove: number) {
+    setSelectedPhotos((currentPhotos) =>
+      currentPhotos.filter((_, index) => index !== indexToRemove)
+    );
+
+    setPhotoPreviewUrls((currentPreviews) =>
+      currentPreviews.filter((_, index) => index !== indexToRemove)
+    );
+
+    resetFileInput();
   }
 
   function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
     setSuccessMessage("");
     setErrorMessage("");
 
-    const file = event.target.files?.[0];
+    const newFiles = Array.from(event.target.files || []);
 
-    if (!file) {
-      setSelectedPhotoName("");
-      setPhotoPreviewUrl("");
+    if (newFiles.length === 0) {
+      resetFileInput();
       return;
     }
 
-    const photoError = validatePhoto(file);
+    for (const file of newFiles) {
+      const photoError = validatePhoto(file);
 
-    if (photoError) {
-      setSelectedPhotoName("");
-      setPhotoPreviewUrl("");
-      setErrorMessage(photoError);
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+      if (photoError) {
+        setErrorMessage(photoError);
+        resetFileInput();
+        return;
       }
+    }
 
+    const remainingSlots = maxPhotoCount - selectedPhotos.length;
+
+    if (remainingSlots <= 0) {
+      setErrorMessage(`You can upload up to ${maxPhotoCount} photos.`);
+      resetFileInput();
       return;
     }
 
-    setSelectedPhotoName(file.name);
+    const filesToAdd = newFiles.slice(0, remainingSlots);
 
-    const reader = new FileReader();
+    if (newFiles.length > remainingSlots) {
+      setErrorMessage(
+        `Only ${remainingSlots} more photo${
+          remainingSlots === 1 ? "" : "s"
+        } can be added. The extra photos were not added.`
+      );
+    }
 
-    reader.onload = () => {
-      setPhotoPreviewUrl(typeof reader.result === "string" ? reader.result : "");
-    };
+    const previewPromises = filesToAdd.map(
+      (file) =>
+        new Promise<PhotoPreview>((resolve) => {
+          const reader = new FileReader();
 
-    reader.readAsDataURL(file);
+          reader.onload = () => {
+            resolve({
+              name: file.name,
+              url: typeof reader.result === "string" ? reader.result : "",
+            });
+          };
+
+          reader.readAsDataURL(file);
+        })
+    );
+
+    Promise.all(previewPromises).then((newPreviews) => {
+      setSelectedPhotos((currentPhotos) => [...currentPhotos, ...filesToAdd]);
+      setPhotoPreviewUrls((currentPreviews) => [
+        ...currentPreviews,
+        ...newPreviews.filter((preview) => preview.url),
+      ]);
+      resetFileInput();
+    });
   }
 
-  async function uploadListingPhoto() {
-    const selectedPhoto = fileInputRef.current?.files?.[0];
-
-    if (!selectedPhoto) {
-      return null;
+  async function uploadListingPhotos() {
+    if (selectedPhotos.length === 0) {
+      return [];
     }
 
-    const photoError = validatePhoto(selectedPhoto);
-
-    if (photoError) {
-      throw new Error(photoError);
+    if (selectedPhotos.length > maxPhotoCount) {
+      throw new Error(`Please choose no more than ${maxPhotoCount} photos.`);
     }
 
-    const safeFileName = makeSafeFileName(selectedPhoto.name);
-    const filePath = `public/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;
+    const uploadedUrls: string[] = [];
 
-    const { error: uploadError } = await supabase.storage
-      .from("listing-photos")
-      .upload(filePath, selectedPhoto, {
-        cacheControl: "3600",
-        upsert: false,
-      });
+    for (const selectedPhoto of selectedPhotos) {
+      const photoError = validatePhoto(selectedPhoto);
 
-    if (uploadError) {
-      throw new Error(`Photo upload failed: ${uploadError.message}`);
+      if (photoError) {
+        throw new Error(photoError);
+      }
+
+      const safeFileName = makeSafeFileName(selectedPhoto.name);
+      const filePath = `public/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("listing-photos")
+        .upload(filePath, selectedPhoto, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(`Photo upload failed: ${uploadError.message}`);
+      }
+
+      const { data } = supabase.storage
+        .from("listing-photos")
+        .getPublicUrl(filePath);
+
+      uploadedUrls.push(data.publicUrl);
     }
 
-    const { data } = supabase.storage
-      .from("listing-photos")
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
+    return uploadedUrls;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -259,7 +325,8 @@ export default function SellPage() {
     setIsSubmitting(true);
 
     try {
-      const photoUrl = await uploadListingPhoto();
+      const photoUrls = await uploadListingPhotos();
+      const firstPhotoUrl = photoUrls[0] || null;
 
       const { error } = await supabase.from("listings").insert({
         title: title.trim(),
@@ -277,7 +344,8 @@ export default function SellPage() {
         handedness: handedness || null,
         included_accessories: includedAccessories.trim() || null,
         shipping_available: shippingAvailable,
-        image_url: photoUrl,
+        image_url: firstPhotoUrl,
+        image_urls: photoUrls,
         status: "pending",
         denial_reason: null,
       });
@@ -305,12 +373,7 @@ export default function SellPage() {
       setHandedness("");
       setIncludedAccessories("");
       setShippingAvailable(false);
-      setSelectedPhotoName("");
-      setPhotoPreviewUrl("");
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      resetPhotoSelection();
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -337,8 +400,8 @@ export default function SellPage() {
           </h2>
 
           <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
-            Submit your listing with archery-specific details and one clear
-            photo. Listings are reviewed before they appear in Browse.
+            Submit your listing with archery-specific details and clear photos.
+            Listings are reviewed before they appear in Browse.
           </p>
         </div>
       </section>
@@ -598,7 +661,7 @@ export default function SellPage() {
             </section>
 
             <section className="rounded-2xl border border-stone-200 p-5">
-              <h4 className="text-xl font-black">Description and photo</h4>
+              <h4 className="text-xl font-black">Description and photos</h4>
 
               <div className="mt-5">
                 <label className="text-sm font-black text-stone-700">
@@ -614,43 +677,77 @@ export default function SellPage() {
               </div>
 
               <div className="mt-5">
-                <p className="text-sm font-black text-stone-700">Photo</p>
+                <p className="text-sm font-black text-stone-700">Photos</p>
 
                 <label className="mt-2 block cursor-pointer rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 p-6 text-center hover:border-emerald-700 hover:bg-emerald-50">
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/jpeg,image/png,image/webp,image/gif"
+                    multiple
                     onChange={handlePhotoChange}
                     className="sr-only"
                   />
 
                   <span className="inline-block rounded-xl bg-stone-950 px-5 py-3 text-sm font-black text-white">
-                    Choose Photo
+                    Choose Photos
                   </span>
 
                   <span className="mt-3 block text-sm font-bold text-stone-700">
-                    Click here to upload one clear photo.
+                    Click here to add up to {maxPhotoCount} clear photos.
                   </span>
 
                   <span className="mt-1 block text-xs text-stone-500">
-                    JPG, PNG, WEBP, or GIF. Max size: 5 MB.
+                    JPG, PNG, WEBP, or GIF. Max size: 5 MB each.
                   </span>
                 </label>
 
-                {selectedPhotoName ? (
-                  <p className="mt-3 text-sm font-bold text-stone-700">
-                    Selected: {selectedPhotoName}
-                  </p>
-                ) : null}
+                {photoPreviewUrls.length > 0 ? (
+                  <div className="mt-5">
+                    <div className="mb-3 flex items-center justify-between gap-4">
+                      <p className="text-sm font-black text-stone-700">
+                        Selected photos: {photoPreviewUrls.length}/{maxPhotoCount}
+                      </p>
 
-                {photoPreviewUrl ? (
-                  <div className="mt-5 overflow-hidden rounded-2xl border border-stone-300 bg-white">
-                    <img
-                      src={photoPreviewUrl}
-                      alt="Selected listing photo preview"
-                      className="h-72 w-full object-cover"
-                    />
+                      <button
+                        type="button"
+                        onClick={resetPhotoSelection}
+                        className="text-sm font-black text-red-700 hover:text-red-600"
+                      >
+                        Remove all
+                      </button>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+                      {photoPreviewUrls.map((preview, index) => (
+                        <div
+                          key={`${preview.name}-${index}`}
+                          className="overflow-hidden rounded-2xl border border-stone-300 bg-stone-100"
+                        >
+                          <div className="flex h-48 items-center justify-center">
+                            <img
+                              src={preview.url}
+                              alt={`${preview.name} preview`}
+                              className="max-h-full max-w-full object-contain"
+                            />
+                          </div>
+
+                          <div className="border-t border-stone-300 bg-white px-3 py-2">
+                            <p className="truncate text-xs font-bold text-stone-600">
+                              {preview.name}
+                            </p>
+
+                            <button
+                              type="button"
+                              onClick={() => removePhoto(index)}
+                              className="mt-2 text-xs font-black text-red-700 hover:text-red-600"
+                            >
+                              Remove photo
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -659,7 +756,7 @@ export default function SellPage() {
             <div className="rounded-2xl bg-stone-100 p-5">
               <h4 className="font-black">Listing safety checklist</h4>
               <ul className="mt-3 space-y-2 text-sm text-stone-700">
-                <li>• Use a clear photo that shows the item well.</li>
+                <li>• Use clear photos that show the item well.</li>
                 <li>• Be honest about wear, damage, or missing parts.</li>
                 <li>• Include important bow specs when possible.</li>
                 <li>• Your listing will be reviewed before it appears in Browse.</li>
