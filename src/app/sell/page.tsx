@@ -417,6 +417,18 @@ export default function SellPage() {
             </p>
           </div>
 
+          <div className="mb-8 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+            <h4 className="font-black text-emerald-950">
+              Before you submit
+            </h4>
+            <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-emerald-900">
+              <li>• Add clear photos from multiple angles if possible.</li>
+              <li>• JPG, PNG, WEBP, and GIF photos work right now.</li>
+              <li>• HEIC iPhone photos are not supported yet.</li>
+              <li>• New listings must be approved before they show publicly.</li>
+            </ul>
+          </div>
+
           {successMessage ? (
             <div className="mb-6 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">
               {successMessage}
@@ -698,7 +710,8 @@ export default function SellPage() {
                   </span>
 
                   <span className="mt-1 block text-xs text-stone-500">
-                    JPG, PNG, WEBP, or GIF. Max size: 5 MB each.
+                    JPG, PNG, WEBP, or GIF. Max size: 5 MB each. HEIC is not
+                    supported yet.
                   </span>
                 </label>
 
@@ -769,7 +782,7 @@ export default function SellPage() {
               disabled={isSubmitting}
               className="w-full rounded-xl bg-emerald-600 px-6 py-3 font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-stone-400 sm:w-auto"
             >
-              {isSubmitting ? "Submitting Listing..." : "Submit Listing"}
+              {isSubmitting ? "Submitting Listing..." : "Submit Listing for Review"}
             </button>
           </form>
         </div>
