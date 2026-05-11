@@ -193,20 +193,41 @@ export default async function ListingDetailPage({
               ${Number(item.price).toLocaleString()}
             </p>
 
-            <div className="mt-6 grid gap-3">
-              <Link
-                href="/messages"
-                className="rounded-xl bg-emerald-600 px-6 py-3 text-center font-black text-white hover:bg-emerald-500"
-              >
-                Message Seller
-              </Link>
+            <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+              <h3 className="text-lg font-black text-emerald-950">
+                Contact tools coming soon
+              </h3>
 
-              <Link
-                href="/browse"
-                className="rounded-xl border border-stone-400 px-6 py-3 text-center font-black text-stone-950 hover:bg-stone-100"
-              >
-                Keep Browsing
-              </Link>
+              <p className="mt-2 text-sm font-bold leading-6 text-emerald-900">
+                Messaging, saved listings, offers, checkout, and buyer accounts
+                are not active yet. For now, this listing page is for viewing
+                approved gear details.
+              </p>
+
+              <div className="mt-5 grid gap-3">
+                <button
+                  type="button"
+                  disabled
+                  className="cursor-not-allowed rounded-xl bg-emerald-700 px-6 py-3 text-center font-black text-white opacity-70"
+                >
+                  Contact Seller — Coming Soon
+                </button>
+
+                <button
+                  type="button"
+                  disabled
+                  className="cursor-not-allowed rounded-xl border border-emerald-700 bg-white px-6 py-3 text-center font-black text-emerald-950 opacity-80"
+                >
+                  Save Listing — Coming Soon
+                </button>
+
+                <Link
+                  href="/browse"
+                  className="rounded-xl border border-stone-400 px-6 py-3 text-center font-black text-stone-950 hover:bg-stone-100"
+                >
+                  Keep Browsing
+                </Link>
+              </div>
             </div>
 
             <div className="mt-6 rounded-2xl bg-stone-100 p-5">
