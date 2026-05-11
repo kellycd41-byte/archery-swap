@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import ListingPhotoGallery from "./ListingPhotoGallery";
 
 type Listing = {
   id: string;
@@ -136,26 +137,6 @@ function buildPhotoList(item: Listing) {
   return [];
 }
 
-function DetailPhotoPlaceholder() {
-  return (
-    <div className="relative flex h-[440px] items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-stone-950 via-stone-800 to-emerald-950 px-5 text-center">
-      <div className="absolute left-8 top-8 h-20 w-20 rounded-full border border-emerald-300/20" />
-      <div className="absolute bottom-8 right-8 h-24 w-24 rounded-full border border-white/10" />
-      <div className="absolute left-0 top-1/2 h-px w-full bg-white/10" />
-
-      <div className="relative">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-emerald-300/40 bg-white/10 text-3xl">
-          🎯
-        </div>
-
-        <p className="mt-4 text-xs font-black uppercase tracking-[0.25em] text-emerald-200">
-          No Photo Yet
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export default async function ListingDetailPage({
   params,
 }: ListingDetailPageProps) {
@@ -174,7 +155,6 @@ export default async function ListingDetailPage({
 
   const item = listing as Listing;
   const photos = buildPhotoList(item);
-  const mainPhoto = photos[0];
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
@@ -191,38 +171,7 @@ export default async function ListingDetailPage({
         <div className="mt-6 grid gap-8 md:grid-cols-[520px_minmax(0,1fr)] md:items-start">
           <section>
             <div className="rounded-3xl border border-stone-300 bg-white p-4 shadow-sm">
-              {mainPhoto ? (
-                <div className="flex h-[440px] items-center justify-center overflow-hidden rounded-2xl bg-stone-100">
-                  <img
-                    src={mainPhoto}
-                    alt={item.title}
-                    className="max-h-full max-w-full object-contain"
-                  />
-                </div>
-              ) : (
-                <DetailPhotoPlaceholder />
-              )}
-
-              <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
-                {photos.length > 0 ? (
-                  photos.map((photoUrl, index) => (
-                    <div
-                      key={`${photoUrl}-${index}`}
-                      className="flex h-16 w-16 flex-none items-center justify-center overflow-hidden rounded-xl border border-stone-300 bg-stone-100"
-                    >
-                      <img
-                        src={photoUrl}
-                        alt={`${item.title} photo ${index + 1}`}
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex h-16 w-16 flex-none items-center justify-center rounded-xl border border-dashed border-stone-300 bg-stone-100 text-xl">
-                    🎯
-                  </div>
-                )}
-              </div>
+              <ListingPhotoGallery photos={photos} title={item.title} />
             </div>
           </section>
 
