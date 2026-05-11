@@ -30,6 +30,7 @@ type Listing = {
   condition: string;
   location: string | null;
   image_url: string | null;
+  image_urls: string[] | null;
   seller_name: string | null;
   seller_email: string | null;
   status: string;
@@ -245,6 +246,14 @@ function getCompactSpecs(item: Listing) {
   }
 
   return specs;
+}
+
+function getListingPhotoUrl(item: Listing) {
+  if (item.image_urls && item.image_urls.length > 0 && item.image_urls[0]) {
+    return item.image_urls[0];
+  }
+
+  return item.image_url;
 }
 
 function BrowsePhotoPlaceholder() {
@@ -685,18 +694,21 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                 {(listings as Listing[]).map((item) => {
                   const brandModelText = getBrandModelText(item);
                   const compactSpecs = getCompactSpecs(item);
+                  const photoUrl = getListingPhotoUrl(item);
 
                   return (
                     <article
                       key={item.id}
                       className="overflow-hidden rounded-2xl border border-stone-300 bg-white shadow-sm"
                     >
-                      {item.image_url ? (
-                        <img
-                          src={item.image_url}
-                          alt={item.title}
-                          className="h-48 w-full object-cover"
-                        />
+                      {photoUrl ? (
+                        <div className="flex h-48 items-center justify-center bg-stone-200 p-3">
+                          <img
+                            src={photoUrl}
+                            alt={item.title}
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        </div>
                       ) : (
                         <BrowsePhotoPlaceholder />
                       )}

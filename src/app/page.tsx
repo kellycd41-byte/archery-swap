@@ -19,6 +19,7 @@ type Listing = {
   condition: string;
   location: string | null;
   image_url: string | null;
+  image_urls: string[] | null;
   status: string;
   created_at: string;
   brand: string | null;
@@ -185,6 +186,14 @@ function getCompactSpecs(item: Listing) {
   return specs;
 }
 
+function getListingPhotoUrl(item: Listing) {
+  if (item.image_urls && item.image_urls.length > 0 && item.image_urls[0]) {
+    return item.image_urls[0];
+  }
+
+  return item.image_url;
+}
+
 export default async function Home() {
   const { data, error } = await supabase
     .from("listings")
@@ -195,6 +204,7 @@ export default async function Home() {
 
   const featuredListings = (data || []) as Listing[];
   const heroListing = featuredListings[0] || null;
+  const heroPhotoUrl = heroListing ? getListingPhotoUrl(heroListing) : null;
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
@@ -246,12 +256,14 @@ export default async function Home() {
 
             {heroListing ? (
               <div className="rounded-2xl bg-stone-800 p-6">
-                {heroListing.image_url ? (
-                  <img
-                    src={heroListing.image_url}
-                    alt={heroListing.title}
-                    className="mb-5 h-56 w-full rounded-2xl object-cover"
-                  />
+                {heroPhotoUrl ? (
+                  <div className="mb-5 flex h-56 items-center justify-center rounded-2xl bg-stone-200 p-3">
+                    <img
+                      src={heroPhotoUrl}
+                      alt={heroListing.title}
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
                 ) : (
                   <HeroPhotoPlaceholder />
                 )}
@@ -372,18 +384,21 @@ export default async function Home() {
               {featuredListings.map((item) => {
                 const brandModelText = getBrandModelText(item);
                 const compactSpecs = getCompactSpecs(item);
+                const photoUrl = getListingPhotoUrl(item);
 
                 return (
                   <div
                     key={item.id}
                     className="overflow-hidden rounded-2xl border border-stone-300 bg-stone-50 shadow-sm"
                   >
-                    {item.image_url ? (
-                      <img
-                        src={item.image_url}
-                        alt={item.title}
-                        className="h-44 w-full object-cover"
-                      />
+                    {photoUrl ? (
+                      <div className="flex h-44 items-center justify-center bg-stone-200 p-3">
+                        <img
+                          src={photoUrl}
+                          alt={item.title}
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      </div>
                     ) : (
                       <PhotoPlaceholder />
                     )}
