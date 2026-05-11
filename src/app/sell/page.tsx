@@ -296,6 +296,7 @@ export default function SellPage() {
     setErrorMessage("");
 
     const cleanedPrice = Number(price.replace(/[^0-9.]/g, ""));
+    const cleanedSellerEmail = sellerEmail.trim();
 
     if (!title.trim()) {
       setErrorMessage("Please enter an item title.");
@@ -322,6 +323,16 @@ export default function SellPage() {
       return;
     }
 
+    if (!cleanedSellerEmail) {
+      setErrorMessage("Please enter your seller email.");
+      return;
+    }
+
+    if (!cleanedSellerEmail.includes("@")) {
+      setErrorMessage("Please enter a valid seller email.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -336,7 +347,7 @@ export default function SellPage() {
         condition,
         location: location.trim() || null,
         seller_name: sellerName.trim() || null,
-        seller_email: sellerEmail.trim() || null,
+        seller_email: cleanedSellerEmail,
         brand: brand.trim() || null,
         model: model.trim() || null,
         draw_weight: drawWeight.trim() || null,
@@ -396,12 +407,13 @@ export default function SellPage() {
           </p>
 
           <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">
-            List your archery gear for sale.
+            Create a clean, useful listing for your archery gear.
           </h2>
 
           <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
-            Submit your listing with archery-specific details and clear photos.
-            Listings are reviewed before they appear in Browse.
+            Add clear photos, honest condition details, key specs, and a way for
+            buyers to contact you. Listings are reviewed before they appear in
+            Browse.
           </p>
         </div>
       </section>
@@ -411,9 +423,9 @@ export default function SellPage() {
           <div className="mb-8">
             <h3 className="text-3xl font-black">Create a listing</h3>
             <p className="mt-2 text-stone-600">
-              Add the details a buyer needs to understand exactly what you are
-              selling. After submitting, your listing will wait for approval
-              before it appears in Browse.
+              Fill out the important details first. Buyers should be able to
+              understand what it is, what condition it is in, and whether it
+              fits their setup.
             </p>
           </div>
 
@@ -422,6 +434,7 @@ export default function SellPage() {
               Before you submit
             </h4>
             <ul className="mt-3 space-y-2 text-sm font-bold leading-6 text-emerald-900">
+              <li>• Required fields are marked clearly below.</li>
               <li>• Add clear photos from multiple angles if possible.</li>
               <li>• JPG, PNG, WEBP, and GIF photos work right now.</li>
               <li>• HEIC iPhone photos are not supported yet.</li>
@@ -444,10 +457,13 @@ export default function SellPage() {
           <form onSubmit={handleSubmit} className="space-y-8">
             <section className="rounded-2xl border border-stone-200 p-5">
               <h4 className="text-xl font-black">Basic details</h4>
+              <p className="mt-1 text-sm text-stone-600">
+                Start with the main information shoppers will see first.
+              </p>
 
               <div className="mt-5">
                 <label className="text-sm font-black text-stone-700">
-                  Item title
+                  Item title <span className="text-red-700">Required</span>
                 </label>
                 <input
                   type="text"
@@ -461,7 +477,7 @@ export default function SellPage() {
               <div className="mt-5 grid gap-5 md:grid-cols-2">
                 <div>
                   <label className="text-sm font-black text-stone-700">
-                    Category
+                    Category <span className="text-red-700">Required</span>
                   </label>
                   <select
                     value={category}
@@ -479,7 +495,7 @@ export default function SellPage() {
 
                 <div>
                   <label className="text-sm font-black text-stone-700">
-                    Condition
+                    Condition <span className="text-red-700">Required</span>
                   </label>
                   <select
                     value={condition}
@@ -499,7 +515,7 @@ export default function SellPage() {
               <div className="mt-5 grid gap-5 md:grid-cols-2">
                 <div>
                   <label className="text-sm font-black text-stone-700">
-                    Price
+                    Price <span className="text-red-700">Required</span>
                   </label>
                   <input
                     type="text"
@@ -528,7 +544,8 @@ export default function SellPage() {
             <section className="rounded-2xl border border-stone-200 p-5">
               <h4 className="text-xl font-black">Archery specs</h4>
               <p className="mt-1 text-sm text-stone-600">
-                These fields help buyers compare gear faster.
+                These details are optional, but they help buyers compare bows
+                and other gear faster.
               </p>
 
               <div className="mt-5 grid gap-5 md:grid-cols-2">
@@ -623,6 +640,10 @@ export default function SellPage() {
 
             <section className="rounded-2xl border border-stone-200 p-5">
               <h4 className="text-xl font-black">Seller and shipping</h4>
+              <p className="mt-1 text-sm text-stone-600">
+                Seller email is required for now because built-in messaging is
+                still coming soon.
+              </p>
 
               <div className="mt-5 grid gap-5 md:grid-cols-2">
                 <div>
@@ -640,7 +661,7 @@ export default function SellPage() {
 
                 <div>
                   <label className="text-sm font-black text-stone-700">
-                    Seller email
+                    Seller email <span className="text-red-700">Required</span>
                   </label>
                   <input
                     type="email"
@@ -674,10 +695,14 @@ export default function SellPage() {
 
             <section className="rounded-2xl border border-stone-200 p-5">
               <h4 className="text-xl font-black">Description and photos</h4>
+              <p className="mt-1 text-sm text-stone-600">
+                A clear description and good photos make a listing easier to
+                approve and easier for buyers to trust.
+              </p>
 
               <div className="mt-5">
                 <label className="text-sm font-black text-stone-700">
-                  Description
+                  Description <span className="text-red-700">Required</span>
                 </label>
                 <textarea
                   value={description}
@@ -706,7 +731,8 @@ export default function SellPage() {
                   </span>
 
                   <span className="mt-3 block text-sm font-bold text-stone-700">
-                    Click here to add up to {maxPhotoCount} clear photos.
+                    Add up to {maxPhotoCount} photos. You can choose more than
+                    one photo at a time.
                   </span>
 
                   <span className="mt-1 block text-xs text-stone-500">
@@ -725,7 +751,7 @@ export default function SellPage() {
                       <button
                         type="button"
                         onClick={resetPhotoSelection}
-                        className="text-sm font-black text-red-700 hover:text-red-600"
+                        className="cursor-pointer text-sm font-black text-red-700 hover:text-red-600"
                       >
                         Remove all
                       </button>
@@ -753,7 +779,7 @@ export default function SellPage() {
                             <button
                               type="button"
                               onClick={() => removePhoto(index)}
-                              className="mt-2 text-xs font-black text-red-700 hover:text-red-600"
+                              className="mt-2 cursor-pointer text-xs font-black text-red-700 hover:text-red-600"
                             >
                               Remove photo
                             </button>
@@ -772,8 +798,8 @@ export default function SellPage() {
                 <li>• Use clear photos that show the item well.</li>
                 <li>• Be honest about wear, damage, or missing parts.</li>
                 <li>• Include important bow specs when possible.</li>
-                <li>• Your listing will be reviewed before it appears in Browse.</li>
                 <li>• Do not share payment information in your listing.</li>
+                <li>• Your listing will be reviewed before it appears in Browse.</li>
               </ul>
             </div>
 
