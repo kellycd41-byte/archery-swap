@@ -476,7 +476,7 @@ export default async function Home() {
           </p>
 
           <h2 className="mt-2 text-3xl font-black sm:text-4xl">
-            Simple enough for day one.
+            Buy and sell archery gear in a few clear steps.
           </h2>
 
           <div className="mt-8 grid gap-6 md:grid-cols-3">
