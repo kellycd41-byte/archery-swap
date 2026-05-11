@@ -137,6 +137,20 @@ function buildPhotoList(item: Listing) {
   return [];
 }
 
+function formatPostedDate(dateValue: string) {
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Recently posted";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export default async function ListingDetailPage({
   params,
 }: ListingDetailPageProps) {
@@ -155,6 +169,7 @@ export default async function ListingDetailPage({
 
   const item = listing as Listing;
   const photos = buildPhotoList(item);
+  const postedDate = formatPostedDate(item.created_at);
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
@@ -173,21 +188,55 @@ export default async function ListingDetailPage({
             <div className="rounded-3xl border border-stone-300 bg-white p-4 shadow-sm">
               <ListingPhotoGallery photos={photos} title={item.title} />
             </div>
+
+            <div className="mt-5 rounded-2xl border border-stone-300 bg-white p-5 shadow-sm">
+              <h3 className="font-black">Listing notes</h3>
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-600">
+                <li>• This listing has been reviewed before appearing publicly.</li>
+                <li>• Review all photos, specs, and description before buying.</li>
+                <li>• Contact, offers, checkout, and saved listings are coming soon.</li>
+              </ul>
+            </div>
           </section>
 
           <section className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6">
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-800">
-              {item.category}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-emerald-900">
+                Approved Listing
+              </span>
 
-            <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
+              <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-stone-700">
+                {item.category}
+              </span>
+            </div>
+
+            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">
               {item.title}
             </h2>
 
-            <p className="mt-3 text-stone-600">
-              {item.condition}
-              {item.location ? ` • ${item.location}` : ""}
+            <p className="mt-3 text-sm font-bold text-stone-500">
+              Posted {postedDate}
             </p>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="rounded-full border border-stone-300 bg-stone-50 px-3 py-1 text-sm font-black text-stone-800">
+                {item.condition}
+              </span>
+
+              <span className="rounded-full border border-stone-300 bg-stone-50 px-3 py-1 text-sm font-black text-stone-800">
+                {item.location || "Location not listed"}
+              </span>
+
+              <span
+                className={`rounded-full border px-3 py-1 text-sm font-black ${
+                  item.shipping_available
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                    : "border-stone-300 bg-stone-50 text-stone-800"
+                }`}
+              >
+                {item.shipping_available ? "Shipping Available" : "Local Only"}
+              </span>
+            </div>
 
             <p className="mt-6 text-4xl font-black sm:text-5xl">
               ${Number(item.price).toLocaleString()}
@@ -200,8 +249,8 @@ export default async function ListingDetailPage({
 
               <p className="mt-2 text-sm font-bold leading-6 text-emerald-900">
                 Messaging, saved listings, offers, checkout, and buyer accounts
-                are not active yet. For now, this listing page is for viewing
-                approved gear details.
+                are not active yet. For now, this page lets buyers review
+                approved listing details.
               </p>
 
               <div className="mt-5 grid gap-3">
@@ -232,12 +281,15 @@ export default async function ListingDetailPage({
 
             <div className="mt-6 rounded-2xl bg-stone-100 p-5">
               <h3 className="font-black">Seller</h3>
+
               <p className="mt-2 font-bold">
                 {item.seller_name || "Archery Swap Seller"}
               </p>
-              <p className="mt-1 text-sm text-stone-600">
-                Seller profiles, ratings, checkout, and shipping tools will be
-                added later.
+
+              <p className="mt-1 text-sm leading-6 text-stone-600">
+                Seller profiles, ratings, checkout, messaging, and shipping
+                tools will be added later. Do not share payment details through
+                listing descriptions.
               </p>
             </div>
 
@@ -300,8 +352,13 @@ export default async function ListingDetailPage({
                 <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
                   <span className="font-bold text-stone-600">Shipping</span>
                   <span className="text-right font-black">
-                    {item.shipping_available ? "Available" : "Not available"}
+                    {item.shipping_available ? "Available" : "Local only"}
                   </span>
+                </div>
+
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Posted</span>
+                  <span className="text-right font-black">{postedDate}</span>
                 </div>
               </div>
             </div>
@@ -330,9 +387,10 @@ export default async function ListingDetailPage({
           <h3 className="text-2xl font-black">Buyer safety</h3>
 
           <ul className="mt-4 space-y-2 text-stone-300">
-            <li>• Review photos and description before buying.</li>
-            <li>• Ask questions if specs are missing.</li>
-            <li>• Be careful with payment or shipping arrangements.</li>
+            <li>• Review photos, specs, price, and description carefully.</li>
+            <li>• Ask questions when contact tools are added if anything is unclear.</li>
+            <li>• Be careful with payment, pickup, or shipping arrangements.</li>
+            <li>• Do not send payment outside a method you trust.</li>
             <li>• Report suspicious listings to the Archery Swap team.</li>
           </ul>
         </section>
