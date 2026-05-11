@@ -21,6 +21,8 @@ const sortOptions = [
   { label: "Price: High to Low", value: "price_desc" },
 ];
 
+const handednessOptions = ["Right Hand", "Left Hand", "Ambidextrous"];
+
 type Listing = {
   id: string;
   title: string;
@@ -50,7 +52,20 @@ type BrowsePageProps = {
     conditions?: string;
     search?: string;
     sort?: string;
+    drawWeight?: string;
+    drawLength?: string;
+    handedness?: string;
   }>;
+};
+
+type BrowseHrefOptions = {
+  category: string;
+  selectedConditions: string[];
+  search: string;
+  sort: string;
+  drawWeight: string;
+  drawLength: string;
+  handedness: string;
 };
 
 function Header() {
@@ -159,28 +174,45 @@ function getSelectedSort(sortParam: string | undefined) {
   return sortParam;
 }
 
-function buildBrowseHref(
-  category: string,
-  selectedConditions: string[],
-  search: string,
-  sort: string
-) {
+function getSelectedHandedness(handednessParam: string | undefined) {
+  if (!handednessParam || !handednessOptions.includes(handednessParam)) {
+    return "";
+  }
+
+  return handednessParam;
+}
+
+function buildBrowseHref(options: BrowseHrefOptions) {
   const params = new URLSearchParams();
 
-  if (category !== "All") {
-    params.set("category", category);
+  if (options.category !== "All") {
+    params.set("category", options.category);
   }
 
-  if (selectedConditions.length > 0) {
-    params.set("conditions", selectedConditions.join(","));
+  if (options.selectedConditions.length > 0) {
+    params.set("conditions", options.selectedConditions.join(","));
   }
 
-  if (search.trim()) {
-    params.set("search", search.trim());
+  if (options.search.trim()) {
+    params.set("search", options.search.trim());
   }
 
-  if (sort !== "newest") {
-    params.set("sort", sort);
+  if (options.sort !== "newest") {
+    params.set("sort", options.sort);
+  }
+
+  if (options.category === "Bows") {
+    if (options.drawWeight.trim()) {
+      params.set("drawWeight", options.drawWeight.trim());
+    }
+
+    if (options.drawLength.trim()) {
+      params.set("drawLength", options.drawLength.trim());
+    }
+
+    if (options.handedness) {
+      params.set("handedness", options.handedness);
+    }
   }
 
   const queryString = params.toString();
@@ -193,7 +225,10 @@ function toggleCondition(
   selectedConditions: string[],
   selectedCategory: string,
   searchTerm: string,
-  selectedSort: string
+  selectedSort: string,
+  selectedDrawWeight: string,
+  selectedDrawLength: string,
+  selectedHandedness: string
 ) {
   const conditionIsSelected = selectedConditions.includes(condition);
 
@@ -203,12 +238,15 @@ function toggleCondition(
       )
     : [...selectedConditions, condition];
 
-  return buildBrowseHref(
-    selectedCategory,
-    nextConditions,
-    searchTerm,
-    selectedSort
-  );
+  return buildBrowseHref({
+    category: selectedCategory,
+    selectedConditions: nextConditions,
+    search: searchTerm,
+    sort: selectedSort,
+    drawWeight: selectedDrawWeight,
+    drawLength: selectedDrawLength,
+    handedness: selectedHandedness,
+  });
 }
 
 function getBrandModelText(item: Listing) {
@@ -284,6 +322,17 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const selectedConditions = getSelectedConditions(params.conditions);
   const selectedSort = getSelectedSort(params.sort);
   const searchTerm = params.search?.trim() || "";
+  const selectedDrawWeight =
+    selectedCategory === "Bows" ? params.drawWeight?.trim() || "" : "";
+  const selectedDrawLength =
+    selectedCategory === "Bows" ? params.drawLength?.trim() || "" : "";
+  const selectedHandedness =
+    selectedCategory === "Bows"
+      ? getSelectedHandedness(params.handedness)
+      : "";
+
+  const bowFiltersAreActive =
+    selectedDrawWeight || selectedDrawLength || selectedHandedness;
 
   let query = supabase.from("listings").select("*").eq("status", "active");
 
@@ -299,6 +348,18 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     query = query.or(
       `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,condition.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,model.ilike.%${searchTerm}%,draw_weight.ilike.%${searchTerm}%,draw_length.ilike.%${searchTerm}%,handedness.ilike.%${searchTerm}%`
     );
+  }
+
+  if (selectedCategory === "Bows" && selectedDrawWeight) {
+    query = query.ilike("draw_weight", `%${selectedDrawWeight}%`);
+  }
+
+  if (selectedCategory === "Bows" && selectedDrawLength) {
+    query = query.ilike("draw_length", `%${selectedDrawLength}%`);
+  }
+
+  if (selectedCategory === "Bows" && selectedHandedness) {
+    query = query.eq("handedness", selectedHandedness);
   }
 
   if (selectedSort === "price_asc") {
@@ -363,6 +424,30 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                 <input type="hidden" name="sort" value={selectedSort} />
               ) : null}
 
+              {selectedCategory === "Bows" && selectedDrawWeight ? (
+                <input
+                  type="hidden"
+                  name="drawWeight"
+                  value={selectedDrawWeight}
+                />
+              ) : null}
+
+              {selectedCategory === "Bows" && selectedDrawLength ? (
+                <input
+                  type="hidden"
+                  name="drawLength"
+                  value={selectedDrawLength}
+                />
+              ) : null}
+
+              {selectedCategory === "Bows" && selectedHandedness ? (
+                <input
+                  type="hidden"
+                  name="handedness"
+                  value={selectedHandedness}
+                />
+              ) : null}
+
               <label className="text-sm font-black text-stone-700">
                 Search
               </label>
@@ -384,12 +469,15 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
               {searchTerm ? (
                 <Link
-                  href={buildBrowseHref(
-                    selectedCategory,
+                  href={buildBrowseHref({
+                    category: selectedCategory,
                     selectedConditions,
-                    "",
-                    selectedSort
-                  )}
+                    search: "",
+                    sort: selectedSort,
+                    drawWeight: selectedDrawWeight,
+                    drawLength: selectedDrawLength,
+                    handedness: selectedHandedness,
+                  })}
                   scroll={false}
                   className="mt-3 block text-center text-sm font-black text-emerald-800 hover:text-emerald-600"
                 >
@@ -405,12 +493,15 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
               <div className="mt-3 space-y-2">
                 {categories.map((category) => {
-                  const href = buildBrowseHref(
+                  const href = buildBrowseHref({
                     category,
                     selectedConditions,
-                    searchTerm,
-                    selectedSort
-                  );
+                    search: searchTerm,
+                    sort: selectedSort,
+                    drawWeight: selectedDrawWeight,
+                    drawLength: selectedDrawLength,
+                    handedness: selectedHandedness,
+                  });
                   const isSelected = selectedCategory === category;
 
                   return (
@@ -436,12 +527,15 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
               <div className="mt-3 space-y-2">
                 {categories.map((category) => {
-                  const href = buildBrowseHref(
+                  const href = buildBrowseHref({
                     category,
                     selectedConditions,
-                    searchTerm,
-                    selectedSort
-                  );
+                    search: searchTerm,
+                    sort: selectedSort,
+                    drawWeight: selectedDrawWeight,
+                    drawLength: selectedDrawLength,
+                    handedness: selectedHandedness,
+                  });
                   const isSelected = selectedCategory === category;
 
                   return (
@@ -475,7 +569,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                     selectedConditions,
                     selectedCategory,
                     searchTerm,
-                    selectedSort
+                    selectedSort,
+                    selectedDrawWeight,
+                    selectedDrawLength,
+                    selectedHandedness
                   );
 
                   return (
@@ -505,12 +602,15 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
                 {selectedConditions.length > 0 ? (
                   <Link
-                    href={buildBrowseHref(
-                      selectedCategory,
-                      [],
-                      searchTerm,
-                      selectedSort
-                    )}
+                    href={buildBrowseHref({
+                      category: selectedCategory,
+                      selectedConditions: [],
+                      search: searchTerm,
+                      sort: selectedSort,
+                      drawWeight: selectedDrawWeight,
+                      drawLength: selectedDrawLength,
+                      handedness: selectedHandedness,
+                    })}
                     scroll={false}
                     className="block text-sm font-black text-emerald-800 hover:text-emerald-600"
                   >
@@ -531,7 +631,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                     selectedConditions,
                     selectedCategory,
                     searchTerm,
-                    selectedSort
+                    selectedSort,
+                    selectedDrawWeight,
+                    selectedDrawLength,
+                    selectedHandedness
                   );
 
                   return (
@@ -562,12 +665,15 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
               {selectedConditions.length > 0 ? (
                 <Link
-                  href={buildBrowseHref(
-                    selectedCategory,
-                    [],
-                    searchTerm,
-                    selectedSort
-                  )}
+                  href={buildBrowseHref({
+                    category: selectedCategory,
+                    selectedConditions: [],
+                    search: searchTerm,
+                    sort: selectedSort,
+                    drawWeight: selectedDrawWeight,
+                    drawLength: selectedDrawLength,
+                    handedness: selectedHandedness,
+                  })}
                   scroll={false}
                   className="mt-3 block text-sm font-black text-emerald-800 hover:text-emerald-600"
                 >
@@ -576,10 +682,103 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               ) : null}
             </div>
 
+            {selectedCategory === "Bows" ? (
+              <form
+                action="/browse"
+                className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
+              >
+                <input type="hidden" name="category" value="Bows" />
+
+                {selectedConditions.length > 0 ? (
+                  <input
+                    type="hidden"
+                    name="conditions"
+                    value={selectedConditions.join(",")}
+                  />
+                ) : null}
+
+                {searchTerm ? (
+                  <input type="hidden" name="search" value={searchTerm} />
+                ) : null}
+
+                {selectedSort !== "newest" ? (
+                  <input type="hidden" name="sort" value={selectedSort} />
+                ) : null}
+
+                <p className="text-sm font-black text-emerald-950">
+                  Bow Details
+                </p>
+
+                <label className="mt-4 block text-xs font-black uppercase tracking-[0.16em] text-emerald-900">
+                  Draw Weight
+                </label>
+                <input
+                  type="text"
+                  name="drawWeight"
+                  defaultValue={selectedDrawWeight}
+                  placeholder="Example: 60"
+                  className="mt-2 w-full rounded-xl border border-emerald-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-700"
+                />
+
+                <label className="mt-4 block text-xs font-black uppercase tracking-[0.16em] text-emerald-900">
+                  Draw Length
+                </label>
+                <input
+                  type="text"
+                  name="drawLength"
+                  defaultValue={selectedDrawLength}
+                  placeholder="Example: 29"
+                  className="mt-2 w-full rounded-xl border border-emerald-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-700"
+                />
+
+                <label className="mt-4 block text-xs font-black uppercase tracking-[0.16em] text-emerald-900">
+                  Handedness
+                </label>
+                <select
+                  name="handedness"
+                  defaultValue={selectedHandedness}
+                  className="mt-2 w-full rounded-xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-emerald-700"
+                >
+                  <option value="">Any Hand</option>
+                  {handednessOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="submit"
+                  className="mt-4 w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-black text-white hover:bg-emerald-600"
+                >
+                  Apply Bow Filters
+                </button>
+
+                {bowFiltersAreActive ? (
+                  <Link
+                    href={buildBrowseHref({
+                      category: selectedCategory,
+                      selectedConditions,
+                      search: searchTerm,
+                      sort: selectedSort,
+                      drawWeight: "",
+                      drawLength: "",
+                      handedness: "",
+                    })}
+                    scroll={false}
+                    className="mt-3 block text-center text-sm font-black text-emerald-900 hover:text-emerald-700"
+                  >
+                    Clear Bow Filters
+                  </Link>
+                ) : null}
+              </form>
+            ) : null}
+
             {selectedCategory !== "All" ||
             selectedConditions.length > 0 ||
             searchTerm ||
-            selectedSort !== "newest" ? (
+            selectedSort !== "newest" ||
+            bowFiltersAreActive ? (
               <Link
                 href="/browse"
                 scroll={false}
@@ -603,11 +802,21 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                 {selectedCategory !== "All" ||
                 selectedConditions.length > 0 ||
                 searchTerm ||
-                selectedSort !== "newest" ? (
+                selectedSort !== "newest" ||
+                bowFiltersAreActive ? (
                   <p className="mt-1 text-sm font-bold text-stone-500">
                     Category: {selectedCategory} • Conditions: {conditionLabel}{" "}
                     • {selectedSortLabel}
                     {searchTerm ? ` • Search: “${searchTerm}”` : ""}
+                    {selectedDrawWeight
+                      ? ` • Draw Weight: ${selectedDrawWeight}`
+                      : ""}
+                    {selectedDrawLength
+                      ? ` • Draw Length: ${selectedDrawLength}`
+                      : ""}
+                    {selectedHandedness
+                      ? ` • Handedness: ${selectedHandedness}`
+                      : ""}
                   </p>
                 ) : null}
 
@@ -637,6 +846,30 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                   <input type="hidden" name="search" value={searchTerm} />
                 ) : null}
 
+                {selectedCategory === "Bows" && selectedDrawWeight ? (
+                  <input
+                    type="hidden"
+                    name="drawWeight"
+                    value={selectedDrawWeight}
+                  />
+                ) : null}
+
+                {selectedCategory === "Bows" && selectedDrawLength ? (
+                  <input
+                    type="hidden"
+                    name="drawLength"
+                    value={selectedDrawLength}
+                  />
+                ) : null}
+
+                {selectedCategory === "Bows" && selectedHandedness ? (
+                  <input
+                    type="hidden"
+                    name="handedness"
+                    value={selectedHandedness}
+                  />
+                ) : null}
+
                 <select
                   name="sort"
                   defaultValue={selectedSort}
@@ -658,6 +891,108 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               </form>
             </div>
 
+            {selectedCategory === "Bows" ? (
+              <form
+                action="/browse"
+                className="mb-5 rounded-2xl border border-stone-300 bg-white p-5 shadow-sm lg:hidden"
+              >
+                <input type="hidden" name="category" value="Bows" />
+
+                {selectedConditions.length > 0 ? (
+                  <input
+                    type="hidden"
+                    name="conditions"
+                    value={selectedConditions.join(",")}
+                  />
+                ) : null}
+
+                {searchTerm ? (
+                  <input type="hidden" name="search" value={searchTerm} />
+                ) : null}
+
+                {selectedSort !== "newest" ? (
+                  <input type="hidden" name="sort" value={selectedSort} />
+                ) : null}
+
+                <p className="text-sm font-black text-stone-800">
+                  Bow Details
+                </p>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-[0.16em] text-stone-600">
+                      Draw Weight
+                    </label>
+                    <input
+                      type="text"
+                      name="drawWeight"
+                      defaultValue={selectedDrawWeight}
+                      placeholder="60"
+                      className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-[0.16em] text-stone-600">
+                      Draw Length
+                    </label>
+                    <input
+                      type="text"
+                      name="drawLength"
+                      defaultValue={selectedDrawLength}
+                      placeholder="29"
+                      className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-[0.16em] text-stone-600">
+                      Handedness
+                    </label>
+                    <select
+                      name="handedness"
+                      defaultValue={selectedHandedness}
+                      className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-emerald-700"
+                    >
+                      <option value="">Any Hand</option>
+                      {handednessOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="submit"
+                    className="rounded-xl bg-emerald-700 px-4 py-3 text-sm font-black text-white hover:bg-emerald-600"
+                  >
+                    Apply Bow Filters
+                  </button>
+
+                  {bowFiltersAreActive ? (
+                    <Link
+                      href={buildBrowseHref({
+                        category: selectedCategory,
+                        selectedConditions,
+                        search: searchTerm,
+                        sort: selectedSort,
+                        drawWeight: "",
+                        drawLength: "",
+                        handedness: "",
+                      })}
+                      scroll={false}
+                      className="rounded-xl border border-stone-400 px-4 py-3 text-center text-sm font-black text-stone-950 hover:bg-stone-100"
+                    >
+                      Clear Bow Filters
+                    </Link>
+                  ) : null}
+                </div>
+              </form>
+            ) : null}
+
             {error ? (
               <div className="rounded-2xl border border-red-300 bg-red-50 p-5 text-sm font-bold text-red-800">
                 Could not load listings: {error.message}
@@ -668,8 +1003,9 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               <div className="rounded-2xl border border-stone-300 bg-white p-8 text-center shadow-sm">
                 <h4 className="text-2xl font-black">No listings found</h4>
                 <p className="mt-2 text-stone-600">
-                  Try a different search, category, condition, or sort option,
-                  or be the first person to list gear that matches this filter.
+                  Try a different search, category, condition, bow detail, or
+                  sort option, or be the first person to list gear that matches
+                  this filter.
                 </p>
 
                 <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
