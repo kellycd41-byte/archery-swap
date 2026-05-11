@@ -11,6 +11,7 @@ type Listing = {
   condition: string;
   location: string | null;
   image_url: string | null;
+  image_urls: string[] | null;
   seller_name: string | null;
   seller_email: string | null;
   status: string;
@@ -119,26 +120,36 @@ function detailValue(value: string | null | undefined) {
   return value && value.trim() ? value : "Not listed";
 }
 
+function buildPhotoList(item: Listing) {
+  const photosFromArray = Array.isArray(item.image_urls)
+    ? item.image_urls.filter((url) => url && url.trim())
+    : [];
+
+  if (photosFromArray.length > 0) {
+    return photosFromArray;
+  }
+
+  if (item.image_url && item.image_url.trim()) {
+    return [item.image_url];
+  }
+
+  return [];
+}
+
 function DetailPhotoPlaceholder() {
   return (
-    <div className="relative flex h-[320px] items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-stone-950 via-stone-800 to-emerald-950 px-6 text-center sm:h-[420px]">
-      <div className="absolute left-8 top-8 h-28 w-28 rounded-full border border-emerald-300/20" />
-      <div className="absolute bottom-8 right-8 h-36 w-36 rounded-full border border-white/10" />
+    <div className="relative flex h-[440px] items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-stone-950 via-stone-800 to-emerald-950 px-5 text-center">
+      <div className="absolute left-8 top-8 h-20 w-20 rounded-full border border-emerald-300/20" />
+      <div className="absolute bottom-8 right-8 h-24 w-24 rounded-full border border-white/10" />
       <div className="absolute left-0 top-1/2 h-px w-full bg-white/10" />
-      <div className="absolute left-1/2 top-0 h-full w-px bg-white/10" />
 
-      <div className="relative max-w-sm">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-emerald-300/40 bg-white/10 text-4xl">
+      <div className="relative">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-emerald-300/40 bg-white/10 text-3xl">
           🎯
         </div>
 
-        <p className="mt-5 text-sm font-black uppercase tracking-[0.3em] text-emerald-200">
-          No Photo Added
-        </p>
-
-        <p className="mt-3 text-sm font-bold leading-6 text-white/70">
-          This listing does not have a photo yet. Message the seller to request
-          clear pictures before buying.
+        <p className="mt-4 text-xs font-black uppercase tracking-[0.25em] text-emerald-200">
+          No Photo Yet
         </p>
       </div>
     </div>
@@ -162,6 +173,8 @@ export default async function ListingDetailPage({
   }
 
   const item = listing as Listing;
+  const photos = buildPhotoList(item);
+  const mainPhoto = photos[0];
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
@@ -175,22 +188,45 @@ export default async function ListingDetailPage({
           ← Back to Browse Gear
         </Link>
 
-        <div className="mt-6 grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <div>
+        <div className="mt-6 grid gap-8 md:grid-cols-[520px_minmax(0,1fr)] md:items-start">
+          <section>
             <div className="rounded-3xl border border-stone-300 bg-white p-4 shadow-sm">
-              {item.image_url ? (
-                <img
-                  src={item.image_url}
-                  alt={item.title}
-                  className="h-[320px] w-full rounded-2xl object-cover sm:h-[420px]"
-                />
+              {mainPhoto ? (
+                <div className="flex h-[440px] items-center justify-center overflow-hidden rounded-2xl bg-stone-100">
+                  <img
+                    src={mainPhoto}
+                    alt={item.title}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
               ) : (
                 <DetailPhotoPlaceholder />
               )}
-            </div>
-          </div>
 
-          <div className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6">
+              <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+                {photos.length > 0 ? (
+                  photos.map((photoUrl, index) => (
+                    <div
+                      key={`${photoUrl}-${index}`}
+                      className="flex h-16 w-16 flex-none items-center justify-center overflow-hidden rounded-xl border border-stone-300 bg-stone-100"
+                    >
+                      <img
+                        src={photoUrl}
+                        alt={`${item.title} photo ${index + 1}`}
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex h-16 w-16 flex-none items-center justify-center rounded-xl border border-dashed border-stone-300 bg-stone-100 text-xl">
+                    🎯
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6">
             <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-800">
               {item.category}
             </p>
@@ -299,7 +335,7 @@ export default async function ListingDetailPage({
                 </div>
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
         {item.included_accessories ? (
