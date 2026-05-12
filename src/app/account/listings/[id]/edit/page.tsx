@@ -21,6 +21,7 @@ type ListingForm = {
   handedness: string;
   included_accessories: string;
   shipping_available: boolean;
+  offers_allowed: boolean;
 };
 
 const emptyForm: ListingForm = {
@@ -37,6 +38,7 @@ const emptyForm: ListingForm = {
   handedness: "",
   included_accessories: "",
   shipping_available: false,
+  offers_allowed: true,
 };
 
 export default function EditListingPage() {
@@ -85,7 +87,7 @@ export default function EditListingPage() {
       const { data, error } = await supabase
         .from("listings")
         .select(
-          "title,description,price,category,condition,location,brand,model,draw_weight,draw_length,handedness,included_accessories,shipping_available,status"
+          "title,description,price,category,condition,location,brand,model,draw_weight,draw_length,handedness,included_accessories,shipping_available,offers_allowed,status"
         )
         .eq("id", listingId)
         .eq("user_id", signedInUser.id)
@@ -122,6 +124,7 @@ export default function EditListingPage() {
         handedness: data.handedness || "",
         included_accessories: data.included_accessories || "",
         shipping_available: Boolean(data.shipping_available),
+        offers_allowed: data.offers_allowed !== false,
       });
     }
 
@@ -203,6 +206,7 @@ export default function EditListingPage() {
         handedness: form.handedness || null,
         included_accessories: form.included_accessories.trim() || null,
         shipping_available: form.shipping_available,
+        offers_allowed: form.offers_allowed,
       })
       .eq("id", listingId)
       .eq("user_id", user.id);
@@ -481,6 +485,26 @@ export default function EditListingPage() {
                       />
                       <span className="text-sm font-black">
                         Shipping Available
+                      </span>
+                    </label>
+
+                    <label className="flex items-center gap-3 rounded-2xl border border-stone-300 bg-white px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={form.offers_allowed}
+                        onChange={(event) =>
+                          updateField("offers_allowed", event.target.checked)
+                        }
+                        className="h-5 w-5"
+                      />
+                      <span>
+                        <span className="block text-sm font-black">
+                          Allow buyers to make offers
+                        </span>
+                        <span className="mt-1 block text-xs font-bold text-stone-600">
+                          Uncheck this if you only want buyers to use the future
+                          Buy Now option.
+                        </span>
                       </span>
                     </label>
                   </div>
