@@ -28,6 +28,7 @@ type Conversation = {
   listingTitle: string;
   lastMessage: MessageRecord;
   messages: MessageRecord[];
+  unreadCount: number;
 };
 
 type ReplyStatus = {
@@ -183,6 +184,7 @@ export default function MessagesPage() {
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSendingReply, setIsSendingReply] = useState(false);
+  const [isMarkingRead, setIsMarkingRead] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   const conversations = useMemo(() => {
@@ -196,6 +198,8 @@ export default function MessagesPage() {
       const conversationId = getConversationId(message, user.id);
       const otherUserId = getOtherUserId(message, user.id);
       const listingTitle = getListingTitle(message.listing_id, listingMap);
+      const isUnreadForMe =
+        message.receiver_id === user.id && message.read_at === null;
 
       if (!conversationMap[conversationId]) {
         conversationMap[conversationId] = {
@@ -205,10 +209,15 @@ export default function MessagesPage() {
           listingTitle,
           lastMessage: message,
           messages: [],
+          unreadCount: 0,
         };
       }
 
       conversationMap[conversationId].messages.push(message);
+
+      if (isUnreadForMe) {
+        conversationMap[conversationId].unreadCount += 1;
+      }
 
       const currentLastMessageDate = new Date(
         conversationMap[conversationId].lastMessage.created_at
@@ -235,6 +244,11 @@ export default function MessagesPage() {
           new Date(firstConversation.lastMessage.created_at).getTime()
       );
   }, [messages, listingMap, user]);
+
+  const totalUnreadCount = conversations.reduce(
+    (total, conversation) => total + conversation.unreadCount,
+    0
+  );
 
   const selectedConversation =
     conversations.find(
@@ -295,6 +309,49 @@ export default function MessagesPage() {
 
     setListingMap(nextListingMap);
     setIsLoadingMessages(false);
+  }
+
+  async function markConversationAsRead(conversation: Conversation) {
+    if (!user || isMarkingRead) {
+      return;
+    }
+
+    const unreadMessageIds = conversation.messages
+      .filter(
+        (message) => message.receiver_id === user.id && message.read_at === null
+      )
+      .map((message) => message.id);
+
+    if (unreadMessageIds.length === 0) {
+      return;
+    }
+
+    setIsMarkingRead(true);
+
+    const readAtValue = new Date().toISOString();
+
+    setMessages((currentMessages) =>
+      currentMessages.map((message) =>
+        unreadMessageIds.includes(message.id)
+          ? {
+              ...message,
+              read_at: readAtValue,
+            }
+          : message
+      )
+    );
+
+    const { error } = await supabase
+      .from("messages")
+      .update({ read_at: readAtValue })
+      .in("id", unreadMessageIds);
+
+    if (error) {
+      setErrorMessage(error.message);
+      await loadMessages(user);
+    }
+
+    setIsMarkingRead(false);
   }
 
   async function handleSendReply(event: FormEvent<HTMLFormElement>) {
@@ -389,6 +446,12 @@ export default function MessagesPage() {
     }
   }, [conversations, selectedConversationId]);
 
+  useEffect(() => {
+    if (selectedConversation) {
+      markConversationAsRead(selectedConversation);
+    }
+  }, [selectedConversation?.id]);
+
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
       <Header />
@@ -461,6 +524,14 @@ export default function MessagesPage() {
                   <p className="mt-4 max-w-2xl text-base leading-7 text-stone-700">
                     Signed in as <span className="font-black">{user.email}</span>
                   </p>
+
+                  <p className="mt-2 text-sm font-black text-emerald-800">
+                    {totalUnreadCount === 0
+                      ? "No unread messages"
+                      : `${totalUnreadCount} unread message${
+                          totalUnreadCount === 1 ? "" : "s"
+                        }`}
+                  </p>
                 </div>
 
                 <button
@@ -516,6 +587,7 @@ export default function MessagesPage() {
                         selectedConversation?.id === conversation.id;
                       const lastMessageSentByMe =
                         conversation.lastMessage.sender_id === user.id;
+                      const hasUnreadMessages = conversation.unreadCount > 0;
 
                       return (
                         <button
@@ -529,16 +601,38 @@ export default function MessagesPage() {
                           className={`mb-3 w-full cursor-pointer rounded-2xl border p-4 text-left transition ${
                             isSelected
                               ? "border-emerald-400 bg-emerald-50"
+                              : hasUnreadMessages
+                              ? "border-emerald-300 bg-white shadow-sm hover:bg-emerald-50"
                               : "border-stone-300 bg-white hover:bg-stone-100"
                           }`}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-black text-stone-950">
-                                {conversation.listingTitle}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <p
+                                  className={`truncate text-sm text-stone-950 ${
+                                    hasUnreadMessages
+                                      ? "font-black"
+                                      : "font-bold"
+                                  }`}
+                                >
+                                  {conversation.listingTitle}
+                                </p>
 
-                              <p className="mt-1 truncate text-xs font-bold text-stone-500">
+                                {hasUnreadMessages ? (
+                                  <span className="shrink-0 rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-black text-white">
+                                    {conversation.unreadCount}
+                                  </span>
+                                ) : null}
+                              </div>
+
+                              <p
+                                className={`mt-1 truncate text-xs ${
+                                  hasUnreadMessages
+                                    ? "font-black text-stone-800"
+                                    : "font-bold text-stone-500"
+                                }`}
+                              >
                                 {lastMessageSentByMe ? "You: " : "Them: "}
                                 {conversation.lastMessage.body}
                               </p>
@@ -587,6 +681,9 @@ export default function MessagesPage() {
                       <div className="flex-1 space-y-4 overflow-y-auto bg-stone-100 p-5">
                         {selectedConversation.messages.map((message) => {
                           const isSentByMe = message.sender_id === user.id;
+                          const isUnreadForMe =
+                            message.receiver_id === user.id &&
+                            message.read_at === null;
 
                           return (
                             <div
@@ -599,6 +696,8 @@ export default function MessagesPage() {
                                 className={`max-w-[85%] rounded-2xl p-4 shadow-sm sm:max-w-[70%] ${
                                   isSentByMe
                                     ? "bg-emerald-600 text-white"
+                                    : isUnreadForMe
+                                    ? "border-2 border-emerald-300 bg-white text-stone-900"
                                     : "border border-stone-300 bg-white text-stone-900"
                                 }`}
                               >
@@ -690,6 +789,7 @@ export default function MessagesPage() {
                 <li>• Buyers can send messages from listing pages.</li>
                 <li>• Messages are grouped by listing and person.</li>
                 <li>• Buyers and sellers can reply from one chat window.</li>
+                <li>• Unread messages are marked when a conversation is opened.</li>
                 <li>• Offers and checkout will come later.</li>
               </ul>
             </div>
