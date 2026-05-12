@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import { supabase } from "@/lib/supabase";
 import ListingPhotoGallery from "./ListingPhotoGallery";
+import MakeOfferBox from "./MakeOfferBox";
 import MessageSellerBox from "./MessageSellerBox";
 
 type Listing = {
@@ -113,6 +114,7 @@ export default async function ListingDetailPage({
                 <li>• This listing has been reviewed before appearing publicly.</li>
                 <li>• Review all photos, specs, and description before buying.</li>
                 <li>• Use messaging to ask the seller questions before making arrangements.</li>
+                <li>• Use Make Offer to send a private offer to the seller.</li>
               </ul>
             </div>
           </section>
@@ -159,6 +161,13 @@ export default async function ListingDetailPage({
             <p className="mt-6 text-4xl font-black sm:text-5xl">
               ${Number(item.price).toLocaleString()}
             </p>
+
+            <MakeOfferBox
+              listingId={item.id}
+              listingTitle={item.title}
+              listingPrice={item.price}
+              sellerUserId={item.user_id}
+            />
 
             <MessageSellerBox
               listingId={item.id}
