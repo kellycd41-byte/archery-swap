@@ -247,7 +247,9 @@ export default function AccountPage() {
 
   async function handleMarkInactive(listing: UserListing) {
     if (!user) {
-      setListingActionErrorMessage("Please sign in again before updating this listing.");
+      setListingActionErrorMessage(
+        "Please sign in again before updating this listing."
+      );
       return;
     }
 
@@ -285,7 +287,9 @@ export default function AccountPage() {
 
   async function handleReactivateListing(listing: UserListing) {
     if (!user) {
-      setListingActionErrorMessage("Please sign in again before updating this listing.");
+      setListingActionErrorMessage(
+        "Please sign in again before updating this listing."
+      );
       return;
     }
 
@@ -411,8 +415,8 @@ export default function AccountPage() {
                     <h3 className="text-2xl font-black">My Listings</h3>
                     <p className="mt-2 text-sm leading-6 text-stone-600">
                       These are the listings submitted from your signed-in
-                      account. Active listings can be marked inactive/sold, and
-                      inactive listings can be reactivated.
+                      account. You can edit details, mark active listings
+                      inactive/sold, and reactivate inactive listings.
                     </p>
                   </div>
 
@@ -521,15 +525,24 @@ export default function AccountPage() {
                           </div>
                         </div>
 
-                        {listing.status === "active" ? (
-                          <div className="mt-4 flex flex-wrap gap-3">
+                        <div className="mt-4 flex flex-wrap gap-3">
+                          <Link
+                            href={`/account/listings/${listing.id}/edit`}
+                            className="inline-block rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-black text-stone-950 hover:bg-stone-100"
+                          >
+                            Edit Listing
+                          </Link>
+
+                          {listing.status === "active" ? (
                             <Link
                               href={`/listing/${listing.id}`}
                               className="inline-block rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-stone-800"
                             >
                               View Public Listing
                             </Link>
+                          ) : null}
 
+                          {listing.status === "active" ? (
                             <button
                               type="button"
                               onClick={() => handleMarkInactive(listing)}
@@ -540,8 +553,8 @@ export default function AccountPage() {
                                 ? "Updating..."
                                 : "Mark Inactive / Sold"}
                             </button>
-                          </div>
-                        ) : null}
+                          ) : null}
+                        </div>
 
                         {listing.status === "pending" ? (
                           <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold leading-6 text-amber-900">
@@ -704,8 +717,8 @@ export default function AccountPage() {
             <div className="rounded-2xl border border-stone-300 bg-stone-50 p-5">
               <p className="text-lg font-black">Listing control</p>
               <p className="mt-2 text-sm leading-6 text-stone-600">
-                Users can now mark active listings inactive/sold and reactivate
-                inactive listings from My Listings.
+                Users can now edit listings, mark active listings inactive/sold,
+                and reactivate inactive listings from My Listings.
               </p>
             </div>
           </div>
@@ -719,6 +732,7 @@ export default function AccountPage() {
               <li>• Signed-in users can now view listings they submitted.</li>
               <li>• Active listings can now be marked inactive/sold.</li>
               <li>• Inactive listings can now be reactivated.</li>
+              <li>• Listing details can now be edited from My Listings.</li>
             </ul>
           </div>
         </div>
@@ -785,5 +799,5 @@ export default function AccountPage() {
         </aside>
       </section>
     </main>
-  )
+  );
 }
