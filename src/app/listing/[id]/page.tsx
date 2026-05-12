@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import ListingPhotoGallery from "./ListingPhotoGallery";
+import MessageSellerBox from "./MessageSellerBox";
 
 type Listing = {
   id: string;
+  user_id: string | null;
   title: string;
   description: string;
   price: number;
@@ -151,19 +153,6 @@ function formatPostedDate(dateValue: string) {
   });
 }
 
-function buildEmailLink(item: Listing) {
-  if (!item.seller_email || !item.seller_email.trim()) {
-    return "";
-  }
-
-  const subject = encodeURIComponent(`Question about ${item.title}`);
-  const body = encodeURIComponent(
-    `Hi, I saw your listing on Archery Swap and wanted to ask about "${item.title}".`
-  );
-
-  return `mailto:${item.seller_email.trim()}?subject=${subject}&body=${body}`;
-}
-
 export default async function ListingDetailPage({
   params,
 }: ListingDetailPageProps) {
@@ -183,7 +172,6 @@ export default async function ListingDetailPage({
   const item = listing as Listing;
   const photos = buildPhotoList(item);
   const postedDate = formatPostedDate(item.created_at);
-  const sellerEmailLink = buildEmailLink(item);
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
@@ -208,7 +196,7 @@ export default async function ListingDetailPage({
               <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-600">
                 <li>• This listing has been reviewed before appearing publicly.</li>
                 <li>• Review all photos, specs, and description before buying.</li>
-                <li>• Contact the seller directly with questions before making arrangements.</li>
+                <li>• Use messaging to ask the seller questions before making arrangements.</li>
               </ul>
             </div>
           </section>
@@ -256,63 +244,11 @@ export default async function ListingDetailPage({
               ${Number(item.price).toLocaleString()}
             </p>
 
-            <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-              <h3 className="text-lg font-black text-emerald-950">
-                Contact seller
-              </h3>
-
-              <p className="mt-2 text-sm font-bold leading-6 text-emerald-900">
-                Archery Swap messaging and checkout are still coming soon. For
-                now, approved listings can be handled by contacting the seller
-                directly.
-              </p>
-
-              {item.seller_email ? (
-                <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-4">
-                  <p className="text-sm font-black text-emerald-950">
-                    Seller contact is available for this listing.
-                  </p>
-
-                  <p className="mt-2 text-xs font-bold leading-5 text-stone-500">
-                    Use the Email Seller button below to open your email app with
-                    a starter message. The seller email is not displayed
-                    directly on the page.
-                  </p>
-                </div>
-              ) : (
-                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                  <p className="text-sm font-black text-amber-950">
-                    Seller contact is not available for this listing yet.
-                  </p>
-                </div>
-              )}
-
-              <div className="mt-5 grid gap-3">
-                {item.seller_email ? (
-                  <a
-                    href={sellerEmailLink}
-                    className="rounded-xl bg-emerald-700 px-6 py-3 text-center font-black text-white hover:bg-emerald-600"
-                  >
-                    Email Seller
-                  </a>
-                ) : null}
-
-                <button
-                  type="button"
-                  disabled
-                  className="cursor-not-allowed rounded-xl border border-emerald-700 bg-white px-6 py-3 text-center font-black text-emerald-950 opacity-80"
-                >
-                  Save Listing — Coming Soon
-                </button>
-
-                <Link
-                  href="/browse"
-                  className="rounded-xl border border-stone-400 px-6 py-3 text-center font-black text-stone-950 hover:bg-stone-100"
-                >
-                  Keep Browsing
-                </Link>
-              </div>
-            </div>
+            <MessageSellerBox
+              listingId={item.id}
+              listingTitle={item.title}
+              sellerUserId={item.user_id}
+            />
 
             <div className="mt-6 rounded-2xl bg-stone-100 p-5">
               <h3 className="font-black">Seller</h3>
@@ -322,8 +258,8 @@ export default async function ListingDetailPage({
               </p>
 
               <p className="mt-1 text-sm leading-6 text-stone-600">
-                Seller profiles, ratings, checkout, messaging, and shipping
-                tools will be added later. Use caution with payment, pickup, and
+                Seller profiles, ratings, checkout, offers, and shipping tools
+                will be added later. Use caution with payment, pickup, and
                 shipping arrangements.
               </p>
             </div>
