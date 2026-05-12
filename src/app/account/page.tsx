@@ -163,6 +163,9 @@ export default function AccountPage() {
   const [receivedOffers, setReceivedOffers] = useState<UserOffer[]>([]);
   const [isLoadingOffers, setIsLoadingOffers] = useState(false);
   const [offersErrorMessage, setOffersErrorMessage] = useState("");
+  const [offerActionMessage, setOfferActionMessage] = useState("");
+  const [offerActionErrorMessage, setOfferActionErrorMessage] = useState("");
+  const [updatingOfferId, setUpdatingOfferId] = useState<string | null>(null);
 
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -265,6 +268,8 @@ export default function AccountPage() {
         setReceivedOffers([]);
         setListingsErrorMessage("");
         setOffersErrorMessage("");
+        setOfferActionMessage("");
+        setOfferActionErrorMessage("");
         setListingActionMessage("");
         setListingActionErrorMessage("");
       }
@@ -373,6 +378,8 @@ export default function AccountPage() {
     setReceivedOffers([]);
     setListingsErrorMessage("");
     setOffersErrorMessage("");
+    setOfferActionMessage("");
+    setOfferActionErrorMessage("");
     setListingActionMessage("");
     setListingActionErrorMessage("");
     setMessage("You are signed out.");
@@ -458,6 +465,93 @@ export default function AccountPage() {
     await loadMyListings(user);
   }
 
+  async function updateOfferStatus(offer: UserOffer, nextStatus: string) {
+    if (!user) {
+      setOfferActionErrorMessage("Please sign in again before updating this offer.");
+      return;
+    }
+
+    if (offer.status !== "pending") {
+      setOfferActionErrorMessage("Only pending offers can be updated.");
+      return;
+    }
+
+    const listing = getOfferListing(offer);
+    const listingTitle = listing?.title || "this listing";
+
+    let confirmMessage = "";
+
+    if (nextStatus === "accepted") {
+      confirmMessage = `Accept the offer of $${Number(
+        offer.amount
+      ).toLocaleString()} for "${listingTitle}"?`;
+    } else if (nextStatus === "declined") {
+      confirmMessage = `Decline the offer of $${Number(
+        offer.amount
+      ).toLocaleString()} for "${listingTitle}"?`;
+    } else {
+      confirmMessage = `Withdraw your offer of $${Number(
+        offer.amount
+      ).toLocaleString()} for "${listingTitle}"?`;
+    }
+
+    const confirmed = window.confirm(confirmMessage);
+
+    if (!confirmed) {
+      return;
+    }
+
+    setUpdatingOfferId(offer.id);
+    setOfferActionMessage("");
+    setOfferActionErrorMessage("");
+
+    let query = supabase
+      .from("offers")
+      .update({
+        status: nextStatus,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", offer.id)
+      .eq("status", "pending");
+
+    if (nextStatus === "withdrawn") {
+      query = query.eq("buyer_id", user.id);
+    } else {
+      query = query.eq("seller_id", user.id);
+    }
+
+    const { error } = await query;
+
+    setUpdatingOfferId(null);
+
+    if (error) {
+      setOfferActionErrorMessage(error.message);
+      return;
+    }
+
+    if (nextStatus === "accepted") {
+      setOfferActionMessage(`Offer accepted for "${listingTitle}".`);
+    } else if (nextStatus === "declined") {
+      setOfferActionMessage(`Offer declined for "${listingTitle}".`);
+    } else {
+      setOfferActionMessage(`Offer withdrawn for "${listingTitle}".`);
+    }
+
+    await loadMyOffers(user);
+  }
+
+  async function handleAcceptOffer(offer: UserOffer) {
+    await updateOfferStatus(offer, "accepted");
+  }
+
+  async function handleDeclineOffer(offer: UserOffer) {
+    await updateOfferStatus(offer, "declined");
+  }
+
+  async function handleWithdrawOffer(offer: UserOffer) {
+    await updateOfferStatus(offer, "withdrawn");
+  }
+
   function renderOfferCard(offer: UserOffer, kind: "sent" | "received") {
     const listing = getOfferListing(offer);
     const listingTitle = listing?.title || "Listing unavailable";
@@ -537,6 +631,39 @@ export default function AccountPage() {
             >
               View Listing
             </Link>
+          ) : null}
+
+          {kind === "received" && offer.status === "pending" ? (
+            <>
+              <button
+                type="button"
+                onClick={() => handleAcceptOffer(offer)}
+                disabled={updatingOfferId === offer.id}
+                className="cursor-pointer rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {updatingOfferId === offer.id ? "Updating..." : "Accept Offer"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDeclineOffer(offer)}
+                disabled={updatingOfferId === offer.id}
+                className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-800 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {updatingOfferId === offer.id ? "Updating..." : "Decline Offer"}
+              </button>
+            </>
+          ) : null}
+
+          {kind === "sent" && offer.status === "pending" ? (
+            <button
+              type="button"
+              onClick={() => handleWithdrawOffer(offer)}
+              disabled={updatingOfferId === offer.id}
+              className="cursor-pointer rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-black text-stone-950 hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {updatingOfferId === offer.id ? "Updating..." : "Withdraw Offer"}
+            </button>
           ) : null}
         </div>
       </div>
@@ -649,6 +776,18 @@ export default function AccountPage() {
                 {offersErrorMessage ? (
                   <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
                     {offersErrorMessage}
+                  </div>
+                ) : null}
+
+                {offerActionMessage ? (
+                  <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
+                    {offerActionMessage}
+                  </div>
+                ) : null}
+
+                {offerActionErrorMessage ? (
+                  <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+                    {offerActionErrorMessage}
                   </div>
                 ) : null}
 
