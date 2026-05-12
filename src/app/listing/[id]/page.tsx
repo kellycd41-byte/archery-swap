@@ -28,6 +28,7 @@ type Listing = {
   handedness: string | null;
   included_accessories: string | null;
   shipping_available: boolean;
+  offers_allowed: boolean | null;
 };
 
 type ListingDetailPageProps = {
@@ -89,6 +90,7 @@ export default async function ListingDetailPage({
   const item = listing as Listing;
   const photos = buildPhotoList(item);
   const postedDate = formatPostedDate(item.created_at);
+  const offersAllowed = item.offers_allowed !== false;
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
@@ -114,7 +116,11 @@ export default async function ListingDetailPage({
                 <li>• This listing has been reviewed before appearing publicly.</li>
                 <li>• Review all photos, specs, and description before buying.</li>
                 <li>• Use messaging to ask the seller questions before making arrangements.</li>
-                <li>• Use Make Offer to send a private offer to the seller.</li>
+                {offersAllowed ? (
+                  <li>• This seller is open to offers on this listing.</li>
+                ) : (
+                  <li>• This seller is not accepting offers on this listing.</li>
+                )}
               </ul>
             </div>
           </section>
@@ -156,18 +162,30 @@ export default async function ListingDetailPage({
               >
                 {item.shipping_available ? "Shipping Available" : "Local Only"}
               </span>
+
+              <span
+                className={`rounded-full border px-3 py-1 text-sm font-black ${
+                  offersAllowed
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                    : "border-stone-300 bg-stone-50 text-stone-800"
+                }`}
+              >
+                {offersAllowed ? "Offers Welcome" : "No Offers"}
+              </span>
             </div>
 
             <p className="mt-6 text-4xl font-black sm:text-5xl">
               ${Number(item.price).toLocaleString()}
             </p>
 
-            <MakeOfferBox
-              listingId={item.id}
-              listingTitle={item.title}
-              listingPrice={item.price}
-              sellerUserId={item.user_id}
-            />
+            {offersAllowed ? (
+              <MakeOfferBox
+                listingId={item.id}
+                listingTitle={item.title}
+                listingPrice={item.price}
+                sellerUserId={item.user_id}
+              />
+            ) : null}
 
             <MessageSellerBox
               listingId={item.id}
@@ -249,6 +267,13 @@ export default async function ListingDetailPage({
                   <span className="font-bold text-stone-600">Shipping</span>
                   <span className="text-right font-black">
                     {item.shipping_available ? "Available" : "Local only"}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Offers</span>
+                  <span className="text-right font-black">
+                    {offersAllowed ? "Allowed" : "Not accepted"}
                   </span>
                 </div>
 

@@ -58,6 +58,7 @@ export default function SellPage() {
   const [handedness, setHandedness] = useState("");
   const [includedAccessories, setIncludedAccessories] = useState("");
   const [shippingAvailable, setShippingAvailable] = useState(false);
+  const [offersAllowed, setOffersAllowed] = useState(true);
 
   const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState<PhotoPreview[]>([]);
@@ -316,6 +317,7 @@ export default function SellPage() {
         handedness: handedness || null,
         included_accessories: includedAccessories.trim() || null,
         shipping_available: shippingAvailable,
+        offers_allowed: offersAllowed,
         image_url: firstPhotoUrl,
         image_urls: photoUrls,
         status: "pending",
@@ -345,6 +347,7 @@ export default function SellPage() {
       setHandedness("");
       setIncludedAccessories("");
       setShippingAvailable(false);
+      setOffersAllowed(true);
       resetPhotoSelection();
     } catch (error) {
       setErrorMessage(
@@ -647,7 +650,7 @@ export default function SellPage() {
               </section>
 
               <section className="rounded-2xl border border-stone-200 p-5">
-                <h4 className="text-xl font-black">Seller and shipping</h4>
+                <h4 className="text-xl font-black">Seller, shipping, and offers</h4>
                 <p className="mt-1 text-sm text-stone-600">
                   Your seller email now comes from your signed-in account.
                 </p>
@@ -694,6 +697,24 @@ export default function SellPage() {
                     </span>
                     <span className="mt-1 block text-sm text-stone-600">
                       Check this if you are willing to ship this item to a buyer.
+                    </span>
+                  </span>
+                </label>
+
+                <label className="mt-4 flex items-start gap-3 rounded-2xl border border-stone-300 bg-stone-50 p-4">
+                  <input
+                    type="checkbox"
+                    checked={offersAllowed}
+                    onChange={(event) => setOffersAllowed(event.target.checked)}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="block font-black">
+                      Allow buyers to make offers
+                    </span>
+                    <span className="mt-1 block text-sm text-stone-600">
+                      Leave this checked if you are open to offers. Uncheck it
+                      if you only want buyers to use the future Buy Now option.
                     </span>
                   </span>
                 </label>
