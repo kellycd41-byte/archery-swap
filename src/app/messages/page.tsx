@@ -1,4 +1,25 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { User } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
+
+type MessageRecord = {
+  id: string;
+  listing_id: string;
+  sender_id: string;
+  receiver_id: string;
+  body: string;
+  read_at: string | null;
+  created_at: string;
+};
+
+type ListingSummary = {
+  id: string;
+  title: string;
+  status: string;
+};
 
 function Header() {
   return (
@@ -85,7 +106,132 @@ function Header() {
   );
 }
 
+function formatMessageDate(dateValue: string) {
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Recently";
+  }
+
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function getListingTitle(
+  listingId: string,
+  listingMap: Record<string, ListingSummary>
+) {
+  return listingMap[listingId]?.title || "Listing";
+}
+
 export default function MessagesPage() {
+  const [user, setUser] = useState<User | null>(null);
+  const [messages, setMessages] = useState<MessageRecord[]>([]);
+  const [listingMap, setListingMap] = useState<Record<string, ListingSummary>>(
+    {}
+  );
+
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  async function loadMessages(currentUser: User) {
+    setIsLoadingMessages(true);
+    setErrorMessage("");
+
+    const { data: messageData, error: messageError } = await supabase
+      .from("messages")
+      .select("id,listing_id,sender_id,receiver_id,body,read_at,created_at")
+      .order("created_at", { ascending: false });
+
+    if (messageError) {
+      setMessages([]);
+      setListingMap({});
+      setErrorMessage(messageError.message);
+      setIsLoadingMessages(false);
+      return;
+    }
+
+    const loadedMessages = (messageData || []) as MessageRecord[];
+    setMessages(loadedMessages);
+
+    const uniqueListingIds = Array.from(
+      new Set(
+        loadedMessages
+          .map((message) => message.listing_id)
+          .filter((listingId) => listingId)
+      )
+    );
+
+    if (uniqueListingIds.length === 0) {
+      setListingMap({});
+      setIsLoadingMessages(false);
+      return;
+    }
+
+    const { data: listingData, error: listingError } = await supabase
+      .from("listings")
+      .select("id,title,status")
+      .in("id", uniqueListingIds);
+
+    if (listingError) {
+      setListingMap({});
+      setErrorMessage(listingError.message);
+      setIsLoadingMessages(false);
+      return;
+    }
+
+    const nextListingMap: Record<string, ListingSummary> = {};
+
+    ((listingData || []) as ListingSummary[]).forEach((listing) => {
+      nextListingMap[listing.id] = listing;
+    });
+
+    setListingMap(nextListingMap);
+    setIsLoadingMessages(false);
+  }
+
+  useEffect(() => {
+    async function loadSession() {
+      const { data } = await supabase.auth.getSession();
+      const signedInUser = data.session?.user ?? null;
+
+      setUser(signedInUser);
+      setIsLoadingSession(false);
+
+      if (signedInUser) {
+        loadMessages(signedInUser);
+      }
+    }
+
+    loadSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const signedInUser = session?.user ?? null;
+
+      setUser(signedInUser);
+
+      if (signedInUser) {
+        loadMessages(signedInUser);
+      } else {
+        setMessages([]);
+        setListingMap({});
+        setErrorMessage("");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
       <Header />
@@ -97,124 +243,213 @@ export default function MessagesPage() {
           </p>
 
           <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">
-            Buyer and seller messaging is coming soon.
+            Your Archery Swap messages.
           </h2>
 
           <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
-            We are preparing a safer messaging system for Archery Swap. Once
-            account sign-in is ready, buyers and sellers will be able to contact
-            each other directly from listings.
+            Messages are connected to listings so buyers and sellers know
+            exactly which item they are discussing.
           </p>
         </div>
       </section>
 
       <section className="mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[1fr_380px]">
         <div className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6 md:p-8">
-          <div className="rounded-3xl border border-dashed border-emerald-700 bg-emerald-50 p-6 sm:p-8">
-            <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-800">
-              Coming Soon
-            </p>
-
-            <h3 className="mt-4 text-3xl font-black tracking-tight text-stone-950">
-              Messaging is not active yet.
-            </h3>
-
-            <p className="mt-4 max-w-2xl text-base leading-7 text-stone-700">
-              This page is ready for the future messaging feature, but real
-              conversations are not connected yet. We removed the fake inbox so
-              the site stays cleaner and more honest while the marketplace is
-              being finished.
-            </p>
-
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              <Link
-                href="/browse"
-                className="rounded-2xl bg-stone-950 px-5 py-4 text-center text-sm font-black text-white hover:bg-stone-800"
-              >
-                Browse Gear
-              </Link>
-
-              <Link
-                href="/sell"
-                className="rounded-2xl bg-emerald-600 px-5 py-4 text-center text-sm font-black text-white hover:bg-emerald-500"
-              >
-                List Your Gear
-              </Link>
+          {isLoadingSession ? (
+            <div className="rounded-3xl border border-stone-300 bg-stone-50 p-6">
+              <p className="font-black">Checking sign-in status...</p>
             </div>
-          </div>
-
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-stone-300 bg-stone-50 p-5">
-              <p className="text-lg font-black">Buyer questions</p>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
-                Buyers will be able to ask about condition, included gear,
-                specs, pickup, and shipping before making a deal.
+          ) : !user ? (
+            <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 sm:p-8">
+              <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-800">
+                Sign In Required
               </p>
-            </div>
 
-            <div className="rounded-2xl border border-stone-300 bg-stone-50 p-5">
-              <p className="text-lg font-black">Seller replies</p>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
-                Sellers will be able to respond from one inbox instead of
-                managing messages across different places.
+              <h3 className="mt-4 text-3xl font-black tracking-tight text-stone-950">
+                Sign in to view messages.
+              </h3>
+
+              <p className="mt-4 max-w-2xl text-base leading-7 text-stone-700">
+                Your inbox is private. Sign in to see messages you have sent or
+                received about listings.
               </p>
-            </div>
 
-            <div className="rounded-2xl border border-stone-300 bg-stone-50 p-5">
-              <p className="text-lg font-black">Listing context</p>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
-                Conversations will be connected to the correct listing so buyers
-                and sellers know exactly which item they are discussing.
-              </p>
-            </div>
-          </div>
+              <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                <Link
+                  href="/account"
+                  className="rounded-2xl bg-emerald-600 px-5 py-4 text-center text-sm font-black text-white hover:bg-emerald-500"
+                >
+                  Sign In or Create Account
+                </Link>
 
-          <div className="mt-8 rounded-2xl bg-stone-100 p-5">
-            <h3 className="text-xl font-black">Current status</h3>
-            <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-700">
-              <li>• Approved listings can be browsed now.</li>
-              <li>• Listing detail pages show photos, specs, and descriptions now.</li>
-              <li>• New listings can be submitted for admin review now.</li>
-              <li>• Real messaging will be added later with account sign-in.</li>
-            </ul>
-          </div>
+                <Link
+                  href="/browse"
+                  className="rounded-2xl bg-stone-950 px-5 py-4 text-center text-sm font-black text-white hover:bg-stone-800"
+                >
+                  Browse Gear
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 sm:p-8">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-800">
+                      Inbox
+                    </p>
+
+                    <h3 className="mt-4 text-3xl font-black tracking-tight text-stone-950">
+                      Messages for your account.
+                    </h3>
+
+                    <p className="mt-4 max-w-2xl text-base leading-7 text-stone-700">
+                      Signed in as{" "}
+                      <span className="font-black">{user.email}</span>
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => loadMessages(user)}
+                    disabled={isLoadingMessages}
+                    className="cursor-pointer rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-black text-emerald-950 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isLoadingMessages ? "Refreshing..." : "Refresh"}
+                  </button>
+                </div>
+              </div>
+
+              {errorMessage ? (
+                <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+                  {errorMessage}
+                </div>
+              ) : null}
+
+              {isLoadingMessages ? (
+                <div className="mt-6 rounded-2xl border border-stone-300 bg-stone-50 p-5">
+                  <p className="font-bold text-stone-700">
+                    Loading messages...
+                  </p>
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="mt-6 rounded-2xl border border-stone-300 bg-stone-50 p-5">
+                  <p className="font-black">No messages yet.</p>
+
+                  <p className="mt-2 text-sm leading-6 text-stone-600">
+                    When you send a message to a seller, or someone messages you
+                    about your listing, it will appear here.
+                  </p>
+
+                  <Link
+                    href="/browse"
+                    className="mt-5 inline-block rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-500"
+                  >
+                    Browse Gear
+                  </Link>
+                </div>
+              ) : (
+                <div className="mt-6 grid gap-4">
+                  {messages.map((message) => {
+                    const isSentByMe = message.sender_id === user.id;
+                    const listingTitle = getListingTitle(
+                      message.listing_id,
+                      listingMap
+                    );
+
+                    return (
+                      <article
+                        key={message.id}
+                        className="rounded-2xl border border-stone-300 bg-stone-50 p-5"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.14em] ${
+                                isSentByMe
+                                  ? "bg-stone-200 text-stone-800"
+                                  : "bg-emerald-100 text-emerald-900"
+                              }`}
+                            >
+                              {isSentByMe ? "Sent" : "Received"}
+                            </span>
+
+                            <h4 className="mt-3 text-lg font-black">
+                              {listingTitle}
+                            </h4>
+
+                            <p className="mt-1 text-sm font-bold text-stone-500">
+                              {formatMessageDate(message.created_at)}
+                            </p>
+                          </div>
+
+                          <Link
+                            href={`/listing/${message.listing_id}`}
+                            className="rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-black hover:bg-stone-100"
+                          >
+                            View Listing
+                          </Link>
+                        </div>
+
+                        <p className="mt-4 whitespace-pre-line rounded-2xl bg-white p-4 text-sm font-bold leading-6 text-stone-700">
+                          {message.body}
+                        </p>
+
+                        <p className="mt-3 text-xs font-bold leading-5 text-stone-500">
+                          Reply tools are coming next. For now, this page shows
+                          messages that were sent from listing pages.
+                        </p>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="mt-8 rounded-2xl bg-stone-100 p-5">
+                <h3 className="text-xl font-black">Current status</h3>
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-700">
+                  <li>• Buyers can send messages from listing pages.</li>
+                  <li>• Sellers can view received messages here.</li>
+                  <li>• Buyers can view sent messages here.</li>
+                  <li>• Reply tools will be added next.</li>
+                </ul>
+              </div>
+            </>
+          )}
         </div>
 
         <aside className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6">
-          <h3 className="text-2xl font-black">What to do for now</h3>
+          <h3 className="text-2xl font-black">Messaging notes</h3>
 
           <div className="mt-5 space-y-4">
             <div className="rounded-2xl bg-stone-100 p-5">
-              <p className="font-black">Looking to buy?</p>
+              <p className="font-black">Listing context</p>
               <p className="mt-2 text-sm leading-6 text-stone-600">
-                Browse available listings and review item details, photos,
-                description, seller information, location, and shipping status.
+                Each message is attached to a listing so the conversation starts
+                with the right item.
               </p>
             </div>
 
             <div className="rounded-2xl bg-stone-100 p-5">
-              <p className="font-black">Looking to sell?</p>
+              <p className="font-black">Private inbox</p>
               <p className="mt-2 text-sm leading-6 text-stone-600">
-                Create a detailed listing with clear photos, specs, condition,
-                location, and shipping information so buyers know what you are
-                offering.
+                You only see messages where you are the sender or receiver.
               </p>
             </div>
 
             <div className="rounded-2xl bg-stone-100 p-5">
-              <p className="font-black">Building toward launch</p>
+              <p className="font-black">Replies coming next</p>
               <p className="mt-2 text-sm leading-6 text-stone-600">
-                Messaging will work best after account sign-in is added, so
-                messages can be connected to the correct buyer, seller, and
-                listing.
+                This first inbox shows messages. The next step will let buyers
+                and sellers reply from this page.
               </p>
             </div>
 
             <div className="rounded-2xl bg-stone-950 p-5 text-white">
-              <p className="font-black text-emerald-300">For now</p>
+              <p className="font-black text-emerald-300">Safety reminder</p>
               <p className="mt-2 text-sm leading-6 text-stone-300">
-                You can still browse approved listings and submit new gear for
-                admin review using the current Sell page.
+                Be careful with payment, pickup, and shipping arrangements until
+                checkout tools are built.
               </p>
             </div>
           </div>
