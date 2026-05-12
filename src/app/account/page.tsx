@@ -33,7 +33,7 @@ type UserOffer = {
   message: string | null;
   status: string;
   created_at: string;
-  listing: OfferListing | null;
+  listing: OfferListing | OfferListing[] | null;
 };
 
 function formatListingDate(dateValue: string) {
@@ -134,6 +134,14 @@ function offerStatusClassName(status: string) {
   }
 
   return "bg-stone-200 text-stone-800";
+}
+
+function getOfferListing(offer: UserOffer) {
+  if (Array.isArray(offer.listing)) {
+    return offer.listing[0] || null;
+  }
+
+  return offer.listing;
 }
 
 export default function AccountPage() {
@@ -451,8 +459,9 @@ export default function AccountPage() {
   }
 
   function renderOfferCard(offer: UserOffer, kind: "sent" | "received") {
-    const listingTitle = offer.listing?.title || "Listing unavailable";
-    const listingStatus = offer.listing?.status || "";
+    const listing = getOfferListing(offer);
+    const listingTitle = listing?.title || "Listing unavailable";
+    const listingStatus = listing?.status || "";
 
     return (
       <div
@@ -493,8 +502,8 @@ export default function AccountPage() {
               Listing Price
             </p>
             <p className="mt-1 font-black">
-              {offer.listing
-                ? `$${Number(offer.listing.price).toLocaleString()}`
+              {listing
+                ? `$${Number(listing.price).toLocaleString()}`
                 : "Unavailable"}
             </p>
           </div>
@@ -521,7 +530,7 @@ export default function AccountPage() {
         ) : null}
 
         <div className="mt-4 flex flex-wrap gap-3">
-          {offer.listing ? (
+          {listing ? (
             <Link
               href={`/listing/${offer.listing_id}`}
               className="inline-block rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-stone-800"
