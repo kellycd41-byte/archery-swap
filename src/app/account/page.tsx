@@ -17,11 +17,44 @@ type UserListing = {
   created_at: string;
 };
 
+type OfferListing = {
+  id: string;
+  title: string;
+  price: number;
+  status: string;
+};
+
+type UserOffer = {
+  id: string;
+  listing_id: string;
+  buyer_id: string;
+  seller_id: string;
+  amount: number;
+  message: string | null;
+  status: string;
+  created_at: string;
+  listing: OfferListing | null;
+};
+
 function formatListingDate(dateValue: string) {
   const date = new Date(dateValue);
 
   if (Number.isNaN(date.getTime())) {
     return "Recently submitted";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatOfferDate(dateValue: string) {
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Recently sent";
   }
 
   return date.toLocaleDateString("en-US", {
@@ -51,6 +84,26 @@ function statusLabel(status: string) {
   return status || "Unknown";
 }
 
+function offerStatusLabel(status: string) {
+  if (status === "pending") {
+    return "Pending";
+  }
+
+  if (status === "accepted") {
+    return "Accepted";
+  }
+
+  if (status === "declined") {
+    return "Declined";
+  }
+
+  if (status === "withdrawn") {
+    return "Withdrawn";
+  }
+
+  return status || "Unknown";
+}
+
 function statusClassName(status: string) {
   if (status === "active") {
     return "bg-emerald-100 text-emerald-900";
@@ -61,6 +114,22 @@ function statusClassName(status: string) {
   }
 
   if (status === "denied") {
+    return "bg-red-100 text-red-900";
+  }
+
+  return "bg-stone-200 text-stone-800";
+}
+
+function offerStatusClassName(status: string) {
+  if (status === "pending") {
+    return "bg-amber-100 text-amber-900";
+  }
+
+  if (status === "accepted") {
+    return "bg-emerald-100 text-emerald-900";
+  }
+
+  if (status === "declined") {
     return "bg-red-100 text-red-900";
   }
 
@@ -81,6 +150,11 @@ export default function AccountPage() {
   const [updatingListingId, setUpdatingListingId] = useState<string | null>(
     null
   );
+
+  const [sentOffers, setSentOffers] = useState<UserOffer[]>([]);
+  const [receivedOffers, setReceivedOffers] = useState<UserOffer[]>([]);
+  const [isLoadingOffers, setIsLoadingOffers] = useState(false);
+  const [offersErrorMessage, setOffersErrorMessage] = useState("");
 
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,6 +182,51 @@ export default function AccountPage() {
     setMyListings((data || []) as UserListing[]);
   }
 
+  async function loadMyOffers(currentUser: User) {
+    setIsLoadingOffers(true);
+    setOffersErrorMessage("");
+
+    const { data: sentData, error: sentError } = await supabase
+      .from("offers")
+      .select(
+        "id,listing_id,buyer_id,seller_id,amount,message,status,created_at,listing:listings(id,title,price,status)"
+      )
+      .eq("buyer_id", currentUser.id)
+      .order("created_at", { ascending: false });
+
+    if (sentError) {
+      setOffersErrorMessage(sentError.message);
+      setSentOffers([]);
+      setReceivedOffers([]);
+      setIsLoadingOffers(false);
+      return;
+    }
+
+    const { data: receivedData, error: receivedError } = await supabase
+      .from("offers")
+      .select(
+        "id,listing_id,buyer_id,seller_id,amount,message,status,created_at,listing:listings(id,title,price,status)"
+      )
+      .eq("seller_id", currentUser.id)
+      .order("created_at", { ascending: false });
+
+    setIsLoadingOffers(false);
+
+    if (receivedError) {
+      setOffersErrorMessage(receivedError.message);
+      setSentOffers((sentData || []) as UserOffer[]);
+      setReceivedOffers([]);
+      return;
+    }
+
+    setSentOffers((sentData || []) as UserOffer[]);
+    setReceivedOffers((receivedData || []) as UserOffer[]);
+  }
+
+  async function refreshAccountData(currentUser: User) {
+    await Promise.all([loadMyListings(currentUser), loadMyOffers(currentUser)]);
+  }
+
   useEffect(() => {
     async function loadSession() {
       const { data } = await supabase.auth.getSession();
@@ -117,7 +236,7 @@ export default function AccountPage() {
       setIsLoadingSession(false);
 
       if (signedInUser) {
-        loadMyListings(signedInUser);
+        refreshAccountData(signedInUser);
       }
     }
 
@@ -131,10 +250,13 @@ export default function AccountPage() {
       setUser(signedInUser);
 
       if (signedInUser) {
-        loadMyListings(signedInUser);
+        refreshAccountData(signedInUser);
       } else {
         setMyListings([]);
+        setSentOffers([]);
+        setReceivedOffers([]);
         setListingsErrorMessage("");
+        setOffersErrorMessage("");
         setListingActionMessage("");
         setListingActionErrorMessage("");
       }
@@ -192,7 +314,7 @@ export default function AccountPage() {
         setUser(data.user);
 
         if (data.user) {
-          loadMyListings(data.user);
+          refreshAccountData(data.user);
         }
       }
 
@@ -217,7 +339,7 @@ export default function AccountPage() {
     setPassword("");
 
     if (data.user) {
-      loadMyListings(data.user);
+      refreshAccountData(data.user);
     }
   }
 
@@ -239,7 +361,10 @@ export default function AccountPage() {
     setEmail("");
     setPassword("");
     setMyListings([]);
+    setSentOffers([]);
+    setReceivedOffers([]);
     setListingsErrorMessage("");
+    setOffersErrorMessage("");
     setListingActionMessage("");
     setListingActionErrorMessage("");
     setMessage("You are signed out.");
@@ -325,6 +450,90 @@ export default function AccountPage() {
     await loadMyListings(user);
   }
 
+  function renderOfferCard(offer: UserOffer, kind: "sent" | "received") {
+    const listingTitle = offer.listing?.title || "Listing unavailable";
+    const listingStatus = offer.listing?.status || "";
+
+    return (
+      <div
+        key={offer.id}
+        className="rounded-2xl border border-stone-300 bg-white p-5"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h4 className="text-lg font-black">{listingTitle}</h4>
+
+            <p className="mt-1 text-sm font-bold text-stone-500">
+              {kind === "sent" ? "Sent" : "Received"}{" "}
+              {formatOfferDate(offer.created_at)}
+            </p>
+          </div>
+
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.14em] ${offerStatusClassName(
+              offer.status
+            )}`}
+          >
+            {offerStatusLabel(offer.status)}
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
+          <div className="rounded-xl bg-stone-100 p-3">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+              Offer
+            </p>
+            <p className="mt-1 font-black">
+              ${Number(offer.amount).toLocaleString()}
+            </p>
+          </div>
+
+          <div className="rounded-xl bg-stone-100 p-3">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+              Listing Price
+            </p>
+            <p className="mt-1 font-black">
+              {offer.listing
+                ? `$${Number(offer.listing.price).toLocaleString()}`
+                : "Unavailable"}
+            </p>
+          </div>
+
+          <div className="rounded-xl bg-stone-100 p-3">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+              Listing Status
+            </p>
+            <p className="mt-1 font-black">
+              {listingStatus ? statusLabel(listingStatus) : "Unavailable"}
+            </p>
+          </div>
+        </div>
+
+        {offer.message ? (
+          <div className="mt-4 rounded-xl border border-stone-200 bg-stone-50 p-3">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+              Message
+            </p>
+            <p className="mt-2 whitespace-pre-line text-sm font-bold leading-6 text-stone-700">
+              {offer.message}
+            </p>
+          </div>
+        ) : null}
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          {offer.listing ? (
+            <Link
+              href={`/listing/${offer.listing_id}`}
+              className="inline-block rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-stone-800"
+            >
+              View Listing
+            </Link>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
       <Header activePage="account" />
@@ -373,9 +582,8 @@ export default function AccountPage() {
                 </div>
 
                 <p className="mt-5 max-w-2xl text-base leading-7 text-stone-700">
-                  This account is now connected to the listings you submit.
-                  Next, we will build stronger listing controls, messaging, and
-                  offer tools.
+                  This account is now connected to the listings you submit,
+                  messages you send, and offers you make or receive.
                 </p>
 
                 {message ? (
@@ -408,6 +616,83 @@ export default function AccountPage() {
                   </button>
                 </div>
               </div>
+
+              <section className="mt-8 rounded-3xl border border-stone-300 bg-stone-50 p-5 sm:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-2xl font-black">My Offers</h3>
+                    <p className="mt-2 text-sm leading-6 text-stone-600">
+                      Review offers you sent as a buyer and offers you received
+                      as a seller. Accept and decline tools will come next.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => loadMyOffers(user)}
+                    disabled={isLoadingOffers}
+                    className="cursor-pointer rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-black hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isLoadingOffers ? "Refreshing..." : "Refresh Offers"}
+                  </button>
+                </div>
+
+                {offersErrorMessage ? (
+                  <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+                    {offersErrorMessage}
+                  </div>
+                ) : null}
+
+                {isLoadingOffers ? (
+                  <div className="mt-5 rounded-2xl border border-stone-300 bg-white p-5">
+                    <p className="font-bold text-stone-700">
+                      Loading your offers...
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-5 grid gap-5 xl:grid-cols-2">
+                    <div>
+                      <h4 className="text-lg font-black">Offers I Sent</h4>
+
+                      {sentOffers.length === 0 ? (
+                        <div className="mt-3 rounded-2xl border border-stone-300 bg-white p-5">
+                          <p className="font-black">No sent offers yet.</p>
+                          <p className="mt-2 text-sm leading-6 text-stone-600">
+                            When you make an offer on a listing, it will appear
+                            here.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="mt-3 grid gap-4">
+                          {sentOffers.map((offer) =>
+                            renderOfferCard(offer, "sent")
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <h4 className="text-lg font-black">Offers I Received</h4>
+
+                      {receivedOffers.length === 0 ? (
+                        <div className="mt-3 rounded-2xl border border-stone-300 bg-white p-5">
+                          <p className="font-black">No received offers yet.</p>
+                          <p className="mt-2 text-sm leading-6 text-stone-600">
+                            When a buyer makes an offer on your listing, it will
+                            appear here.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="mt-3 grid gap-4">
+                          {receivedOffers.map((offer) =>
+                            renderOfferCard(offer, "received")
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </section>
 
               <section className="mt-8 rounded-3xl border border-stone-300 bg-stone-50 p-5 sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -733,6 +1018,7 @@ export default function AccountPage() {
               <li>• Active listings can now be marked inactive/sold.</li>
               <li>• Inactive listings can now be reactivated.</li>
               <li>• Listing details can now be edited from My Listings.</li>
+              <li>• Users can now view sent and received offers.</li>
             </ul>
           </div>
         </div>
@@ -768,8 +1054,7 @@ export default function AccountPage() {
             <div className="rounded-2xl bg-stone-950 p-5 text-white">
               <p className="font-black text-emerald-300">Next foundation step</p>
               <p className="mt-2 text-sm leading-6 text-stone-300">
-                After listing controls are solid, we can move toward Make Offer
-                and Buy Now.
+                Next, we can add accept and decline controls for offers.
               </p>
             </div>
           </div>
