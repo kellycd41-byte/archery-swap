@@ -1,4 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { FormEvent, useEffect, useState } from "react";
+import { User } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
 function Header() {
   return (
@@ -86,6 +91,125 @@ function Header() {
 }
 
 export default function AccountPage() {
+  const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
+  const [user, setUser] = useState<User | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    async function loadSession() {
+      const { data } = await supabase.auth.getSession();
+
+      setUser(data.session?.user ?? null);
+      setIsLoadingSession(false);
+    }
+
+    loadSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setMessage("");
+    setErrorMessage("");
+
+    const cleanedEmail = email.trim();
+
+    if (!cleanedEmail || !password) {
+      setErrorMessage("Please enter your email and password.");
+      return;
+    }
+
+    if (!cleanedEmail.includes("@")) {
+      setErrorMessage("Please enter a valid email address.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage("Password must be at least 6 characters.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    if (mode === "sign-up") {
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanedEmail,
+        password,
+      });
+
+      setIsSubmitting(false);
+
+      if (error) {
+        setErrorMessage(error.message);
+        return;
+      }
+
+      if (data.user && !data.session) {
+        setMessage(
+          "Account created. Please check your email to confirm your account, then come back and sign in."
+        );
+      } else {
+        setMessage("Account created and signed in.");
+        setUser(data.user);
+      }
+
+      setPassword("");
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: cleanedEmail,
+      password,
+    });
+
+    setIsSubmitting(false);
+
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+
+    setUser(data.user);
+    setMessage("You are signed in.");
+    setPassword("");
+  }
+
+  async function handleSignOut() {
+    setMessage("");
+    setErrorMessage("");
+    setIsSubmitting(true);
+
+    const { error } = await supabase.auth.signOut();
+
+    setIsSubmitting(false);
+
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+
+    setUser(null);
+    setEmail("");
+    setPassword("");
+    setMessage("You are signed out.");
+  }
+
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
       <Header />
@@ -97,51 +221,174 @@ export default function AccountPage() {
           </p>
 
           <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">
-            Account tools are coming soon.
+            Sign in to Archery Swap.
           </h2>
 
           <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
-            We are preparing real sign-in for Archery Swap. Once it is ready,
-            buyers and sellers will be able to manage profiles, listings,
-            messages, saved gear, and account settings.
+            Accounts are the foundation for seller profiles, real messaging,
+            saved listings, offers, buying, and safer marketplace tools.
           </p>
         </div>
       </section>
 
       <section className="mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[1fr_380px]">
         <div className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6 md:p-8">
-          <div className="rounded-3xl border border-dashed border-emerald-700 bg-emerald-50 p-6 sm:p-8">
-            <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-800">
-              Coming Soon
-            </p>
-
-            <h3 className="mt-4 text-3xl font-black tracking-tight text-stone-950">
-              Sign-in is not active yet.
-            </h3>
-
-            <p className="mt-4 max-w-2xl text-base leading-7 text-stone-700">
-              This page is ready for future account features, but user login is
-              not connected yet. We removed fake profile information, fake
-              listings, and fake saved items so the site stays honest while the
-              marketplace is being finished.
-            </p>
-
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              <Link
-                href="/browse"
-                className="rounded-2xl bg-stone-950 px-5 py-4 text-center text-sm font-black text-white hover:bg-stone-800"
-              >
-                Browse Gear
-              </Link>
-
-              <Link
-                href="/sell"
-                className="rounded-2xl bg-emerald-600 px-5 py-4 text-center text-sm font-black text-white hover:bg-emerald-500"
-              >
-                List Your Gear
-              </Link>
+          {isLoadingSession ? (
+            <div className="rounded-3xl border border-stone-300 bg-stone-50 p-6">
+              <p className="font-black">Checking account status...</p>
             </div>
-          </div>
+          ) : user ? (
+            <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 sm:p-8">
+              <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-800">
+                Signed In
+              </p>
+
+              <h3 className="mt-4 text-3xl font-black tracking-tight text-stone-950">
+                Your account is active.
+              </h3>
+
+              <div className="mt-5 rounded-2xl border border-emerald-200 bg-white p-5">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-stone-500">
+                  Email
+                </p>
+                <p className="mt-2 break-words text-lg font-black text-stone-950">
+                  {user.email}
+                </p>
+              </div>
+
+              <p className="mt-5 max-w-2xl text-base leading-7 text-stone-700">
+                This is the first step toward real buyer and seller accounts.
+                Next we will connect listings to signed-in users, then build real
+                messaging.
+              </p>
+
+              {message ? (
+                <div className="mt-5 rounded-2xl border border-emerald-200 bg-white p-4 text-sm font-bold text-emerald-900">
+                  {message}
+                </div>
+              ) : null}
+
+              {errorMessage ? (
+                <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+                  {errorMessage}
+                </div>
+              ) : null}
+
+              <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                <Link
+                  href="/sell"
+                  className="rounded-2xl bg-emerald-600 px-5 py-4 text-center text-sm font-black text-white hover:bg-emerald-500"
+                >
+                  List Gear
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  disabled={isSubmitting}
+                  className="cursor-pointer rounded-2xl bg-stone-950 px-5 py-4 text-center text-sm font-black text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSubmitting ? "Signing Out..." : "Sign Out"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-3xl border border-stone-300 bg-stone-50 p-6 sm:p-8">
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("sign-in");
+                    setMessage("");
+                    setErrorMessage("");
+                  }}
+                  className={`cursor-pointer rounded-xl px-4 py-2 text-sm font-black ${
+                    mode === "sign-in"
+                      ? "bg-stone-950 text-white"
+                      : "border border-stone-300 bg-white text-stone-950 hover:bg-stone-100"
+                  }`}
+                >
+                  Sign In
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("sign-up");
+                    setMessage("");
+                    setErrorMessage("");
+                  }}
+                  className={`cursor-pointer rounded-xl px-4 py-2 text-sm font-black ${
+                    mode === "sign-up"
+                      ? "bg-stone-950 text-white"
+                      : "border border-stone-300 bg-white text-stone-950 hover:bg-stone-100"
+                  }`}
+                >
+                  Create Account
+                </button>
+              </div>
+
+              <h3 className="mt-6 text-3xl font-black tracking-tight text-stone-950">
+                {mode === "sign-in"
+                  ? "Sign in to your account."
+                  : "Create your account."}
+              </h3>
+
+              <p className="mt-3 max-w-2xl text-base leading-7 text-stone-700">
+                {mode === "sign-in"
+                  ? "Use your email and password to sign in."
+                  : "Create an account with your email and a password. Passwords must be at least 6 characters."}
+              </p>
+
+              <form onSubmit={handleSubmit} className="mt-8 grid gap-5">
+                <label className="grid gap-2">
+                  <span className="text-sm font-black">Email</span>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="you@example.com"
+                    className="rounded-2xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                  />
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-sm font-black">Password</span>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="At least 6 characters"
+                    className="rounded-2xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                  />
+                </label>
+
+                {message ? (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
+                    {message}
+                  </div>
+                ) : null}
+
+                {errorMessage ? (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+                    {errorMessage}
+                  </div>
+                ) : null}
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="cursor-pointer rounded-2xl bg-emerald-600 px-5 py-4 text-center text-sm font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSubmitting
+                    ? "Working..."
+                    : mode === "sign-in"
+                      ? "Sign In"
+                      : "Create Account"}
+                </button>
+              </form>
+            </div>
+          )}
 
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-stone-300 bg-stone-50 p-5">
@@ -175,13 +422,13 @@ export default function AccountPage() {
               <li>• Browsing approved listings works now.</li>
               <li>• Submitting listings for review works now.</li>
               <li>• Admin approval tools work now.</li>
-              <li>• Real account sign-in will be added later.</li>
+              <li>• Account sign-up and sign-in are being added now.</li>
             </ul>
           </div>
         </div>
 
         <aside className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6">
-          <h3 className="text-2xl font-black">What accounts will unlock</h3>
+          <h3 className="text-2xl font-black">What accounts unlock</h3>
 
           <div className="mt-5 space-y-4">
             <div className="rounded-2xl bg-stone-100 p-5">
@@ -193,10 +440,10 @@ export default function AccountPage() {
             </div>
 
             <div className="rounded-2xl bg-stone-100 p-5">
-              <p className="font-black">Safer marketplace tools</p>
+              <p className="font-black">Offers and buying</p>
               <p className="mt-2 text-sm leading-6 text-stone-600">
-                User accounts will help support safer deals, listing ownership,
-                seller history, and future trust features.
+                Accounts are needed before buyers can make offers, buy gear, and
+                manage order history.
               </p>
             </div>
 
@@ -209,10 +456,10 @@ export default function AccountPage() {
             </div>
 
             <div className="rounded-2xl bg-stone-950 p-5 text-white">
-              <p className="font-black text-emerald-300">For now</p>
+              <p className="font-black text-emerald-300">Next foundation step</p>
               <p className="mt-2 text-sm leading-6 text-stone-300">
-                You can still browse approved listings and submit new gear for
-                admin review using the current Sell page.
+                After this works, we will connect new listings to the signed-in
+                seller account.
               </p>
             </div>
           </div>
