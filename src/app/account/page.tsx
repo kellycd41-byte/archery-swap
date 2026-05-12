@@ -45,7 +45,7 @@ function statusLabel(status: string) {
   }
 
   if (status === "inactive") {
-    return "Inactive";
+    return "Inactive / Sold";
   }
 
   return status || "Unknown";
@@ -76,6 +76,11 @@ export default function AccountPage() {
   const [myListings, setMyListings] = useState<UserListing[]>([]);
   const [isLoadingListings, setIsLoadingListings] = useState(false);
   const [listingsErrorMessage, setListingsErrorMessage] = useState("");
+  const [listingActionMessage, setListingActionMessage] = useState("");
+  const [listingActionErrorMessage, setListingActionErrorMessage] = useState("");
+  const [updatingListingId, setUpdatingListingId] = useState<string | null>(
+    null
+  );
 
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -130,6 +135,8 @@ export default function AccountPage() {
       } else {
         setMyListings([]);
         setListingsErrorMessage("");
+        setListingActionMessage("");
+        setListingActionErrorMessage("");
       }
     });
 
@@ -233,7 +240,47 @@ export default function AccountPage() {
     setPassword("");
     setMyListings([]);
     setListingsErrorMessage("");
+    setListingActionMessage("");
+    setListingActionErrorMessage("");
     setMessage("You are signed out.");
+  }
+
+  async function handleMarkInactive(listing: UserListing) {
+    if (!user) {
+      setListingActionErrorMessage("Please sign in again before updating this listing.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Mark "${listing.title}" as inactive/sold? This will hide it from Browse.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setUpdatingListingId(listing.id);
+    setListingActionMessage("");
+    setListingActionErrorMessage("");
+
+    const { error } = await supabase
+      .from("listings")
+      .update({ status: "inactive" })
+      .eq("id", listing.id)
+      .eq("user_id", user.id);
+
+    setUpdatingListingId(null);
+
+    if (error) {
+      setListingActionErrorMessage(error.message);
+      return;
+    }
+
+    setListingActionMessage(
+      `"${listing.title}" has been marked inactive/sold and is now hidden from Browse.`
+    );
+
+    await loadMyListings(user);
   }
 
   return (
@@ -326,7 +373,7 @@ export default function AccountPage() {
                     <h3 className="text-2xl font-black">My Listings</h3>
                     <p className="mt-2 text-sm leading-6 text-stone-600">
                       These are the listings submitted from your signed-in
-                      account.
+                      account. Active listings can now be marked inactive/sold.
                     </p>
                   </div>
 
@@ -343,6 +390,18 @@ export default function AccountPage() {
                 {listingsErrorMessage ? (
                   <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
                     {listingsErrorMessage}
+                  </div>
+                ) : null}
+
+                {listingActionMessage ? (
+                  <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
+                    {listingActionMessage}
+                  </div>
+                ) : null}
+
+                {listingActionErrorMessage ? (
+                  <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+                    {listingActionErrorMessage}
                   </div>
                 ) : null}
 
@@ -424,12 +483,25 @@ export default function AccountPage() {
                         </div>
 
                         {listing.status === "active" ? (
-                          <Link
-                            href={`/listing/${listing.id}`}
-                            className="mt-4 inline-block rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-stone-800"
-                          >
-                            View Public Listing
-                          </Link>
+                          <div className="mt-4 flex flex-wrap gap-3">
+                            <Link
+                              href={`/listing/${listing.id}`}
+                              className="inline-block rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-stone-800"
+                            >
+                              View Public Listing
+                            </Link>
+
+                            <button
+                              type="button"
+                              onClick={() => handleMarkInactive(listing)}
+                              disabled={updatingListingId === listing.id}
+                              className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-800 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {updatingListingId === listing.id
+                                ? "Updating..."
+                                : "Mark Inactive / Sold"}
+                            </button>
+                          </div>
                         ) : null}
 
                         {listing.status === "pending" ? (
@@ -452,7 +524,7 @@ export default function AccountPage() {
 
                         {listing.status === "inactive" ? (
                           <p className="mt-4 rounded-xl border border-stone-300 bg-stone-100 p-3 text-sm font-bold leading-6 text-stone-700">
-                            This listing is inactive and is not visible in
+                            This listing is inactive/sold and is not visible in
                             Browse.
                           </p>
                         ) : null}
@@ -580,8 +652,8 @@ export default function AccountPage() {
             <div className="rounded-2xl border border-stone-300 bg-stone-50 p-5">
               <p className="text-lg font-black">Listing control</p>
               <p className="mt-2 text-sm leading-6 text-stone-600">
-                Users will eventually be able to view, update, pause, and manage
-                their own active listings.
+                Users can now mark their active listings inactive/sold from My
+                Listings.
               </p>
             </div>
           </div>
@@ -593,6 +665,7 @@ export default function AccountPage() {
               <li>• Submitting listings for review works now.</li>
               <li>• Admin approval tools work now.</li>
               <li>• Signed-in users can now view listings they submitted.</li>
+              <li>• Active listings can now be marked inactive/sold.</li>
             </ul>
           </div>
         </div>
@@ -604,7 +677,7 @@ export default function AccountPage() {
             <div className="rounded-2xl bg-stone-100 p-5">
               <p className="font-black">Real messaging</p>
               <p className="mt-2 text-sm leading-6 text-stone-600">
-                Account sign-in will let messages connect to the correct buyer,
+                Account sign-in lets messages connect to the correct buyer,
                 seller, and listing.
               </p>
             </div>
@@ -628,8 +701,8 @@ export default function AccountPage() {
             <div className="rounded-2xl bg-stone-950 p-5 text-white">
               <p className="font-black text-emerald-300">Next foundation step</p>
               <p className="mt-2 text-sm leading-6 text-stone-300">
-                After this works, we can start building real messaging between
-                buyers and sellers.
+                After listing controls are solid, we can move toward Make Offer
+                and Buy Now.
               </p>
             </div>
           </div>
