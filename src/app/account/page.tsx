@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
+import Header from "@/components/Header";
 import { supabase } from "@/lib/supabase";
 
 type UserListing = {
@@ -15,91 +16,6 @@ type UserListing = {
   denial_reason: string | null;
   created_at: string;
 };
-
-function Header() {
-  return (
-    <header className="border-b border-stone-800 bg-stone-950 text-white">
-      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-        <div className="flex items-center justify-between gap-4">
-          <Link href="/" className="min-w-0">
-            <h1 className="text-xl font-black tracking-tight sm:text-2xl">
-              Archery Swap
-            </h1>
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-300 sm:text-xs">
-              Buy • Sell • Archery Gear
-            </p>
-          </Link>
-
-          <nav className="hidden items-center gap-6 text-sm font-bold md:flex">
-            <Link href="/" className="hover:text-emerald-300">
-              Home
-            </Link>
-            <Link href="/browse" className="hover:text-emerald-300">
-              Browse Gear
-            </Link>
-            <Link href="/sell" className="hover:text-emerald-300">
-              Sell Gear
-            </Link>
-            <Link href="/messages" className="hover:text-emerald-300">
-              Messages
-            </Link>
-            <Link href="/account" className="text-emerald-300">
-              Account
-            </Link>
-          </nav>
-
-          <div className="hidden md:block">
-            <Link
-              href="/sell"
-              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-500"
-            >
-              Sell Your Gear
-            </Link>
-          </div>
-
-          <details className="relative md:hidden">
-            <summary className="cursor-pointer list-none rounded-xl border border-stone-700 px-4 py-2 text-sm font-black text-white">
-              Menu
-            </summary>
-
-            <div className="absolute right-0 z-20 mt-3 w-56 overflow-hidden rounded-2xl border border-stone-700 bg-stone-900 shadow-2xl">
-              <Link
-                href="/"
-                className="block border-b border-stone-800 px-4 py-3 text-sm font-bold hover:bg-stone-800"
-              >
-                Home
-              </Link>
-              <Link
-                href="/browse"
-                className="block border-b border-stone-800 px-4 py-3 text-sm font-bold hover:bg-stone-800"
-              >
-                Browse Gear
-              </Link>
-              <Link
-                href="/sell"
-                className="block border-b border-stone-800 px-4 py-3 text-sm font-bold hover:bg-stone-800"
-              >
-                Sell Gear
-              </Link>
-              <Link
-                href="/messages"
-                className="block border-b border-stone-800 px-4 py-3 text-sm font-bold hover:bg-stone-800"
-              >
-                Messages
-              </Link>
-              <Link
-                href="/account"
-                className="block bg-stone-800 px-4 py-3 text-sm font-bold text-emerald-300"
-              >
-                Account
-              </Link>
-            </div>
-          </details>
-        </div>
-      </div>
-    </header>
-  );
-}
 
 function formatListingDate(dateValue: string) {
   const date = new Date(dateValue);
@@ -322,7 +238,7 @@ export default function AccountPage() {
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
-      <Header />
+      <Header activePage="account" />
 
       <section className="bg-stone-950 px-4 py-14 text-white sm:px-6 md:py-16">
         <div className="mx-auto max-w-7xl">
