@@ -5,6 +5,17 @@ import { FormEvent, useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 
+type UserListing = {
+  id: string;
+  title: string;
+  price: number;
+  category: string;
+  condition: string;
+  status: string;
+  denial_reason: string | null;
+  created_at: string;
+};
+
 function Header() {
   return (
     <header className="border-b border-stone-800 bg-stone-950 text-white">
@@ -90,23 +101,103 @@ function Header() {
   );
 }
 
+function formatListingDate(dateValue: string) {
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Recently submitted";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function statusLabel(status: string) {
+  if (status === "active") {
+    return "Approved";
+  }
+
+  if (status === "pending") {
+    return "Pending Review";
+  }
+
+  if (status === "denied") {
+    return "Denied";
+  }
+
+  if (status === "inactive") {
+    return "Inactive";
+  }
+
+  return status || "Unknown";
+}
+
+function statusClassName(status: string) {
+  if (status === "active") {
+    return "bg-emerald-100 text-emerald-900";
+  }
+
+  if (status === "pending") {
+    return "bg-amber-100 text-amber-900";
+  }
+
+  if (status === "denied") {
+    return "bg-red-100 text-red-900";
+  }
+
+  return "bg-stone-200 text-stone-800";
+}
+
 export default function AccountPage() {
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const [myListings, setMyListings] = useState<UserListing[]>([]);
+  const [isLoadingListings, setIsLoadingListings] = useState(false);
+  const [listingsErrorMessage, setListingsErrorMessage] = useState("");
+
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
+  async function loadMyListings(currentUser: User) {
+    setIsLoadingListings(true);
+    setListingsErrorMessage("");
+
+    const { data, error } = await supabase
+      .from("listings")
+      .select("id,title,price,category,condition,status,denial_reason,created_at")
+      .eq("user_id", currentUser.id)
+      .order("created_at", { ascending: false });
+
+    setIsLoadingListings(false);
+
+    if (error) {
+      setListingsErrorMessage(error.message);
+      setMyListings([]);
+      return;
+    }
+
+    setMyListings((data || []) as UserListing[]);
+  }
+
   useEffect(() => {
     async function loadSession() {
       const { data } = await supabase.auth.getSession();
+      const signedInUser = data.session?.user ?? null;
 
-      setUser(data.session?.user ?? null);
+      setUser(signedInUser);
       setIsLoadingSession(false);
+
+      if (signedInUser) {
+        loadMyListings(signedInUser);
+      }
     }
 
     loadSession();
@@ -114,7 +205,16 @@ export default function AccountPage() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      const signedInUser = session?.user ?? null;
+
+      setUser(signedInUser);
+
+      if (signedInUser) {
+        loadMyListings(signedInUser);
+      } else {
+        setMyListings([]);
+        setListingsErrorMessage("");
+      }
     });
 
     return () => {
@@ -167,6 +267,10 @@ export default function AccountPage() {
       } else {
         setMessage("Account created and signed in.");
         setUser(data.user);
+
+        if (data.user) {
+          loadMyListings(data.user);
+        }
       }
 
       setPassword("");
@@ -188,6 +292,10 @@ export default function AccountPage() {
     setUser(data.user);
     setMessage("You are signed in.");
     setPassword("");
+
+    if (data.user) {
+      loadMyListings(data.user);
+    }
   }
 
   async function handleSignOut() {
@@ -207,6 +315,8 @@ export default function AccountPage() {
     setUser(null);
     setEmail("");
     setPassword("");
+    setMyListings([]);
+    setListingsErrorMessage("");
     setMessage("You are signed out.");
   }
 
@@ -238,60 +348,204 @@ export default function AccountPage() {
               <p className="font-black">Checking account status...</p>
             </div>
           ) : user ? (
-            <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 sm:p-8">
-              <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-800">
-                Signed In
-              </p>
-
-              <h3 className="mt-4 text-3xl font-black tracking-tight text-stone-950">
-                Your account is active.
-              </h3>
-
-              <div className="mt-5 rounded-2xl border border-emerald-200 bg-white p-5">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-stone-500">
-                  Email
+            <>
+              <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 sm:p-8">
+                <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-800">
+                  Signed In
                 </p>
-                <p className="mt-2 break-words text-lg font-black text-stone-950">
-                  {user.email}
+
+                <h3 className="mt-4 text-3xl font-black tracking-tight text-stone-950">
+                  Your account is active.
+                </h3>
+
+                <div className="mt-5 rounded-2xl border border-emerald-200 bg-white p-5">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-stone-500">
+                    Email
+                  </p>
+                  <p className="mt-2 break-words text-lg font-black text-stone-950">
+                    {user.email}
+                  </p>
+                </div>
+
+                <p className="mt-5 max-w-2xl text-base leading-7 text-stone-700">
+                  This account is now connected to the listings you submit.
+                  Next, we will build stronger listing controls, messaging, and
+                  offer tools.
                 </p>
+
+                {message ? (
+                  <div className="mt-5 rounded-2xl border border-emerald-200 bg-white p-4 text-sm font-bold text-emerald-900">
+                    {message}
+                  </div>
+                ) : null}
+
+                {errorMessage ? (
+                  <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+                    {errorMessage}
+                  </div>
+                ) : null}
+
+                <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                  <Link
+                    href="/sell"
+                    className="rounded-2xl bg-emerald-600 px-5 py-4 text-center text-sm font-black text-white hover:bg-emerald-500"
+                  >
+                    List Gear
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    disabled={isSubmitting}
+                    className="cursor-pointer rounded-2xl bg-stone-950 px-5 py-4 text-center text-sm font-black text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSubmitting ? "Signing Out..." : "Sign Out"}
+                  </button>
+                </div>
               </div>
 
-              <p className="mt-5 max-w-2xl text-base leading-7 text-stone-700">
-                This is the first step toward real buyer and seller accounts.
-                Next we will connect listings to signed-in users, then build real
-                messaging.
-              </p>
+              <section className="mt-8 rounded-3xl border border-stone-300 bg-stone-50 p-5 sm:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-2xl font-black">My Listings</h3>
+                    <p className="mt-2 text-sm leading-6 text-stone-600">
+                      These are the listings submitted from your signed-in
+                      account.
+                    </p>
+                  </div>
 
-              {message ? (
-                <div className="mt-5 rounded-2xl border border-emerald-200 bg-white p-4 text-sm font-bold text-emerald-900">
-                  {message}
+                  <button
+                    type="button"
+                    onClick={() => loadMyListings(user)}
+                    disabled={isLoadingListings}
+                    className="cursor-pointer rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-black hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isLoadingListings ? "Refreshing..." : "Refresh"}
+                  </button>
                 </div>
-              ) : null}
 
-              {errorMessage ? (
-                <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
-                  {errorMessage}
-                </div>
-              ) : null}
+                {listingsErrorMessage ? (
+                  <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+                    {listingsErrorMessage}
+                  </div>
+                ) : null}
 
-              <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                <Link
-                  href="/sell"
-                  className="rounded-2xl bg-emerald-600 px-5 py-4 text-center text-sm font-black text-white hover:bg-emerald-500"
-                >
-                  List Gear
-                </Link>
+                {isLoadingListings ? (
+                  <div className="mt-5 rounded-2xl border border-stone-300 bg-white p-5">
+                    <p className="font-bold text-stone-700">
+                      Loading your listings...
+                    </p>
+                  </div>
+                ) : myListings.length === 0 ? (
+                  <div className="mt-5 rounded-2xl border border-stone-300 bg-white p-5">
+                    <p className="font-black">No listings yet.</p>
+                    <p className="mt-2 text-sm leading-6 text-stone-600">
+                      When you submit gear from the Sell page, it will appear
+                      here.
+                    </p>
 
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  disabled={isSubmitting}
-                  className="cursor-pointer rounded-2xl bg-stone-950 px-5 py-4 text-center text-sm font-black text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isSubmitting ? "Signing Out..." : "Sign Out"}
-                </button>
-              </div>
-            </div>
+                    <Link
+                      href="/sell"
+                      className="mt-5 inline-block rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-500"
+                    >
+                      Create a Listing
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="mt-5 grid gap-4">
+                    {myListings.map((listing) => (
+                      <div
+                        key={listing.id}
+                        className="rounded-2xl border border-stone-300 bg-white p-5"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <h4 className="text-lg font-black">
+                              {listing.title}
+                            </h4>
+
+                            <p className="mt-1 text-sm font-bold text-stone-500">
+                              Submitted {formatListingDate(listing.created_at)}
+                            </p>
+                          </div>
+
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.14em] ${statusClassName(
+                              listing.status
+                            )}`}
+                          >
+                            {statusLabel(listing.status)}
+                          </span>
+                        </div>
+
+                        <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
+                          <div className="rounded-xl bg-stone-100 p-3">
+                            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                              Price
+                            </p>
+                            <p className="mt-1 font-black">
+                              ${Number(listing.price).toLocaleString()}
+                            </p>
+                          </div>
+
+                          <div className="rounded-xl bg-stone-100 p-3">
+                            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                              Category
+                            </p>
+                            <p className="mt-1 font-black">
+                              {listing.category}
+                            </p>
+                          </div>
+
+                          <div className="rounded-xl bg-stone-100 p-3">
+                            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                              Condition
+                            </p>
+                            <p className="mt-1 font-black">
+                              {listing.condition}
+                            </p>
+                          </div>
+                        </div>
+
+                        {listing.status === "active" ? (
+                          <Link
+                            href={`/listing/${listing.id}`}
+                            className="mt-4 inline-block rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-stone-800"
+                          >
+                            View Public Listing
+                          </Link>
+                        ) : null}
+
+                        {listing.status === "pending" ? (
+                          <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold leading-6 text-amber-900">
+                            This listing is waiting for admin review. It will
+                            not appear publicly until it is approved.
+                          </p>
+                        ) : null}
+
+                        {listing.status === "denied" ? (
+                          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold leading-6 text-red-800">
+                            <p>This listing was denied.</p>
+                            {listing.denial_reason ? (
+                              <p className="mt-2">
+                                Reason: {listing.denial_reason}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
+
+                        {listing.status === "inactive" ? (
+                          <p className="mt-4 rounded-xl border border-stone-300 bg-stone-100 p-3 text-sm font-bold leading-6 text-stone-700">
+                            This listing is inactive and is not visible in
+                            Browse.
+                          </p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </>
           ) : (
             <div className="rounded-3xl border border-stone-300 bg-stone-50 p-6 sm:p-8">
               <div className="flex flex-wrap gap-3">
@@ -422,7 +676,7 @@ export default function AccountPage() {
               <li>• Browsing approved listings works now.</li>
               <li>• Submitting listings for review works now.</li>
               <li>• Admin approval tools work now.</li>
-              <li>• Account sign-up and sign-in are being added now.</li>
+              <li>• Signed-in users can now view listings they submitted.</li>
             </ul>
           </div>
         </div>
@@ -458,8 +712,8 @@ export default function AccountPage() {
             <div className="rounded-2xl bg-stone-950 p-5 text-white">
               <p className="font-black text-emerald-300">Next foundation step</p>
               <p className="mt-2 text-sm leading-6 text-stone-300">
-                After this works, we will connect new listings to the signed-in
-                seller account.
+                After this works, we can start building real messaging between
+                buyers and sellers.
               </p>
             </div>
           </div>
