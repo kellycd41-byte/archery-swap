@@ -134,38 +134,69 @@ export default async function ListingDetailPage({
               <ListingPhotoGallery photos={photos} title={item.title} />
             </div>
 
-            <div className="mt-5 rounded-2xl border border-stone-300 bg-white p-5 shadow-sm">
-              <h3 className="font-black">Listing notes</h3>
-              <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-600">
-                {isSold ? (
-                  <>
-                    <li>• This listing has been marked sold.</li>
-                    <li>• It is hidden from Browse.</li>
-                    <li>
-                      • Offers, Buy Now, and seller messages are turned off for
-                      sold listings.
-                    </li>
-                  </>
-                ) : (
-                  <>
-                    <li>
-                      • This listing has been reviewed before appearing publicly.
-                    </li>
-                    <li>
-                      • Review all photos, specs, and description before buying.
-                    </li>
-                    <li>
-                      • Use messaging to ask the seller questions before making
-                      arrangements.
-                    </li>
-                    {offersAllowed ? (
-                      <li>• This seller is open to offers on this listing.</li>
-                    ) : (
-                      <li>• This seller is not accepting offers on this listing.</li>
-                    )}
-                  </>
-                )}
-              </ul>
+            <div className="mt-5 rounded-3xl border border-stone-300 bg-white p-5 shadow-sm">
+              <h3 className="text-2xl font-black">Item Details</h3>
+
+              <div className="mt-4 grid gap-3 text-sm">
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Status</span>
+                  <span className="text-right font-black">
+                    {isSold ? "Sold" : "Available"}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Condition</span>
+                  <span className="text-right font-black">{item.condition}</span>
+                </div>
+
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Category</span>
+                  <span className="text-right font-black">{item.category}</span>
+                </div>
+
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Brand</span>
+                  <span className="text-right font-black">
+                    {detailValue(item.brand)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Model</span>
+                  <span className="text-right font-black">
+                    {detailValue(item.model)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Draw weight</span>
+                  <span className="text-right font-black">
+                    {detailValue(item.draw_weight)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Draw length</span>
+                  <span className="text-right font-black">
+                    {detailValue(item.draw_length)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Handedness</span>
+                  <span className="text-right font-black">
+                    {detailValue(item.handedness)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Accessories</span>
+                  <span className="text-right font-black">
+                    {item.included_accessories ? "Listed below" : "Not listed"}
+                  </span>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -258,8 +289,8 @@ export default async function ListingDetailPage({
                     sellerUserId={item.user_id}
                   />
                 ) : (
-                  <div className="mt-6 rounded-2xl border border-stone-300 bg-stone-50 p-5">
-                    <h3 className="font-black">Offers closed</h3>
+                  <div className="mt-4 rounded-2xl border border-stone-300 bg-stone-50 p-4">
+                    <h3 className="text-xl font-black">Offers Closed</h3>
 
                     <p className="mt-2 text-sm font-bold leading-6 text-stone-600">
                       This seller is not accepting offers on this listing.
@@ -275,73 +306,14 @@ export default async function ListingDetailPage({
               </>
             )}
 
-            <div className="mt-6 rounded-2xl bg-stone-100 p-5">
-              <h3 className="font-black">Seller</h3>
-
-              <p className="mt-2 font-bold">
-                {item.seller_name || "Archery Swap Seller"}
-              </p>
-
-              <p className="mt-1 text-sm leading-6 text-stone-600">
-                Seller profiles, ratings, checkout, offers, and shipping tools
-                will be added later. Use caution with payment, pickup, and
-                shipping arrangements.
-              </p>
-            </div>
-
-            <div className="mt-8">
-              <h3 className="text-xl font-black">Item details</h3>
+            <div className="mt-5 rounded-2xl border border-stone-300 bg-stone-50 p-5">
+              <h3 className="text-xl font-black">Listing Details</h3>
 
               <div className="mt-4 grid gap-3 text-sm">
                 <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
-                  <span className="font-bold text-stone-600">Status</span>
+                  <span className="font-bold text-stone-600">Seller</span>
                   <span className="text-right font-black">
-                    {isSold ? "Sold" : "Available"}
-                  </span>
-                </div>
-
-                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
-                  <span className="font-bold text-stone-600">Condition</span>
-                  <span className="text-right font-black">{item.condition}</span>
-                </div>
-
-                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
-                  <span className="font-bold text-stone-600">Category</span>
-                  <span className="text-right font-black">{item.category}</span>
-                </div>
-
-                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
-                  <span className="font-bold text-stone-600">Brand</span>
-                  <span className="text-right font-black">
-                    {detailValue(item.brand)}
-                  </span>
-                </div>
-
-                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
-                  <span className="font-bold text-stone-600">Model</span>
-                  <span className="text-right font-black">
-                    {detailValue(item.model)}
-                  </span>
-                </div>
-
-                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
-                  <span className="font-bold text-stone-600">Draw weight</span>
-                  <span className="text-right font-black">
-                    {detailValue(item.draw_weight)}
-                  </span>
-                </div>
-
-                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
-                  <span className="font-bold text-stone-600">Draw length</span>
-                  <span className="text-right font-black">
-                    {detailValue(item.draw_length)}
-                  </span>
-                </div>
-
-                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
-                  <span className="font-bold text-stone-600">Handedness</span>
-                  <span className="text-right font-black">
-                    {detailValue(item.handedness)}
+                    {item.seller_name || "Archery Swap Seller"}
                   </span>
                 </div>
 
@@ -375,13 +347,19 @@ export default async function ListingDetailPage({
                   <span className="text-right font-black">{postedDate}</span>
                 </div>
               </div>
+
+              <p className="mt-4 text-sm font-bold leading-6 text-stone-600">
+                Seller profiles, ratings, checkout, and shipping tools will be
+                added later. Use caution with payment, pickup, and shipping
+                arrangements.
+              </p>
             </div>
           </section>
         </div>
 
         {item.included_accessories ? (
           <section className="mt-8 rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6">
-            <h3 className="text-2xl font-black">Included accessories</h3>
+            <h3 className="text-2xl font-black">Included Accessories</h3>
 
             <p className="mt-4 max-w-4xl whitespace-pre-line leading-8 text-stone-700">
               {item.included_accessories}
@@ -399,7 +377,7 @@ export default async function ListingDetailPage({
 
         {!isSold ? (
           <section className="mt-8 rounded-3xl bg-stone-950 p-5 text-white sm:p-6">
-            <h3 className="text-2xl font-black">Buyer safety</h3>
+            <h3 className="text-2xl font-black">Buyer Safety</h3>
 
             <ul className="mt-4 space-y-2 text-stone-300">
               <li>• Review photos, specs, price, and description carefully.</li>

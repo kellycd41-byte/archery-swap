@@ -89,18 +89,16 @@ export default function MessageSellerBox({
     }
 
     setMessageBody("");
-    setSuccessMessage(
-      "Your message was sent. The Messages page will show conversations after the next update."
-    );
+    setSuccessMessage("Your message was sent.");
   }
 
   return (
-    <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-      <h3 className="text-lg font-black text-emerald-950">Message seller</h3>
+    <div className="mt-4 rounded-2xl border border-stone-300 bg-white p-4">
+      <h3 className="text-xl font-black">Message Seller</h3>
 
-      <p className="mt-2 text-sm font-bold leading-6 text-emerald-900">
-        Send a question about this listing. Messages stay connected to the item
-        so buyers and sellers know exactly what gear they are discussing.
+      <p className="mt-2 text-sm font-bold leading-6 text-stone-600">
+        Ask a question about this listing before arranging payment, pickup, or
+        shipping.
       </p>
 
       {!sellerUserId ? (
@@ -113,14 +111,14 @@ export default function MessageSellerBox({
           </p>
         </div>
       ) : isLoadingSession ? (
-        <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-4">
-          <p className="text-sm font-black text-emerald-950">
+        <div className="mt-4 rounded-xl border border-stone-300 bg-stone-50 p-4">
+          <p className="text-sm font-black text-stone-950">
             Checking sign-in status...
           </p>
         </div>
       ) : !user ? (
-        <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-4">
-          <p className="text-sm font-black text-emerald-950">
+        <div className="mt-4 rounded-xl border border-stone-300 bg-stone-50 p-4">
+          <p className="text-sm font-black text-stone-950">
             Sign in to message the seller.
           </p>
 
@@ -130,13 +128,13 @@ export default function MessageSellerBox({
 
           <Link
             href="/account"
-            className="mt-4 inline-block rounded-xl bg-emerald-700 px-5 py-3 text-sm font-black text-white hover:bg-emerald-600"
+            className="mt-4 inline-block rounded-xl bg-stone-950 px-5 py-3 text-sm font-black text-white hover:bg-stone-800"
           >
             Sign In or Create Account
           </Link>
         </div>
       ) : user.id === sellerUserId ? (
-        <div className="mt-4 rounded-xl border border-stone-300 bg-white p-4">
+        <div className="mt-4 rounded-xl border border-stone-300 bg-stone-50 p-4">
           <p className="text-sm font-black text-stone-950">
             This is your listing.
           </p>
@@ -148,27 +146,25 @@ export default function MessageSellerBox({
       ) : (
         <form onSubmit={handleSendMessage} className="mt-4 grid gap-4">
           <label className="grid gap-2">
-            <span className="text-sm font-black text-emerald-950">
-              Your message
-            </span>
+            <span className="text-sm font-black">Your message</span>
 
             <textarea
               value={messageBody}
               onChange={(event) => setMessageBody(event.target.value)}
-              rows={5}
+              rows={4}
               placeholder={`Hi, I have a question about "${listingTitle}".`}
-              className="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold leading-6 outline-none focus:border-emerald-700"
+              className="rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3 text-sm font-bold leading-6 outline-none focus:border-emerald-700"
             />
           </label>
 
           {successMessage ? (
-            <div className="rounded-2xl border border-emerald-200 bg-white p-4 text-sm font-bold text-emerald-900">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
               {successMessage}
             </div>
           ) : null}
 
           {errorMessage ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
               {errorMessage}
             </div>
           ) : null}
@@ -176,29 +172,12 @@ export default function MessageSellerBox({
           <button
             type="submit"
             disabled={isSending}
-            className="cursor-pointer rounded-xl bg-emerald-700 px-6 py-3 text-center font-black text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="cursor-pointer rounded-xl bg-stone-950 px-6 py-3 text-center font-black text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSending ? "Sending Message..." : "Send Message"}
           </button>
         </form>
       )}
-
-      <div className="mt-5 grid gap-3">
-        <button
-          type="button"
-          disabled
-          className="cursor-not-allowed rounded-xl border border-emerald-700 bg-white px-6 py-3 text-center font-black text-emerald-950 opacity-80"
-        >
-          Save Listing — Coming Soon
-        </button>
-
-        <Link
-          href="/browse"
-          className="rounded-xl border border-stone-400 px-6 py-3 text-center font-black text-stone-950 hover:bg-stone-100"
-        >
-          Keep Browsing
-        </Link>
-      </div>
     </div>
   );
 }
