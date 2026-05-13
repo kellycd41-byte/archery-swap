@@ -72,6 +72,16 @@ function formatStatus(status: string) {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
+function getPhotoUrls(imageUrl: string | null, imageUrls: string[] | null) {
+  const allUrls = [...(imageUrls || [])];
+
+  if (imageUrl && !allUrls.includes(imageUrl)) {
+    allUrls.unshift(imageUrl);
+  }
+
+  return allUrls.filter(Boolean);
+}
+
 export default function EditListingPage() {
   const params = useParams();
   const router = useRouter();
@@ -86,6 +96,7 @@ export default function EditListingPage() {
   const [user, setUser] = useState<User | null>(null);
   const [form, setForm] = useState<ListingForm>(emptyForm);
   const [listingStatus, setListingStatus] = useState("");
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [isLoadingListing, setIsLoadingListing] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -118,7 +129,7 @@ export default function EditListingPage() {
       const { data, error } = await supabase
         .from("listings")
         .select(
-          "title,description,price,category,condition,location,brand,model,draw_weight,draw_length,handedness,included_accessories,shipping_available,offers_allowed,status"
+          "title,description,price,category,condition,location,brand,model,draw_weight,draw_length,handedness,included_accessories,shipping_available,offers_allowed,status,image_url,image_urls"
         )
         .eq("id", listingId)
         .eq("user_id", signedInUser.id)
@@ -137,6 +148,7 @@ export default function EditListingPage() {
       }
 
       setListingStatus(data.status || "");
+      setPhotoUrls(getPhotoUrls(data.image_url || null, data.image_urls || null));
 
       setForm({
         title: data.title || "",
@@ -340,8 +352,8 @@ export default function EditListingPage() {
                 </h3>
 
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-600">
-                  This page updates listing details only. Existing photos stay
-                  the same for now.
+                  This page updates listing details only. Existing photos are
+                  shown below but cannot be changed yet.
                 </p>
               </div>
 
@@ -680,14 +692,62 @@ export default function EditListingPage() {
                   </div>
                 </section>
 
+                <section className="rounded-3xl border border-stone-200 p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h4 className="text-xl font-black">Current photos</h4>
+
+                      <p className="mt-1 text-sm leading-6 text-stone-600">
+                        These are the photos currently attached to this listing.
+                      </p>
+                    </div>
+
+                    <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-stone-600">
+                      View Only
+                    </span>
+                  </div>
+
+                  {photoUrls.length > 0 ? (
+                    <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                      {photoUrls.map((photoUrl, index) => (
+                        <div
+                          key={`${photoUrl}-${index}`}
+                          className="overflow-hidden rounded-2xl border border-stone-300 bg-stone-100"
+                        >
+                          <div className="flex h-48 items-center justify-center">
+                            <img
+                              src={photoUrl}
+                              alt={`Listing photo ${index + 1}`}
+                              className="max-h-full max-w-full object-contain"
+                            />
+                          </div>
+
+                          <div className="border-t border-stone-300 bg-white px-3 py-2">
+                            <p className="text-xs font-bold text-stone-600">
+                              Photo {index + 1}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-5 rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-5">
+                      <p className="text-sm font-bold text-stone-600">
+                        This listing does not have photos attached yet.
+                      </p>
+                    </div>
+                  )}
+                </section>
+
                 <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5">
                   <h4 className="font-black text-amber-950">
                     Photo editing is coming later
                   </h4>
 
                   <p className="mt-2 text-sm font-bold leading-6 text-amber-900">
-                    This page currently updates listing details only. Your
-                    existing listing photos will stay unchanged.
+                    This page shows your current photos, but it does not let you
+                    add, remove, or reorder them yet. Your existing listing
+                    photos will stay unchanged.
                   </p>
                 </div>
 
