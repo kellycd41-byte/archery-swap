@@ -180,6 +180,10 @@ export default function AccountPage() {
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
+  const hasPendingReceivedOffers = receivedOffers.some(
+    (offer) => offer.status === "pending"
+  );
+
   async function loadMyListings(currentUser: User) {
     setIsLoadingListings(true);
     setListingsErrorMessage("");
@@ -774,6 +778,15 @@ export default function AccountPage() {
                   messages you send, and offers you make or receive.
                 </p>
 
+                {hasPendingReceivedOffers ? (
+                  <div className="mt-5 rounded-2xl border border-emerald-200 bg-white p-4 text-sm font-bold text-emerald-900">
+                    <div className="flex items-center gap-3">
+                      <span className="h-3 w-3 rounded-full bg-emerald-500" />
+                      <span>You have pending offers to review.</span>
+                    </div>
+                  </div>
+                ) : null}
+
                 {message ? (
                   <div className="mt-5 rounded-2xl border border-emerald-200 bg-white p-4 text-sm font-bold text-emerald-900">
                     {message}
@@ -808,7 +821,17 @@ export default function AccountPage() {
               <section className="mt-8 rounded-3xl border border-stone-300 bg-stone-50 p-5 sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <h3 className="text-2xl font-black">My Offers</h3>
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-2xl font-black">My Offers</h3>
+
+                      {hasPendingReceivedOffers ? (
+                        <span
+                          className="h-3 w-3 rounded-full bg-emerald-500"
+                          title="Pending received offers"
+                        />
+                      ) : null}
+                    </div>
+
                     <p className="mt-2 text-sm leading-6 text-stone-600">
                       Review offers you sent as a buyer and offers you received
                       as a seller. Accepting an offer marks the listing sold and
@@ -873,7 +896,16 @@ export default function AccountPage() {
                     </div>
 
                     <div>
-                      <h4 className="text-lg font-black">Offers I Received</h4>
+                      <div className="flex items-center gap-3">
+                        <h4 className="text-lg font-black">Offers I Received</h4>
+
+                        {hasPendingReceivedOffers ? (
+                          <span
+                            className="h-3 w-3 rounded-full bg-emerald-500"
+                            title="Pending received offers"
+                          />
+                        ) : null}
+                      </div>
 
                       {receivedOffers.length === 0 ? (
                         <div className="mt-3 rounded-2xl border border-stone-300 bg-white p-5">

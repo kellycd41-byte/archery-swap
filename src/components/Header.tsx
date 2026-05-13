@@ -10,14 +10,11 @@ type HeaderProps = {
   activePage?: ActivePage;
 };
 
-function MessageBadge({ count }: { count: number }) {
-  if (count <= 0) {
-    return null;
-  }
-
+function GreenDot({ label }: { label: string }) {
   return (
     <span
-      aria-label="Unread messages"
+      aria-label={label}
+      title={label}
       className="ml-2 h-2.5 w-2.5 rounded-full bg-emerald-400"
     />
   );
@@ -25,39 +22,52 @@ function MessageBadge({ count }: { count: number }) {
 
 export default function Header({ activePage }: HeaderProps) {
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pendingReceivedOfferCount, setPendingReceivedOfferCount] = useState(0);
 
-  async function loadUnreadCount() {
+  async function loadHeaderAlerts() {
     const { data: sessionData } = await supabase.auth.getSession();
     const signedInUser = sessionData.session?.user ?? null;
 
     if (!signedInUser) {
       setUnreadCount(0);
+      setPendingReceivedOfferCount(0);
       return;
     }
 
-    const { count, error } = await supabase
+    const { count: messageCount, error: messageError } = await supabase
       .from("messages")
       .select("id", { count: "exact", head: true })
       .eq("receiver_id", signedInUser.id)
       .is("read_at", null);
 
-    if (error) {
+    if (messageError) {
       setUnreadCount(0);
-      return;
+    } else {
+      setUnreadCount(messageCount || 0);
     }
 
-    setUnreadCount(count || 0);
+    const { count: offerCount, error: offerError } = await supabase
+      .from("offers")
+      .select("id", { count: "exact", head: true })
+      .eq("seller_id", signedInUser.id)
+      .eq("status", "pending");
+
+    if (offerError) {
+      setPendingReceivedOfferCount(0);
+    } else {
+      setPendingReceivedOfferCount(offerCount || 0);
+    }
   }
 
   useEffect(() => {
-    loadUnreadCount();
+    loadHeaderAlerts();
 
     const handleUnreadChange = () => {
-      loadUnreadCount();
+      loadHeaderAlerts();
     };
 
     const handleWindowFocus = () => {
-      loadUnreadCount();
+      loadHeaderAlerts();
     };
 
     window.addEventListener("archery-swap-unread-changed", handleUnreadChange);
@@ -66,7 +76,7 @@ export default function Header({ activePage }: HeaderProps) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(() => {
-      loadUnreadCount();
+      loadHeaderAlerts();
     });
 
     return () => {
@@ -78,6 +88,9 @@ export default function Header({ activePage }: HeaderProps) {
       subscription.unsubscribe();
     };
   }, []);
+
+  const hasUnreadMessages = unreadCount > 0;
+  const hasPendingReceivedOffers = pendingReceivedOfferCount > 0;
 
   return (
     <header className="border-b border-stone-800 bg-stone-950 text-white">
@@ -135,18 +148,23 @@ export default function Header({ activePage }: HeaderProps) {
               }`}
             >
               Messages
-              <MessageBadge count={unreadCount} />
+              {hasUnreadMessages ? (
+                <GreenDot label="Unread messages" />
+              ) : null}
             </Link>
 
             <Link
               href="/account"
-              className={
+              className={`inline-flex items-center ${
                 activePage === "account"
                   ? "text-emerald-300"
                   : "hover:text-emerald-300"
-              }
+              }`}
             >
               Account
+              {hasPendingReceivedOffers ? (
+                <GreenDot label="Pending received offers" />
+              ) : null}
             </Link>
           </nav>
 
@@ -201,16 +219,21 @@ export default function Header({ activePage }: HeaderProps) {
                 }`}
               >
                 Messages
-                <MessageBadge count={unreadCount} />
+                {hasUnreadMessages ? (
+                  <GreenDot label="Unread messages" />
+                ) : null}
               </Link>
 
               <Link
                 href="/account"
-                className={`block px-4 py-3 text-sm font-bold hover:bg-stone-800 ${
+                className={`flex items-center px-4 py-3 text-sm font-bold hover:bg-stone-800 ${
                   activePage === "account" ? "text-emerald-300" : ""
                 }`}
               >
                 Account
+                {hasPendingReceivedOffers ? (
+                  <GreenDot label="Pending received offers" />
+                ) : null}
               </Link>
             </div>
           </details>
