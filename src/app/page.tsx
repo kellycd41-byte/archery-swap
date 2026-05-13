@@ -166,9 +166,18 @@ export default async function Home() {
           </div>
 
           <div className="rounded-3xl border border-stone-700 bg-stone-900 p-6 shadow-2xl">
-            <p className="mb-3 text-sm font-black uppercase tracking-[0.2em] text-emerald-300">
-              Featured Listing
-            </p>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-300">
+                Featured Listing
+              </p>
+
+              <Link
+                href="/browse"
+                className="text-sm font-black text-stone-300 hover:text-white"
+              >
+                View All
+              </Link>
+            </div>
 
             {heroListing ? (
               <div className="rounded-2xl bg-stone-800 p-6">
@@ -184,10 +193,21 @@ export default async function Home() {
                   <HeroPhotoPlaceholder />
                 )}
 
-                <h3 className="text-2xl font-black">{heroListing.title}</h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
+                    {heroListing.category}
+                  </p>
+
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-stone-200">
+                    {heroListing.condition}
+                  </span>
+                </div>
+
+                <h3 className="mt-3 text-2xl font-black">
+                  {heroListing.title}
+                </h3>
 
                 <p className="mt-2 text-stone-300">
-                  {heroListing.condition} •{" "}
                   {heroListing.location || "Location not listed"}
                 </p>
 
@@ -236,13 +256,22 @@ export default async function Home() {
       </section>
 
       <section id="browse" className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
-        <div className="mb-8">
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-800">
-            Shop by category
-          </p>
-          <h2 className="mt-2 text-3xl font-black sm:text-4xl">
-            Find the gear you need.
-          </h2>
+        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-800">
+              Shop by category
+            </p>
+            <h2 className="mt-2 text-3xl font-black sm:text-4xl">
+              Find the gear you need.
+            </h2>
+          </div>
+
+          <Link
+            href="/browse"
+            className="rounded-xl border border-stone-400 px-5 py-3 text-center text-sm font-black text-stone-950 hover:bg-white"
+          >
+            Browse All Gear
+          </Link>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -250,9 +279,16 @@ export default async function Home() {
             <Link
               key={category}
               href={`/browse?category=${encodeURIComponent(category)}`}
-              className="rounded-2xl border border-stone-300 bg-white p-6 shadow-sm hover:border-emerald-700"
+              className="group rounded-2xl border border-stone-300 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-700 hover:shadow-md"
             >
-              <h3 className="text-xl font-black">{category}</h3>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-xl font-black">{category}</h3>
+
+                <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-black text-stone-600 group-hover:bg-emerald-50 group-hover:text-emerald-800">
+                  Browse
+                </span>
+              </div>
+
               <p className="mt-2 text-stone-600">
                 Browse new and used {category.toLowerCase()} from other
                 archers.
@@ -264,13 +300,22 @@ export default async function Home() {
 
       <section className="bg-white py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="mb-8">
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-800">
-              Featured listings
-            </p>
-            <h2 className="mt-2 text-3xl font-black sm:text-4xl">
-              Fresh gear on the market.
-            </h2>
+          <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-800">
+                Featured listings
+              </p>
+              <h2 className="mt-2 text-3xl font-black sm:text-4xl">
+                Fresh gear on the market.
+              </h2>
+            </div>
+
+            <Link
+              href="/browse"
+              className="rounded-xl border border-stone-400 px-5 py-3 text-center text-sm font-black text-stone-950 hover:bg-stone-100"
+            >
+              See More Listings
+            </Link>
           </div>
 
           {error ? (
@@ -296,30 +341,30 @@ export default async function Home() {
           ) : null}
 
           {!error && featuredListings.length > 0 ? (
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid items-stretch gap-5 md:grid-cols-3">
               {featuredListings.map((item) => {
                 const brandModelText = getBrandModelText(item);
                 const compactSpecs = getCompactSpecs(item);
                 const photoUrl = getListingPhotoUrl(item);
 
                 return (
-                  <div
+                  <article
                     key={item.id}
-                    className="overflow-hidden rounded-2xl border border-stone-300 bg-stone-50 shadow-sm"
+                    className="group flex h-full flex-col overflow-hidden rounded-2xl border border-stone-300 bg-stone-50 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                   >
                     {photoUrl ? (
                       <div className="flex h-44 items-center justify-center bg-stone-200 p-3">
                         <img
                           src={photoUrl}
                           alt={item.title}
-                          className="max-h-full max-w-full object-contain"
+                          className="max-h-full max-w-full object-contain transition group-hover:scale-[1.02]"
                         />
                       </div>
                     ) : (
                       <PhotoPlaceholder />
                     )}
 
-                    <div className="p-5">
+                    <div className="flex flex-1 flex-col p-5">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-800">
                           {item.category}
@@ -330,16 +375,18 @@ export default async function Home() {
                         </span>
                       </div>
 
-                      <h3 className="mt-3 text-xl font-black">{item.title}</h3>
+                      <h3 className="mt-3 line-clamp-2 text-xl font-black">
+                        {item.title}
+                      </h3>
 
                       {brandModelText ? (
-                        <p className="mt-1 text-sm font-black text-stone-700">
+                        <p className="mt-1 line-clamp-1 text-sm font-black text-stone-700">
                           {brandModelText}
                         </p>
                       ) : null}
 
                       <div className="mt-3 flex flex-wrap gap-2">
-                        {compactSpecs.map((spec) => (
+                        {compactSpecs.slice(0, 3).map((spec) => (
                           <span
                             key={spec}
                             className="rounded-full border border-stone-300 bg-white px-3 py-1 text-xs font-bold text-stone-700"
@@ -365,7 +412,7 @@ export default async function Home() {
                         {item.location || "Location not listed"}
                       </p>
 
-                      <div className="mt-5 flex items-center justify-between gap-4">
+                      <div className="mt-auto flex items-center justify-between gap-4 pt-5">
                         <p className="text-2xl font-black">
                           ${Number(item.price).toLocaleString()}
                         </p>
@@ -377,7 +424,7 @@ export default async function Home() {
                         </Link>
                       </div>
                     </div>
-                  </div>
+                  </article>
                 );
               })}
             </div>
@@ -395,25 +442,35 @@ export default async function Home() {
             Buy and sell archery gear in a few clear steps.
           </h2>
 
-          <div className="mt-8 grid gap-6 md:grid-cols-3">
-            <div>
-              <h3 className="text-xl font-black">1. List your gear</h3>
-              <p className="mt-2 text-stone-300">
+          <div className="mt-8 grid gap-5 md:grid-cols-3">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
+                Step 1
+              </p>
+              <h3 className="mt-3 text-xl font-black">List your gear</h3>
+              <p className="mt-2 text-sm leading-6 text-stone-300">
                 Add photos, price, condition, category, specs, and description.
               </p>
             </div>
 
-            <div>
-              <h3 className="text-xl font-black">2. Wait for review</h3>
-              <p className="mt-2 text-stone-300">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
+                Step 2
+              </p>
+              <h3 className="mt-3 text-xl font-black">Wait for review</h3>
+              <p className="mt-2 text-sm leading-6 text-stone-300">
                 Listings are reviewed before they show publicly on Browse Gear.
               </p>
             </div>
 
-            <div>
-              <h3 className="text-xl font-black">3. Connect with buyers</h3>
-              <p className="mt-2 text-stone-300">
-                Buyers can view approved listings and reach out when interested.
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
+                Step 3
+              </p>
+              <h3 className="mt-3 text-xl font-black">Connect with buyers</h3>
+              <p className="mt-2 text-sm leading-6 text-stone-300">
+                Buyers can message sellers or make offers on eligible active
+                listings.
               </p>
             </div>
           </div>
@@ -421,19 +478,21 @@ export default async function Home() {
       </section>
 
       <section id="sell" className="bg-emerald-950 px-4 py-16 text-white sm:px-6">
-        <div className="mx-auto max-w-7xl">
-          <h2 className="max-w-3xl text-3xl font-black sm:text-4xl">
-            Ready to turn unused gear into cash?
-          </h2>
+        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 md:flex-row md:items-center">
+          <div>
+            <h2 className="max-w-3xl text-3xl font-black sm:text-4xl">
+              Ready to turn unused gear into cash?
+            </h2>
 
-          <p className="mt-4 max-w-2xl text-emerald-50">
-            List bows, crossbows, sights, releases, arrows, cases, targets, and
-            accessories on Archery Swap.
-          </p>
+            <p className="mt-4 max-w-2xl text-emerald-50">
+              List bows, crossbows, sights, releases, arrows, cases, targets,
+              and accessories on Archery Swap.
+            </p>
+          </div>
 
           <Link
             href="/sell"
-            className="mt-7 inline-block rounded-xl bg-white px-6 py-3 font-black text-emerald-950"
+            className="rounded-xl bg-white px-6 py-3 text-center font-black text-emerald-950 hover:bg-emerald-50"
           >
             List Your Gear
           </Link>
