@@ -140,13 +140,23 @@ export default async function ListingDetailPage({
                   <>
                     <li>• This listing has been marked sold.</li>
                     <li>• It is hidden from Browse.</li>
-                    <li>• Offers and seller messages are turned off for sold listings.</li>
+                    <li>
+                      • Offers, Buy Now, and seller messages are turned off for
+                      sold listings.
+                    </li>
                   </>
                 ) : (
                   <>
-                    <li>• This listing has been reviewed before appearing publicly.</li>
-                    <li>• Review all photos, specs, and description before buying.</li>
-                    <li>• Use messaging to ask the seller questions before making arrangements.</li>
+                    <li>
+                      • This listing has been reviewed before appearing publicly.
+                    </li>
+                    <li>
+                      • Review all photos, specs, and description before buying.
+                    </li>
+                    <li>
+                      • Use messaging to ask the seller questions before making
+                      arrangements.
+                    </li>
                     {offersAllowed ? (
                       <li>• This seller is open to offers on this listing.</li>
                     ) : (
@@ -224,8 +234,8 @@ export default async function ListingDetailPage({
                 <h3 className="font-black">Sold item</h3>
 
                 <p className="mt-2 text-sm font-bold leading-6 text-stone-700">
-                  This item is no longer available. Offers and seller messages
-                  are disabled for this listing.
+                  This item is no longer available. Buy Now, offers, and seller
+                  messages are disabled for this listing.
                 </p>
 
                 <Link
@@ -237,6 +247,33 @@ export default async function ListingDetailPage({
               </div>
             ) : (
               <>
+                <div className="mt-6 rounded-3xl border border-stone-300 bg-stone-50 p-5">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-stone-500">
+                    Secure checkout coming soon
+                  </p>
+
+                  <h3 className="mt-3 text-2xl font-black">Buy this item</h3>
+
+                  <p className="mt-2 text-sm font-bold leading-6 text-stone-700">
+                    Buy Now will eventually let buyers pay through Archery Swap.
+                    For now, use messages or make an offer before arranging
+                    payment, pickup, or shipping.
+                  </p>
+
+                  <button
+                    type="button"
+                    disabled
+                    className="mt-5 w-full cursor-not-allowed rounded-2xl bg-stone-400 px-5 py-4 text-sm font-black text-white"
+                  >
+                    Buy Now Coming Soon
+                  </button>
+
+                  <p className="mt-3 text-xs font-bold leading-5 text-stone-500">
+                    Checkout is not active yet. Do not send payment through
+                    links from unknown users.
+                  </p>
+                </div>
+
                 {offersAllowed ? (
                   <MakeOfferBox
                     listingId={item.id}
@@ -244,7 +281,15 @@ export default async function ListingDetailPage({
                     listingPrice={item.price}
                     sellerUserId={item.user_id}
                   />
-                ) : null}
+                ) : (
+                  <div className="mt-6 rounded-2xl border border-stone-300 bg-stone-50 p-5">
+                    <h3 className="font-black">Offers closed</h3>
+
+                    <p className="mt-2 text-sm font-bold leading-6 text-stone-600">
+                      This seller is not accepting offers on this listing.
+                    </p>
+                  </div>
+                )}
 
                 <MessageSellerBox
                   listingId={item.id}
