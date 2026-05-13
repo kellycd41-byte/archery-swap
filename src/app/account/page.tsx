@@ -152,6 +152,20 @@ function getOfferListing(offer: UserOffer) {
   return offer.listing;
 }
 
+function sortPendingOffersFirst(offers: UserOffer[]) {
+  return [...offers].sort((a, b) => {
+    if (a.status === "pending" && b.status !== "pending") {
+      return -1;
+    }
+
+    if (a.status !== "pending" && b.status === "pending") {
+      return 1;
+    }
+
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+}
+
 export default function AccountPage() {
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [user, setUser] = useState<User | null>(null);
@@ -180,9 +194,18 @@ export default function AccountPage() {
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
+  const [isOffersOpen, setIsOffersOpen] = useState(false);
+  const [activeOfferPanel, setActiveOfferPanel] = useState<
+    "sent" | "received" | null
+  >(null);
+  const [isListingsOpen, setIsListingsOpen] = useState(false);
+
   const hasPendingReceivedOffers = receivedOffers.some(
     (offer) => offer.status === "pending"
   );
+
+  const sortedSentOffers = sortPendingOffersFirst(sentOffers);
+  const sortedReceivedOffers = sortPendingOffersFirst(receivedOffers);
 
   async function loadMyListings(currentUser: User) {
     setIsLoadingListings(true);
@@ -284,6 +307,9 @@ export default function AccountPage() {
         setOfferActionErrorMessage("");
         setListingActionMessage("");
         setListingActionErrorMessage("");
+        setIsOffersOpen(false);
+        setActiveOfferPanel(null);
+        setIsListingsOpen(false);
       }
     });
 
@@ -394,6 +420,9 @@ export default function AccountPage() {
     setOfferActionErrorMessage("");
     setListingActionMessage("");
     setListingActionErrorMessage("");
+    setIsOffersOpen(false);
+    setActiveOfferPanel(null);
+    setIsListingsOpen(false);
     setMessage("You are signed out.");
   }
 
@@ -612,115 +641,130 @@ export default function AccountPage() {
     const listing = getOfferListing(offer);
     const listingTitle = listing?.title || "Listing unavailable";
     const listingStatus = listing?.status || "";
+    const needsResponse = kind === "received" && offer.status === "pending";
 
     return (
       <div
         key={offer.id}
-        className="rounded-2xl border border-stone-300 bg-white p-5"
+        className={`overflow-hidden rounded-2xl border bg-white ${
+          needsResponse
+            ? "border-emerald-300 shadow-sm"
+            : "border-stone-300"
+        }`}
       >
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h4 className="text-lg font-black">{listingTitle}</h4>
-
-            <p className="mt-1 text-sm font-bold text-stone-500">
-              {kind === "sent" ? "Sent" : "Received"}{" "}
-              {formatOfferDate(offer.created_at)}
-            </p>
-          </div>
-
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.14em] ${offerStatusClassName(
-              offer.status
-            )}`}
-          >
-            {offerStatusLabel(offer.status)}
-          </span>
-        </div>
-
-        <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
-          <div className="rounded-xl bg-stone-100 p-3">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
-              Offer
-            </p>
-            <p className="mt-1 font-black">
-              ${Number(offer.amount).toLocaleString()}
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-stone-100 p-3">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
-              Listing Price
-            </p>
-            <p className="mt-1 font-black">
-              {listing
-                ? `$${Number(listing.price).toLocaleString()}`
-                : "Unavailable"}
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-stone-100 p-3">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
-              Listing Status
-            </p>
-            <p className="mt-1 font-black">
-              {listingStatus ? statusLabel(listingStatus) : "Unavailable"}
-            </p>
-          </div>
-        </div>
-
-        {offer.message ? (
-          <div className="mt-4 rounded-xl border border-stone-200 bg-stone-50 p-3">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
-              Message
-            </p>
-            <p className="mt-2 whitespace-pre-line text-sm font-bold leading-6 text-stone-700">
-              {offer.message}
+        {needsResponse ? (
+          <div className="border-b border-emerald-200 bg-emerald-50 px-5 py-3">
+            <p className="text-sm font-black text-emerald-900">
+              Needs response — accept or decline this offer.
             </p>
           </div>
         ) : null}
 
-        <div className="mt-4 flex flex-wrap gap-3">
-          {listing ? (
-            <Link
-              href={`/listing/${offer.listing_id}`}
-              className="inline-block rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-stone-800"
+        <div className="p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h4 className="text-lg font-black">{listingTitle}</h4>
+
+              <p className="mt-1 text-sm font-bold text-stone-500">
+                {kind === "sent" ? "Sent" : "Received"}{" "}
+                {formatOfferDate(offer.created_at)}
+              </p>
+            </div>
+
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.14em] ${offerStatusClassName(
+                offer.status
+              )}`}
             >
-              View Listing
-            </Link>
+              {offerStatusLabel(offer.status)}
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
+            <div className="rounded-xl bg-stone-100 p-3">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                Offer
+              </p>
+              <p className="mt-1 font-black">
+                ${Number(offer.amount).toLocaleString()}
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-stone-100 p-3">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                Listing Price
+              </p>
+              <p className="mt-1 font-black">
+                {listing
+                  ? `$${Number(listing.price).toLocaleString()}`
+                  : "Unavailable"}
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-stone-100 p-3">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                Listing Status
+              </p>
+              <p className="mt-1 font-black">
+                {listingStatus ? statusLabel(listingStatus) : "Unavailable"}
+              </p>
+            </div>
+          </div>
+
+          {offer.message ? (
+            <div className="mt-4 rounded-xl border border-stone-200 bg-stone-50 p-3">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                Message
+              </p>
+              <p className="mt-2 whitespace-pre-line text-sm font-bold leading-6 text-stone-700">
+                {offer.message}
+              </p>
+            </div>
           ) : null}
 
-          {kind === "received" && offer.status === "pending" ? (
-            <>
+          <div className="mt-4 grid gap-3 sm:flex sm:flex-wrap">
+            {listing ? (
+              <Link
+                href={`/listing/${offer.listing_id}`}
+                className="rounded-xl bg-stone-950 px-4 py-3 text-center text-sm font-black text-white hover:bg-stone-800"
+              >
+                View Listing
+              </Link>
+            ) : null}
+
+            {kind === "received" && offer.status === "pending" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleAcceptOffer(offer)}
+                  disabled={updatingOfferId === offer.id}
+                  className="cursor-pointer rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {updatingOfferId === offer.id ? "Updating..." : "Accept Offer"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDeclineOffer(offer)}
+                  disabled={updatingOfferId === offer.id}
+                  className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-800 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {updatingOfferId === offer.id ? "Updating..." : "Decline Offer"}
+                </button>
+              </>
+            ) : null}
+
+            {kind === "sent" && offer.status === "pending" ? (
               <button
                 type="button"
-                onClick={() => handleAcceptOffer(offer)}
+                onClick={() => handleWithdrawOffer(offer)}
                 disabled={updatingOfferId === offer.id}
-                className="cursor-pointer rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                className="cursor-pointer rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-black text-stone-950 hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {updatingOfferId === offer.id ? "Updating..." : "Accept Offer"}
+                {updatingOfferId === offer.id ? "Updating..." : "Withdraw Offer"}
               </button>
-
-              <button
-                type="button"
-                onClick={() => handleDeclineOffer(offer)}
-                disabled={updatingOfferId === offer.id}
-                className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-800 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {updatingOfferId === offer.id ? "Updating..." : "Decline Offer"}
-              </button>
-            </>
-          ) : null}
-
-          {kind === "sent" && offer.status === "pending" ? (
-            <button
-              type="button"
-              onClick={() => handleWithdrawOffer(offer)}
-              disabled={updatingOfferId === offer.id}
-              className="cursor-pointer rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-black text-stone-950 hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {updatingOfferId === offer.id ? "Updating..." : "Withdraw Offer"}
-            </button>
-          ) : null}
+            ) : null}
+          </div>
         </div>
       </div>
     );
@@ -730,56 +774,68 @@ export default function AccountPage() {
     <main className="min-h-screen bg-stone-100 text-stone-950">
       <Header activePage="account" />
 
-      <section className="bg-stone-950 px-4 py-14 text-white sm:px-6 md:py-16">
+      <section className="bg-stone-950 px-4 py-10 text-white sm:px-6 md:py-12">
         <div className="mx-auto max-w-7xl">
           <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-300">
             Account
           </p>
 
-          <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">
-            Sign in to Archery Swap.
+          <h2 className="mt-3 max-w-4xl text-3xl font-black tracking-tight sm:text-4xl">
+            Manage your Archery Swap account.
           </h2>
 
-          <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
-            Accounts are the foundation for seller profiles, real messaging,
-            saved listings, offers, buying, and safer marketplace tools.
+          <p className="mt-4 max-w-2xl text-base leading-7 text-stone-300">
+            View your listings, track offers, and manage buyer and seller
+            activity from one place.
           </p>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[1fr_380px]">
-        <div className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6 md:p-8">
+      <section className="mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[1fr_340px]">
+        <div>
           {isLoadingSession ? (
-            <div className="rounded-3xl border border-stone-300 bg-stone-50 p-6">
+            <div className="rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
               <p className="font-black">Checking account status...</p>
             </div>
           ) : user ? (
             <>
-              <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 sm:p-8">
-                <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-800">
-                  Signed In
-                </p>
+              <div className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700">
+                      Signed In
+                    </p>
 
-                <h3 className="mt-4 text-3xl font-black tracking-tight text-stone-950">
-                  Your account is active.
-                </h3>
+                    <h3 className="mt-2 text-2xl font-black tracking-tight">
+                      Your account is active.
+                    </h3>
 
-                <div className="mt-5 rounded-2xl border border-emerald-200 bg-white p-5">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-stone-500">
-                    Email
-                  </p>
-                  <p className="mt-2 break-words text-lg font-black text-stone-950">
-                    {user.email}
-                  </p>
+                    <p className="mt-2 break-words text-sm font-bold text-stone-600">
+                      {user.email}
+                    </p>
+                  </div>
+
+                  <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2">
+                    <Link
+                      href="/sell"
+                      className="rounded-xl bg-emerald-600 px-5 py-3 text-center text-sm font-black text-white hover:bg-emerald-500"
+                    >
+                      List Gear
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      disabled={isSubmitting}
+                      className="cursor-pointer rounded-xl bg-stone-950 px-5 py-3 text-center text-sm font-black text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isSubmitting ? "Signing Out..." : "Sign Out"}
+                    </button>
+                  </div>
                 </div>
 
-                <p className="mt-5 max-w-2xl text-base leading-7 text-stone-700">
-                  This account is now connected to the listings you submit,
-                  messages you send, and offers you make or receive.
-                </p>
-
                 {hasPendingReceivedOffers ? (
-                  <div className="mt-5 rounded-2xl border border-emerald-200 bg-white p-4 text-sm font-bold text-emerald-900">
+                  <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
                     <div className="flex items-center gap-3">
                       <span className="h-3 w-3 rounded-full bg-emerald-500" />
                       <span>You have pending offers to review.</span>
@@ -788,7 +844,7 @@ export default function AccountPage() {
                 ) : null}
 
                 {message ? (
-                  <div className="mt-5 rounded-2xl border border-emerald-200 bg-white p-4 text-sm font-bold text-emerald-900">
+                  <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
                     {message}
                   </div>
                 ) : null}
@@ -798,106 +854,24 @@ export default function AccountPage() {
                     {errorMessage}
                   </div>
                 ) : null}
-
-                <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                  <Link
-                    href="/sell"
-                    className="rounded-2xl bg-emerald-600 px-5 py-4 text-center text-sm font-black text-white hover:bg-emerald-500"
-                  >
-                    List Gear
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={handleSignOut}
-                    disabled={isSubmitting}
-                    className="cursor-pointer rounded-2xl bg-stone-950 px-5 py-4 text-center text-sm font-black text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isSubmitting ? "Signing Out..." : "Sign Out"}
-                  </button>
-                </div>
               </div>
 
-              <section className="mt-8 rounded-3xl border border-stone-300 bg-stone-50 p-5 sm:p-6">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-2xl font-black">My Offers</h3>
-
-                      {hasPendingReceivedOffers ? (
-                        <span
-                          className="h-3 w-3 rounded-full bg-emerald-500"
-                          title="Pending received offers"
-                        />
-                      ) : null}
-                    </div>
-
-                    <p className="mt-2 text-sm leading-6 text-stone-600">
-                      Review offers you sent as a buyer and offers you received
-                      as a seller. Accepting an offer marks the listing sold and
-                      hides it from Browse.
-                    </p>
-                  </div>
-
+              <div className="mt-8 grid gap-5">
+                <section className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6">
                   <button
                     type="button"
-                    onClick={() => loadMyOffers(user)}
-                    disabled={isLoadingOffers}
-                    className="cursor-pointer rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-black hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => {
+                      setIsOffersOpen((currentValue) => !currentValue);
+
+                      if (isOffersOpen) {
+                        setActiveOfferPanel(null);
+                      }
+                    }}
+                    className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-2xl border border-stone-300 bg-stone-50 px-5 py-4 text-left hover:bg-stone-100"
                   >
-                    {isLoadingOffers ? "Refreshing..." : "Refresh Offers"}
-                  </button>
-                </div>
-
-                {offersErrorMessage ? (
-                  <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
-                    {offersErrorMessage}
-                  </div>
-                ) : null}
-
-                {offerActionMessage ? (
-                  <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
-                    {offerActionMessage}
-                  </div>
-                ) : null}
-
-                {offerActionErrorMessage ? (
-                  <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
-                    {offerActionErrorMessage}
-                  </div>
-                ) : null}
-
-                {isLoadingOffers ? (
-                  <div className="mt-5 rounded-2xl border border-stone-300 bg-white p-5">
-                    <p className="font-bold text-stone-700">
-                      Loading your offers...
-                    </p>
-                  </div>
-                ) : (
-                  <div className="mt-5 grid gap-5 xl:grid-cols-2">
-                    <div>
-                      <h4 className="text-lg font-black">Offers I Sent</h4>
-
-                      {sentOffers.length === 0 ? (
-                        <div className="mt-3 rounded-2xl border border-stone-300 bg-white p-5">
-                          <p className="font-black">No sent offers yet.</p>
-                          <p className="mt-2 text-sm leading-6 text-stone-600">
-                            When you make an offer on a listing, it will appear
-                            here.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="mt-3 grid gap-4">
-                          {sentOffers.map((offer) =>
-                            renderOfferCard(offer, "sent")
-                          )}
-                        </div>
-                      )}
-                    </div>
-
                     <div>
                       <div className="flex items-center gap-3">
-                        <h4 className="text-lg font-black">Offers I Received</h4>
+                        <h3 className="text-2xl font-black">My Offers</h3>
 
                         {hasPendingReceivedOffers ? (
                           <span
@@ -907,236 +881,429 @@ export default function AccountPage() {
                         ) : null}
                       </div>
 
-                      {receivedOffers.length === 0 ? (
-                        <div className="mt-3 rounded-2xl border border-stone-300 bg-white p-5">
-                          <p className="font-black">No received offers yet.</p>
-                          <p className="mt-2 text-sm leading-6 text-stone-600">
-                            When a buyer makes an offer on your listing, it will
-                            appear here.
+                      <p className="mt-2 text-sm font-bold leading-6 text-stone-600">
+                        View offers you sent and offers buyers sent to you.
+                      </p>
+                    </div>
+
+                    <span className="rounded-full bg-stone-950 px-3 py-1 text-sm font-black text-white">
+                      {isOffersOpen ? "Close" : "Open"}
+                    </span>
+                  </button>
+
+                  {isOffersOpen ? (
+                    <div className="mt-5">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActiveOfferPanel((currentValue) =>
+                                currentValue === "sent" ? null : "sent"
+                              )
+                            }
+                            className={`cursor-pointer rounded-2xl px-5 py-4 text-left font-black ${
+                              activeOfferPanel === "sent"
+                                ? "bg-stone-950 text-white"
+                                : "border border-stone-300 bg-white text-stone-950 hover:bg-stone-100"
+                            }`}
+                          >
+                            Offers I Sent
+                            <span className="ml-2 rounded-full bg-stone-200 px-2 py-1 text-xs text-stone-900">
+                              {sentOffers.length}
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActiveOfferPanel((currentValue) =>
+                                currentValue === "received" ? null : "received"
+                              )
+                            }
+                            className={`cursor-pointer rounded-2xl px-5 py-4 text-left font-black ${
+                              activeOfferPanel === "received"
+                                ? "bg-stone-950 text-white"
+                                : "border border-stone-300 bg-white text-stone-950 hover:bg-stone-100"
+                            }`}
+                          >
+                            <span className="inline-flex items-center gap-2">
+                              Offers I Received
+                              {hasPendingReceivedOffers ? (
+                                <span className="h-3 w-3 rounded-full bg-emerald-500" />
+                              ) : null}
+                            </span>
+
+                            <span className="ml-2 rounded-full bg-stone-200 px-2 py-1 text-xs text-stone-900">
+                              {receivedOffers.length}
+                            </span>
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => loadMyOffers(user)}
+                          disabled={isLoadingOffers}
+                          className="w-full cursor-pointer rounded-xl border border-stone-300 bg-stone-50 px-4 py-3 text-sm font-black hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                        >
+                          {isLoadingOffers ? "Refreshing..." : "Refresh Offers"}
+                        </button>
+                      </div>
+
+                      {offersErrorMessage ? (
+                        <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+                          {offersErrorMessage}
+                        </div>
+                      ) : null}
+
+                      {offerActionMessage ? (
+                        <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
+                          {offerActionMessage}
+                        </div>
+                      ) : null}
+
+                      {offerActionErrorMessage ? (
+                        <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+                          {offerActionErrorMessage}
+                        </div>
+                      ) : null}
+
+                      {isLoadingOffers ? (
+                        <div className="mt-5 rounded-2xl border border-stone-300 bg-stone-50 p-5">
+                          <p className="font-bold text-stone-700">
+                            Loading your offers...
                           </p>
                         </div>
-                      ) : (
-                        <div className="mt-3 grid gap-4">
-                          {receivedOffers.map((offer) =>
-                            renderOfferCard(offer, "received")
+                      ) : null}
+
+                      {!isLoadingOffers && activeOfferPanel === "sent" ? (
+                        <div className="mt-5 rounded-3xl border border-stone-300 bg-stone-50 p-4 sm:p-5">
+                          <div className="rounded-2xl border border-stone-200 bg-white p-4">
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-stone-500">
+                              Buying
+                            </p>
+                            <h4 className="mt-1 text-xl font-black">
+                              Offers I Sent
+                            </h4>
+                            <p className="mt-2 text-sm leading-6 text-stone-600">
+                              These are offers you made on other sellers&apos;
+                              listings.
+                            </p>
+                          </div>
+
+                          {sortedSentOffers.length === 0 ? (
+                            <div className="mt-4 rounded-2xl border border-stone-300 bg-white p-5">
+                              <p className="font-black">No sent offers yet.</p>
+                              <p className="mt-2 text-sm leading-6 text-stone-600">
+                                When you make an offer on a listing, it will
+                                appear here.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="mt-4 grid gap-4">
+                              {sortedSentOffers.map((offer) =>
+                                renderOfferCard(offer, "sent")
+                              )}
+                            </div>
                           )}
+                        </div>
+                      ) : null}
+
+                      {!isLoadingOffers && activeOfferPanel === "received" ? (
+                        <div className="mt-5 rounded-3xl border border-stone-300 bg-stone-50 p-4 sm:p-5">
+                          <div className="rounded-2xl border border-stone-200 bg-white p-4">
+                            <div className="flex items-center gap-3">
+                              <p className="text-xs font-black uppercase tracking-[0.2em] text-stone-500">
+                                Selling
+                              </p>
+
+                              {hasPendingReceivedOffers ? (
+                                <span
+                                  className="h-3 w-3 rounded-full bg-emerald-500"
+                                  title="Pending received offers"
+                                />
+                              ) : null}
+                            </div>
+
+                            <h4 className="mt-1 text-xl font-black">
+                              Offers I Received
+                            </h4>
+
+                            <p className="mt-2 text-sm leading-6 text-stone-600">
+                              These are offers buyers made on your listings.
+                              Pending offers appear first.
+                            </p>
+                          </div>
+
+                          {sortedReceivedOffers.length === 0 ? (
+                            <div className="mt-4 rounded-2xl border border-stone-300 bg-white p-5">
+                              <p className="font-black">
+                                No received offers yet.
+                              </p>
+                              <p className="mt-2 text-sm leading-6 text-stone-600">
+                                When a buyer makes an offer on your listing, it
+                                will appear here.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="mt-4 grid gap-4">
+                              {sortedReceivedOffers.map((offer) =>
+                                renderOfferCard(offer, "received")
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+
+                      {!isLoadingOffers && !activeOfferPanel ? (
+                        <div className="mt-5 rounded-2xl border border-stone-300 bg-stone-50 p-5">
+                          <p className="font-black">Choose an offer list.</p>
+                          <p className="mt-2 text-sm leading-6 text-stone-600">
+                            Click Offers I Sent or Offers I Received to open
+                            that list.
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </section>
+
+                <section className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setIsListingsOpen((currentValue) => !currentValue)
+                    }
+                    className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-2xl border border-stone-300 bg-stone-50 px-5 py-4 text-left hover:bg-stone-100"
+                  >
+                    <div>
+                      <h3 className="text-2xl font-black">My Listings</h3>
+                      <p className="mt-2 text-sm font-bold leading-6 text-stone-600">
+                        View, edit, deactivate, reactivate, and review your
+                        listings.
+                      </p>
+                    </div>
+
+                    <span className="rounded-full bg-stone-950 px-3 py-1 text-sm font-black text-white">
+                      {isListingsOpen ? "Close" : "Open"}
+                    </span>
+                  </button>
+
+                  {isListingsOpen ? (
+                    <div className="mt-5">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-bold leading-6 text-stone-600">
+                          You currently have {myListings.length} listing
+                          {myListings.length === 1 ? "" : "s"} in your account.
+                        </p>
+
+                        <button
+                          type="button"
+                          onClick={() => loadMyListings(user)}
+                          disabled={isLoadingListings}
+                          className="w-full cursor-pointer rounded-xl border border-stone-300 bg-stone-50 px-4 py-3 text-sm font-black hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                        >
+                          {isLoadingListings ? "Refreshing..." : "Refresh"}
+                        </button>
+                      </div>
+
+                      {listingsErrorMessage ? (
+                        <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+                          {listingsErrorMessage}
+                        </div>
+                      ) : null}
+
+                      {listingActionMessage ? (
+                        <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
+                          {listingActionMessage}
+                        </div>
+                      ) : null}
+
+                      {listingActionErrorMessage ? (
+                        <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+                          {listingActionErrorMessage}
+                        </div>
+                      ) : null}
+
+                      {isLoadingListings ? (
+                        <div className="mt-5 rounded-2xl border border-stone-300 bg-stone-50 p-5">
+                          <p className="font-bold text-stone-700">
+                            Loading your listings...
+                          </p>
+                        </div>
+                      ) : myListings.length === 0 ? (
+                        <div className="mt-5 rounded-2xl border border-stone-300 bg-stone-50 p-5">
+                          <p className="font-black">No listings yet.</p>
+                          <p className="mt-2 text-sm leading-6 text-stone-600">
+                            When you submit gear from the Sell page, it will
+                            appear here.
+                          </p>
+
+                          <Link
+                            href="/sell"
+                            className="mt-5 inline-block rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-500"
+                          >
+                            Create a Listing
+                          </Link>
+                        </div>
+                      ) : (
+                        <div className="mt-5 grid gap-4">
+                          {myListings.map((listing) => (
+                            <div
+                              key={listing.id}
+                              className="rounded-2xl border border-stone-300 bg-stone-50 p-5"
+                            >
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                  <h4 className="text-lg font-black">
+                                    {listing.title}
+                                  </h4>
+
+                                  <p className="mt-1 text-sm font-bold text-stone-500">
+                                    Submitted{" "}
+                                    {formatListingDate(listing.created_at)}
+                                  </p>
+                                </div>
+
+                                <span
+                                  className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.14em] ${statusClassName(
+                                    listing.status
+                                  )}`}
+                                >
+                                  {statusLabel(listing.status)}
+                                </span>
+                              </div>
+
+                              <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
+                                <div className="rounded-xl bg-white p-3">
+                                  <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                                    Price
+                                  </p>
+                                  <p className="mt-1 font-black">
+                                    ${Number(listing.price).toLocaleString()}
+                                  </p>
+                                </div>
+
+                                <div className="rounded-xl bg-white p-3">
+                                  <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                                    Category
+                                  </p>
+                                  <p className="mt-1 font-black">
+                                    {listing.category}
+                                  </p>
+                                </div>
+
+                                <div className="rounded-xl bg-white p-3">
+                                  <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                                    Condition
+                                  </p>
+                                  <p className="mt-1 font-black">
+                                    {listing.condition}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="mt-4 grid gap-3 sm:flex sm:flex-wrap">
+                                <Link
+                                  href={`/account/listings/${listing.id}/edit`}
+                                  className="rounded-xl border border-stone-300 bg-white px-4 py-3 text-center text-sm font-black text-stone-950 hover:bg-stone-100"
+                                >
+                                  Edit Listing
+                                </Link>
+
+                                {listing.status === "active" ? (
+                                  <Link
+                                    href={`/listing/${listing.id}`}
+                                    className="rounded-xl bg-stone-950 px-4 py-3 text-center text-sm font-black text-white hover:bg-stone-800"
+                                  >
+                                    View Public Listing
+                                  </Link>
+                                ) : null}
+
+                                {listing.status === "sold" ? (
+                                  <Link
+                                    href={`/listing/${listing.id}`}
+                                    className="rounded-xl bg-stone-950 px-4 py-3 text-center text-sm font-black text-white hover:bg-stone-800"
+                                  >
+                                    View Sold Listing
+                                  </Link>
+                                ) : null}
+
+                                {listing.status === "active" ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMarkInactive(listing)}
+                                    disabled={updatingListingId === listing.id}
+                                    className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-800 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    {updatingListingId === listing.id
+                                      ? "Updating..."
+                                      : "Mark Inactive"}
+                                  </button>
+                                ) : null}
+                              </div>
+
+                              {listing.status === "pending" ? (
+                                <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold leading-6 text-amber-900">
+                                  This listing is waiting for admin review. It
+                                  will not appear publicly until it is approved.
+                                </p>
+                              ) : null}
+
+                              {listing.status === "denied" ? (
+                                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold leading-6 text-red-800">
+                                  <p>This listing was denied.</p>
+                                  {listing.denial_reason ? (
+                                    <p className="mt-2">
+                                      Reason: {listing.denial_reason}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ) : null}
+
+                              {listing.status === "inactive" ? (
+                                <div className="mt-4 rounded-xl border border-stone-300 bg-white p-3 text-sm font-bold leading-6 text-stone-700">
+                                  <p>
+                                    This listing is inactive and is not visible
+                                    in Browse. You can reactivate it when you
+                                    are ready.
+                                  </p>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleReactivateListing(listing)
+                                    }
+                                    disabled={updatingListingId === listing.id}
+                                    className="mt-4 cursor-pointer rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    {updatingListingId === listing.id
+                                      ? "Updating..."
+                                      : "Reactivate Listing"}
+                                  </button>
+                                </div>
+                              ) : null}
+
+                              {listing.status === "sold" ? (
+                                <div className="mt-4 rounded-xl border border-stone-300 bg-stone-950 p-3 text-sm font-bold leading-6 text-white">
+                                  <p>
+                                    This listing is sold. It is hidden from
+                                    Browse and cannot be reactivated from this
+                                    page.
+                                  </p>
+                                </div>
+                              ) : null}
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
-                  </div>
-                )}
-              </section>
-
-              <section className="mt-8 rounded-3xl border border-stone-300 bg-stone-50 p-5 sm:p-6">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <h3 className="text-2xl font-black">My Listings</h3>
-                    <p className="mt-2 text-sm leading-6 text-stone-600">
-                      These are the listings submitted from your signed-in
-                      account. You can edit details, mark active listings
-                      inactive, and review sold listings.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => loadMyListings(user)}
-                    disabled={isLoadingListings}
-                    className="cursor-pointer rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-black hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isLoadingListings ? "Refreshing..." : "Refresh"}
-                  </button>
-                </div>
-
-                {listingsErrorMessage ? (
-                  <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
-                    {listingsErrorMessage}
-                  </div>
-                ) : null}
-
-                {listingActionMessage ? (
-                  <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
-                    {listingActionMessage}
-                  </div>
-                ) : null}
-
-                {listingActionErrorMessage ? (
-                  <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
-                    {listingActionErrorMessage}
-                  </div>
-                ) : null}
-
-                {isLoadingListings ? (
-                  <div className="mt-5 rounded-2xl border border-stone-300 bg-white p-5">
-                    <p className="font-bold text-stone-700">
-                      Loading your listings...
-                    </p>
-                  </div>
-                ) : myListings.length === 0 ? (
-                  <div className="mt-5 rounded-2xl border border-stone-300 bg-white p-5">
-                    <p className="font-black">No listings yet.</p>
-                    <p className="mt-2 text-sm leading-6 text-stone-600">
-                      When you submit gear from the Sell page, it will appear
-                      here.
-                    </p>
-
-                    <Link
-                      href="/sell"
-                      className="mt-5 inline-block rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-500"
-                    >
-                      Create a Listing
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="mt-5 grid gap-4">
-                    {myListings.map((listing) => (
-                      <div
-                        key={listing.id}
-                        className="rounded-2xl border border-stone-300 bg-white p-5"
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <h4 className="text-lg font-black">
-                              {listing.title}
-                            </h4>
-
-                            <p className="mt-1 text-sm font-bold text-stone-500">
-                              Submitted {formatListingDate(listing.created_at)}
-                            </p>
-                          </div>
-
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.14em] ${statusClassName(
-                              listing.status
-                            )}`}
-                          >
-                            {statusLabel(listing.status)}
-                          </span>
-                        </div>
-
-                        <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
-                          <div className="rounded-xl bg-stone-100 p-3">
-                            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
-                              Price
-                            </p>
-                            <p className="mt-1 font-black">
-                              ${Number(listing.price).toLocaleString()}
-                            </p>
-                          </div>
-
-                          <div className="rounded-xl bg-stone-100 p-3">
-                            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
-                              Category
-                            </p>
-                            <p className="mt-1 font-black">
-                              {listing.category}
-                            </p>
-                          </div>
-
-                          <div className="rounded-xl bg-stone-100 p-3">
-                            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
-                              Condition
-                            </p>
-                            <p className="mt-1 font-black">
-                              {listing.condition}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="mt-4 flex flex-wrap gap-3">
-                          <Link
-                            href={`/account/listings/${listing.id}/edit`}
-                            className="inline-block rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-black text-stone-950 hover:bg-stone-100"
-                          >
-                            Edit Listing
-                          </Link>
-
-                          {listing.status === "active" ? (
-                            <Link
-                              href={`/listing/${listing.id}`}
-                              className="inline-block rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-stone-800"
-                            >
-                              View Public Listing
-                            </Link>
-                          ) : null}
-
-                          {listing.status === "sold" ? (
-                            <Link
-                              href={`/listing/${listing.id}`}
-                              className="inline-block rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-stone-800"
-                            >
-                              View Sold Listing
-                            </Link>
-                          ) : null}
-
-                          {listing.status === "active" ? (
-                            <button
-                              type="button"
-                              onClick={() => handleMarkInactive(listing)}
-                              disabled={updatingListingId === listing.id}
-                              className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-800 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {updatingListingId === listing.id
-                                ? "Updating..."
-                                : "Mark Inactive"}
-                            </button>
-                          ) : null}
-                        </div>
-
-                        {listing.status === "pending" ? (
-                          <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold leading-6 text-amber-900">
-                            This listing is waiting for admin review. It will
-                            not appear publicly until it is approved.
-                          </p>
-                        ) : null}
-
-                        {listing.status === "denied" ? (
-                          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold leading-6 text-red-800">
-                            <p>This listing was denied.</p>
-                            {listing.denial_reason ? (
-                              <p className="mt-2">
-                                Reason: {listing.denial_reason}
-                              </p>
-                            ) : null}
-                          </div>
-                        ) : null}
-
-                        {listing.status === "inactive" ? (
-                          <div className="mt-4 rounded-xl border border-stone-300 bg-stone-100 p-3 text-sm font-bold leading-6 text-stone-700">
-                            <p>
-                              This listing is inactive and is not visible in
-                              Browse. You can reactivate it when you are ready.
-                            </p>
-
-                            <button
-                              type="button"
-                              onClick={() => handleReactivateListing(listing)}
-                              disabled={updatingListingId === listing.id}
-                              className="mt-4 cursor-pointer rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {updatingListingId === listing.id
-                                ? "Updating..."
-                                : "Reactivate Listing"}
-                            </button>
-                          </div>
-                        ) : null}
-
-                        {listing.status === "sold" ? (
-                          <div className="mt-4 rounded-xl border border-stone-300 bg-stone-950 p-3 text-sm font-bold leading-6 text-white">
-                            <p>
-                              This listing is sold. It is hidden from Browse and
-                              cannot be reactivated from this page.
-                            </p>
-                          </div>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
+                  ) : null}
+                </section>
+              </div>
             </>
           ) : (
-            <div className="rounded-3xl border border-stone-300 bg-stone-50 p-6 sm:p-8">
+            <div className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6">
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
@@ -1171,19 +1338,19 @@ export default function AccountPage() {
                 </button>
               </div>
 
-              <h3 className="mt-6 text-3xl font-black tracking-tight text-stone-950">
+              <h3 className="mt-6 text-2xl font-black tracking-tight text-stone-950">
                 {mode === "sign-in"
                   ? "Sign in to your account."
                   : "Create your account."}
               </h3>
 
-              <p className="mt-3 max-w-2xl text-base leading-7 text-stone-700">
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-700">
                 {mode === "sign-in"
                   ? "Use your email and password to sign in."
                   : "Create an account with your email and a password. Passwords must be at least 6 characters."}
               </p>
 
-              <form onSubmit={handleSubmit} className="mt-8 grid gap-5">
+              <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
                 <label className="grid gap-2">
                   <span className="text-sm font-black">Email</span>
                   <input
@@ -1232,85 +1399,32 @@ export default function AccountPage() {
               </form>
             </div>
           )}
-
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-stone-300 bg-stone-50 p-5">
-              <p className="text-lg font-black">Seller profiles</p>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
-                Sellers will be able to manage their profile, location, contact
-                preferences, and gear listings.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-stone-300 bg-stone-50 p-5">
-              <p className="text-lg font-black">Saved gear</p>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
-                Buyers will be able to save listings and return to gear they are
-                interested in later.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-stone-300 bg-stone-50 p-5">
-              <p className="text-lg font-black">Listing control</p>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
-                Users can edit listings, mark active listings inactive, review
-                sold listings, and reactivate inactive listings.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-8 rounded-2xl bg-stone-100 p-5">
-            <h3 className="text-xl font-black">Current status</h3>
-            <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-700">
-              <li>• Browsing approved listings works now.</li>
-              <li>• Submitting listings for review works now.</li>
-              <li>• Admin approval tools work now.</li>
-              <li>• Signed-in users can now view listings they submitted.</li>
-              <li>• Active listings can now be marked inactive.</li>
-              <li>• Inactive listings can now be reactivated.</li>
-              <li>• Listing details can now be edited from My Listings.</li>
-              <li>• Users can now view, accept, decline, and withdraw offers.</li>
-              <li>
-                • Accepted offers now mark listings sold and hide them from
-                Browse.
-              </li>
-            </ul>
-          </div>
         </div>
 
         <aside className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6">
-          <h3 className="text-2xl font-black">What accounts unlock</h3>
+          <h3 className="text-2xl font-black">Account tools</h3>
 
           <div className="mt-5 space-y-4">
             <div className="rounded-2xl bg-stone-100 p-5">
-              <p className="font-black">Real messaging</p>
+              <p className="font-black">Messages</p>
               <p className="mt-2 text-sm leading-6 text-stone-600">
-                Account sign-in lets messages connect to the correct buyer,
-                seller, and listing.
+                View buyer and seller conversations connected to your listings.
               </p>
             </div>
 
             <div className="rounded-2xl bg-stone-100 p-5">
-              <p className="font-black">Offers and buying</p>
+              <p className="font-black">Offers</p>
               <p className="mt-2 text-sm leading-6 text-stone-600">
-                Accounts are needed before buyers can make offers, buy gear, and
-                manage order history.
+                Track offers you sent and respond to offers buyers made on your
+                listings.
               </p>
             </div>
 
             <div className="rounded-2xl bg-stone-100 p-5">
-              <p className="font-black">Saved listings</p>
+              <p className="font-black">Listings</p>
               <p className="mt-2 text-sm leading-6 text-stone-600">
-                Buyers will be able to save gear and return to listings they are
-                considering.
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-stone-950 p-5 text-white">
-              <p className="font-black text-emerald-300">Next foundation step</p>
-              <p className="mt-2 text-sm leading-6 text-stone-300">
-                Next, we can add a cleaner buying action area with Buy Now and
-                Make Offer side by side.
+                Edit listings, mark active listings inactive, and review sold
+                listings.
               </p>
             </div>
           </div>
@@ -1320,7 +1434,7 @@ export default function AccountPage() {
               href="/messages"
               className="rounded-xl border border-stone-300 px-4 py-3 text-center font-black hover:bg-stone-100"
             >
-              View Messages Page
+              View Messages
             </Link>
 
             <Link
