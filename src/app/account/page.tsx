@@ -166,6 +166,10 @@ function sortPendingOffersFirst(offers: UserOffer[]) {
   });
 }
 
+function isInactiveOrSoldListing(listing: UserListing) {
+  return listing.status === "inactive" || listing.status === "sold";
+}
+
 export default function AccountPage() {
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [user, setUser] = useState<User | null>(null);
@@ -199,6 +203,9 @@ export default function AccountPage() {
     "sent" | "received" | null
   >(null);
   const [isListingsOpen, setIsListingsOpen] = useState(false);
+  const [activeListingPanel, setActiveListingPanel] = useState<
+    "active" | "inactiveSold"
+  >("active");
 
   const hasPendingReceivedOffers = receivedOffers.some(
     (offer) => offer.status === "pending"
@@ -206,6 +213,15 @@ export default function AccountPage() {
 
   const sortedSentOffers = sortPendingOffersFirst(sentOffers);
   const sortedReceivedOffers = sortPendingOffersFirst(receivedOffers);
+
+  const activeListings = myListings.filter(
+    (listing) => !isInactiveOrSoldListing(listing)
+  );
+  const inactiveSoldListings = myListings.filter((listing) =>
+    isInactiveOrSoldListing(listing)
+  );
+  const visibleListings =
+    activeListingPanel === "active" ? activeListings : inactiveSoldListings;
 
   async function loadMyListings(currentUser: User) {
     setIsLoadingListings(true);
@@ -310,6 +326,7 @@ export default function AccountPage() {
         setIsOffersOpen(false);
         setActiveOfferPanel(null);
         setIsListingsOpen(false);
+        setActiveListingPanel("active");
       }
     });
 
@@ -423,6 +440,7 @@ export default function AccountPage() {
     setIsOffersOpen(false);
     setActiveOfferPanel(null);
     setIsListingsOpen(false);
+    setActiveListingPanel("active");
     setMessage("You are signed out.");
   }
 
@@ -463,6 +481,7 @@ export default function AccountPage() {
       `"${listing.title}" has been marked inactive and is now hidden from Browse.`
     );
 
+    setActiveListingPanel("inactiveSold");
     await loadMyListings(user);
   }
 
@@ -503,6 +522,7 @@ export default function AccountPage() {
       `"${listing.title}" has been reactivated and is visible in Browse again.`
     );
 
+    setActiveListingPanel("active");
     await loadMyListings(user);
   }
 
@@ -766,6 +786,143 @@ export default function AccountPage() {
             ) : null}
           </div>
         </div>
+      </div>
+    );
+  }
+
+  function renderListingCard(listing: UserListing) {
+    return (
+      <div
+        key={listing.id}
+        className="rounded-2xl border border-stone-300 bg-stone-50 p-5"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h4 className="text-lg font-black">{listing.title}</h4>
+
+            <p className="mt-1 text-sm font-bold text-stone-500">
+              Submitted {formatListingDate(listing.created_at)}
+            </p>
+          </div>
+
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.14em] ${statusClassName(
+              listing.status
+            )}`}
+          >
+            {statusLabel(listing.status)}
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
+          <div className="rounded-xl bg-white p-3">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+              Price
+            </p>
+            <p className="mt-1 font-black">
+              ${Number(listing.price).toLocaleString()}
+            </p>
+          </div>
+
+          <div className="rounded-xl bg-white p-3">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+              Category
+            </p>
+            <p className="mt-1 font-black">{listing.category}</p>
+          </div>
+
+          <div className="rounded-xl bg-white p-3">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+              Condition
+            </p>
+            <p className="mt-1 font-black">{listing.condition}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:flex sm:flex-wrap">
+          <Link
+            href={`/account/listings/${listing.id}/edit`}
+            className="rounded-xl border border-stone-300 bg-white px-4 py-3 text-center text-sm font-black text-stone-950 hover:bg-stone-100"
+          >
+            Edit Listing
+          </Link>
+
+          {listing.status === "active" ? (
+            <Link
+              href={`/listing/${listing.id}`}
+              className="rounded-xl bg-stone-950 px-4 py-3 text-center text-sm font-black text-white hover:bg-stone-800"
+            >
+              View Public Listing
+            </Link>
+          ) : null}
+
+          {listing.status === "sold" ? (
+            <Link
+              href={`/listing/${listing.id}`}
+              className="rounded-xl bg-stone-950 px-4 py-3 text-center text-sm font-black text-white hover:bg-stone-800"
+            >
+              View Sold Listing
+            </Link>
+          ) : null}
+
+          {listing.status === "active" ? (
+            <button
+              type="button"
+              onClick={() => handleMarkInactive(listing)}
+              disabled={updatingListingId === listing.id}
+              className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-800 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {updatingListingId === listing.id
+                ? "Updating..."
+                : "Mark Inactive"}
+            </button>
+          ) : null}
+        </div>
+
+        {listing.status === "pending" ? (
+          <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold leading-6 text-amber-900">
+            This listing is waiting for admin review. It will not appear
+            publicly until it is approved.
+          </p>
+        ) : null}
+
+        {listing.status === "denied" ? (
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold leading-6 text-red-800">
+            <p>This listing was denied.</p>
+            {listing.denial_reason ? (
+              <p className="mt-2">Reason: {listing.denial_reason}</p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {listing.status === "inactive" ? (
+          <div className="mt-4 rounded-xl border border-stone-300 bg-white p-3 text-sm font-bold leading-6 text-stone-700">
+            <p>
+              This listing is inactive and is not visible in Browse. You can
+              reactivate it when you are ready.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => handleReactivateListing(listing)}
+              disabled={updatingListingId === listing.id}
+              className="mt-4 cursor-pointer rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {updatingListingId === listing.id
+                ? "Updating..."
+                : "Reactivate Listing"}
+            </button>
+          </div>
+        ) : null}
+
+        {listing.status === "sold" ? (
+          <div className="mt-4 rounded-xl border border-stone-300 bg-stone-950 p-3 text-sm font-bold leading-6 text-white">
+            <p>
+              This listing is sold. It is hidden from Browse and cannot be
+              reactivated from this page.
+            </p>
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -1125,6 +1282,48 @@ export default function AccountPage() {
                         </div>
                       ) : null}
 
+                      {!isLoadingListings && myListings.length > 0 ? (
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                          <button
+                            type="button"
+                            onClick={() => setActiveListingPanel("active")}
+                            className={`cursor-pointer rounded-2xl px-5 py-4 text-left font-black ${
+                              activeListingPanel === "active"
+                                ? "bg-stone-950 text-white"
+                                : "border border-stone-300 bg-white text-stone-950 hover:bg-stone-100"
+                            }`}
+                          >
+                            Active Listings
+                            <span className="ml-2 rounded-full bg-stone-200 px-2 py-1 text-xs text-stone-900">
+                              {activeListings.length}
+                            </span>
+                            <span className="mt-1 block text-xs font-bold opacity-80">
+                              Approved, pending, and denied
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActiveListingPanel("inactiveSold")
+                            }
+                            className={`cursor-pointer rounded-2xl px-5 py-4 text-left font-black ${
+                              activeListingPanel === "inactiveSold"
+                                ? "bg-stone-950 text-white"
+                                : "border border-stone-300 bg-white text-stone-950 hover:bg-stone-100"
+                            }`}
+                          >
+                            Inactive / Sold
+                            <span className="ml-2 rounded-full bg-stone-200 px-2 py-1 text-xs text-stone-900">
+                              {inactiveSoldListings.length}
+                            </span>
+                            <span className="mt-1 block text-xs font-bold opacity-80">
+                              Hidden or completed listings
+                            </span>
+                          </button>
+                        </div>
+                      ) : null}
+
                       {isLoadingListings ? (
                         <div className="mt-5 rounded-2xl border border-stone-300 bg-stone-50 p-5">
                           <p className="font-bold text-stone-700">
@@ -1146,155 +1345,25 @@ export default function AccountPage() {
                             Create a Listing
                           </Link>
                         </div>
+                      ) : visibleListings.length === 0 ? (
+                        <div className="mt-5 rounded-2xl border border-stone-300 bg-stone-50 p-5">
+                          <p className="font-black">
+                            {activeListingPanel === "active"
+                              ? "No active listings in this tab."
+                              : "No inactive or sold listings in this tab."}
+                          </p>
+
+                          <p className="mt-2 text-sm leading-6 text-stone-600">
+                            {activeListingPanel === "active"
+                              ? "Approved, pending, and denied listings will appear here."
+                              : "Listings you mark inactive or sell will appear here."}
+                          </p>
+                        </div>
                       ) : (
                         <div className="mt-5 grid gap-4">
-                          {myListings.map((listing) => (
-                            <div
-                              key={listing.id}
-                              className="rounded-2xl border border-stone-300 bg-stone-50 p-5"
-                            >
-                              <div className="flex flex-wrap items-start justify-between gap-3">
-                                <div>
-                                  <h4 className="text-lg font-black">
-                                    {listing.title}
-                                  </h4>
-
-                                  <p className="mt-1 text-sm font-bold text-stone-500">
-                                    Submitted{" "}
-                                    {formatListingDate(listing.created_at)}
-                                  </p>
-                                </div>
-
-                                <span
-                                  className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.14em] ${statusClassName(
-                                    listing.status
-                                  )}`}
-                                >
-                                  {statusLabel(listing.status)}
-                                </span>
-                              </div>
-
-                              <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
-                                <div className="rounded-xl bg-white p-3">
-                                  <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
-                                    Price
-                                  </p>
-                                  <p className="mt-1 font-black">
-                                    ${Number(listing.price).toLocaleString()}
-                                  </p>
-                                </div>
-
-                                <div className="rounded-xl bg-white p-3">
-                                  <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
-                                    Category
-                                  </p>
-                                  <p className="mt-1 font-black">
-                                    {listing.category}
-                                  </p>
-                                </div>
-
-                                <div className="rounded-xl bg-white p-3">
-                                  <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
-                                    Condition
-                                  </p>
-                                  <p className="mt-1 font-black">
-                                    {listing.condition}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="mt-4 grid gap-3 sm:flex sm:flex-wrap">
-                                <Link
-                                  href={`/account/listings/${listing.id}/edit`}
-                                  className="rounded-xl border border-stone-300 bg-white px-4 py-3 text-center text-sm font-black text-stone-950 hover:bg-stone-100"
-                                >
-                                  Edit Listing
-                                </Link>
-
-                                {listing.status === "active" ? (
-                                  <Link
-                                    href={`/listing/${listing.id}`}
-                                    className="rounded-xl bg-stone-950 px-4 py-3 text-center text-sm font-black text-white hover:bg-stone-800"
-                                  >
-                                    View Public Listing
-                                  </Link>
-                                ) : null}
-
-                                {listing.status === "sold" ? (
-                                  <Link
-                                    href={`/listing/${listing.id}`}
-                                    className="rounded-xl bg-stone-950 px-4 py-3 text-center text-sm font-black text-white hover:bg-stone-800"
-                                  >
-                                    View Sold Listing
-                                  </Link>
-                                ) : null}
-
-                                {listing.status === "active" ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleMarkInactive(listing)}
-                                    disabled={updatingListingId === listing.id}
-                                    className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-800 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                  >
-                                    {updatingListingId === listing.id
-                                      ? "Updating..."
-                                      : "Mark Inactive"}
-                                  </button>
-                                ) : null}
-                              </div>
-
-                              {listing.status === "pending" ? (
-                                <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold leading-6 text-amber-900">
-                                  This listing is waiting for admin review. It
-                                  will not appear publicly until it is approved.
-                                </p>
-                              ) : null}
-
-                              {listing.status === "denied" ? (
-                                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold leading-6 text-red-800">
-                                  <p>This listing was denied.</p>
-                                  {listing.denial_reason ? (
-                                    <p className="mt-2">
-                                      Reason: {listing.denial_reason}
-                                    </p>
-                                  ) : null}
-                                </div>
-                              ) : null}
-
-                              {listing.status === "inactive" ? (
-                                <div className="mt-4 rounded-xl border border-stone-300 bg-white p-3 text-sm font-bold leading-6 text-stone-700">
-                                  <p>
-                                    This listing is inactive and is not visible
-                                    in Browse. You can reactivate it when you
-                                    are ready.
-                                  </p>
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleReactivateListing(listing)
-                                    }
-                                    disabled={updatingListingId === listing.id}
-                                    className="mt-4 cursor-pointer rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                                  >
-                                    {updatingListingId === listing.id
-                                      ? "Updating..."
-                                      : "Reactivate Listing"}
-                                  </button>
-                                </div>
-                              ) : null}
-
-                              {listing.status === "sold" ? (
-                                <div className="mt-4 rounded-xl border border-stone-300 bg-stone-950 p-3 text-sm font-bold leading-6 text-white">
-                                  <p>
-                                    This listing is sold. It is hidden from
-                                    Browse and cannot be reactivated from this
-                                    page.
-                                  </p>
-                                </div>
-                              ) : null}
-                            </div>
-                          ))}
+                          {visibleListings.map((listing) =>
+                            renderListingCard(listing)
+                          )}
                         </div>
                       )}
                     </div>
