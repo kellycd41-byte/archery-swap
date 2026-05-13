@@ -212,20 +212,17 @@ function getListingPhotoUrl(item: Listing) {
 
 function BrowsePhotoPlaceholder() {
   return (
-    <div className="relative flex h-48 items-center justify-center overflow-hidden bg-gradient-to-br from-stone-900 via-stone-800 to-emerald-950 px-5 text-center">
-      <div className="absolute left-5 top-5 h-16 w-16 rounded-full border border-emerald-300/20" />
-      <div className="absolute bottom-5 right-5 h-20 w-20 rounded-full border border-white/10" />
+    <div className="relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-br from-stone-900 via-stone-800 to-emerald-950 px-5 text-center">
+      <div className="absolute left-5 top-5 h-14 w-14 rounded-full border border-emerald-300/20" />
+      <div className="absolute bottom-5 right-5 h-16 w-16 rounded-full border border-white/10" />
       <div className="absolute left-0 top-1/2 h-px w-full bg-white/10" />
 
       <div className="relative">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-emerald-300/40 bg-white/10 text-2xl">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-emerald-300/40 bg-white/10 text-xl">
           🎯
         </div>
-        <p className="mt-3 text-xs font-black uppercase tracking-[0.25em] text-emerald-200">
+        <p className="mt-3 text-[11px] font-black uppercase tracking-[0.22em] text-emerald-200">
           No Photo Yet
-        </p>
-        <p className="mt-1 text-xs font-bold text-white/60">
-          Ask seller for pictures
         </p>
       </div>
     </div>
@@ -300,30 +297,61 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     <main className="min-h-screen bg-stone-100 text-stone-950">
       <Header activePage="browse" />
 
-      <section className="bg-stone-950 px-4 py-14 text-white sm:px-6 md:py-16">
+      <section className="bg-stone-950 px-4 py-12 text-white sm:px-6 md:py-14">
         <div className="mx-auto max-w-7xl">
           <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-300">
             Browse Gear
           </p>
 
-          <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">
-            Find approved archery gear from other sellers.
-          </h2>
+          <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_320px] lg:items-end">
+            <div>
+              <h2 className="max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">
+                Shop approved archery gear.
+              </h2>
 
-          <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
-            Search by gear type, condition, brand, model, location, draw
-            weight, draw length, and handedness. Only approved active listings
-            appear here.
-          </p>
+              <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
+                Quickly compare bows, crossbows, sights, releases, arrows,
+                cases, targets, and accessories from other sellers.
+              </p>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-stone-400">
+                Marketplace
+              </p>
+              <p className="mt-2 text-3xl font-black text-white">
+                {listingCount}
+              </p>
+              <p className="mt-1 text-sm font-bold text-stone-300">
+                active listing{listingCount === 1 ? "" : "s"}
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
-        <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
-          <aside className="rounded-2xl border border-stone-300 bg-white p-5 shadow-sm">
-            <h3 className="text-lg font-black">Filters</h3>
+        <div className="grid gap-5 lg:grid-cols-[260px_1fr]">
+          <aside className="rounded-2xl border border-stone-300 bg-white p-4 shadow-sm lg:sticky lg:top-4 lg:self-start">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-lg font-black">Filters</h3>
 
-            <form action="/browse" className="mt-5">
+              {selectedCategory !== "All" ||
+              selectedConditions.length > 0 ||
+              searchTerm ||
+              selectedSort !== "newest" ||
+              bowFiltersAreActive ? (
+                <Link
+                  href="/browse"
+                  scroll={false}
+                  className="text-xs font-black text-emerald-800 hover:text-emerald-600"
+                >
+                  Clear All
+                </Link>
+              ) : null}
+            </div>
+
+            <form action="/browse" className="mt-4">
               {selectedCategory !== "All" ? (
                 <input type="hidden" name="category" value={selectedCategory} />
               ) : null}
@@ -402,12 +430,12 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               ) : null}
             </form>
 
-            <details className="mt-6 rounded-2xl border border-stone-300 bg-stone-50 p-4 lg:hidden">
+            <details className="mt-5 rounded-2xl border border-stone-300 bg-stone-50 p-4 lg:hidden">
               <summary className="cursor-pointer list-none text-sm font-black text-stone-800">
                 Category: {selectedCategory}
               </summary>
 
-              <div className="mt-3 space-y-2">
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 {categories.map((category) => {
                   const href = buildBrowseHref({
                     category,
@@ -425,7 +453,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                       key={category}
                       href={href}
                       scroll={false}
-                      className={`block w-full rounded-xl border px-4 py-2 text-left text-sm font-bold ${
+                      className={`block w-full rounded-xl border px-3 py-2 text-center text-sm font-bold ${
                         isSelected
                           ? "border-emerald-700 bg-emerald-50 text-emerald-900"
                           : "border-stone-300 bg-white text-stone-700 hover:border-emerald-700 hover:bg-emerald-50"
@@ -438,10 +466,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               </div>
             </details>
 
-            <div className="mt-6 hidden lg:block">
+            <div className="mt-5 hidden lg:block">
               <p className="text-sm font-black text-stone-700">Category</p>
 
-              <div className="mt-3 space-y-2">
+              <div className="mt-3 grid gap-2">
                 {categories.map((category) => {
                   const href = buildBrowseHref({
                     category,
@@ -459,7 +487,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                       key={category}
                       href={href}
                       scroll={false}
-                      className={`block w-full rounded-xl border px-4 py-2 text-left text-sm font-bold ${
+                      className={`block w-full rounded-xl border px-3 py-2 text-left text-sm font-bold ${
                         isSelected
                           ? "border-emerald-700 bg-emerald-50 text-emerald-900"
                           : "border-stone-300 text-stone-700 hover:border-emerald-700 hover:bg-emerald-50"
@@ -477,7 +505,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                 Conditions: {conditionLabel}
               </summary>
 
-              <div className="mt-3 space-y-2">
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 {conditions.map((condition) => {
                   const isSelected = selectedConditions.includes(condition);
                   const href = toggleCondition(
@@ -496,7 +524,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                       key={condition}
                       href={href}
                       scroll={false}
-                      className={`flex w-full items-center gap-3 rounded-xl border px-4 py-2 text-left text-sm font-bold ${
+                      className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm font-bold ${
                         isSelected
                           ? "border-emerald-700 bg-emerald-50 text-emerald-900"
                           : "border-stone-300 bg-white text-stone-700 hover:border-emerald-700 hover:bg-emerald-50"
@@ -515,31 +543,13 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                     </Link>
                   );
                 })}
-
-                {selectedConditions.length > 0 ? (
-                  <Link
-                    href={buildBrowseHref({
-                      category: selectedCategory,
-                      selectedConditions: [],
-                      search: searchTerm,
-                      sort: selectedSort,
-                      drawWeight: selectedDrawWeight,
-                      drawLength: selectedDrawLength,
-                      handedness: selectedHandedness,
-                    })}
-                    scroll={false}
-                    className="block text-sm font-black text-emerald-800 hover:text-emerald-600"
-                  >
-                    Clear Conditions
-                  </Link>
-                ) : null}
               </div>
             </details>
 
-            <div className="mt-6 hidden lg:block">
+            <div className="mt-5 hidden lg:block">
               <p className="text-sm font-black text-stone-700">Condition</p>
 
-              <div className="mt-3 space-y-2">
+              <div className="mt-3 grid gap-2">
                 {conditions.map((condition) => {
                   const isSelected = selectedConditions.includes(condition);
                   const href = toggleCondition(
@@ -558,7 +568,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                       key={condition}
                       href={href}
                       scroll={false}
-                      className={`flex w-full items-center gap-3 rounded-xl border px-4 py-2 text-left text-sm font-bold ${
+                      className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left text-sm font-bold ${
                         isSelected
                           ? "border-emerald-700 bg-emerald-50 text-emerald-900"
                           : "border-stone-300 text-stone-700 hover:border-emerald-700 hover:bg-emerald-50"
@@ -601,7 +611,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
             {selectedCategory === "Bows" ? (
               <form
                 action="/browse"
-                className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
+                className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
               >
                 <input type="hidden" name="category" value="Bows" />
 
@@ -689,225 +699,112 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                 ) : null}
               </form>
             ) : null}
-
-            {selectedCategory !== "All" ||
-            selectedConditions.length > 0 ||
-            searchTerm ||
-            selectedSort !== "newest" ||
-            bowFiltersAreActive ? (
-              <Link
-                href="/browse"
-                scroll={false}
-                className="mt-6 block rounded-xl border border-stone-400 px-4 py-3 text-center text-sm font-black text-stone-950 hover:bg-stone-100"
-              >
-                Clear All Filters
-              </Link>
-            ) : null}
           </aside>
 
           <div>
-            <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-              <div>
-                <h3 className="text-2xl font-black">Available Gear</h3>
-                <p className="text-stone-600">
-                  {listingCount === 1
-                    ? "Showing 1 approved active listing."
-                    : `Showing ${listingCount} approved active listings.`}
-                </p>
+            <div className="mb-5 rounded-2xl border border-stone-300 bg-white p-4 shadow-sm">
+              <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
+                <div>
+                  <h3 className="text-2xl font-black">Available Gear</h3>
 
-                {selectedCategory !== "All" ||
-                selectedConditions.length > 0 ||
-                searchTerm ||
-                selectedSort !== "newest" ||
-                bowFiltersAreActive ? (
-                  <p className="mt-1 text-sm font-bold text-stone-500">
-                    Category: {selectedCategory} • Conditions: {conditionLabel}{" "}
-                    • {selectedSortLabel}
-                    {searchTerm ? ` • Search: “${searchTerm}”` : ""}
-                    {selectedDrawWeight
-                      ? ` • Draw Weight: ${selectedDrawWeight}`
-                      : ""}
-                    {selectedDrawLength
-                      ? ` • Draw Length: ${selectedDrawLength}`
-                      : ""}
-                    {selectedHandedness
-                      ? ` • Handedness: ${selectedHandedness}`
-                      : ""}
+                  <p className="mt-1 text-sm font-bold text-stone-600">
+                    {listingCount === 1
+                      ? "Showing 1 approved active listing."
+                      : `Showing ${listingCount} approved active listings.`}
                   </p>
-                ) : null}
 
-                <p className="mt-2 text-sm font-bold text-stone-500">
-                  Listings are reviewed before they appear here.
-                </p>
-              </div>
-
-              <form action="/browse" className="flex flex-col gap-2 sm:flex-row">
-                {selectedCategory !== "All" ? (
-                  <input
-                    type="hidden"
-                    name="category"
-                    value={selectedCategory}
-                  />
-                ) : null}
-
-                {selectedConditions.length > 0 ? (
-                  <input
-                    type="hidden"
-                    name="conditions"
-                    value={selectedConditions.join(",")}
-                  />
-                ) : null}
-
-                {searchTerm ? (
-                  <input type="hidden" name="search" value={searchTerm} />
-                ) : null}
-
-                {selectedCategory === "Bows" && selectedDrawWeight ? (
-                  <input
-                    type="hidden"
-                    name="drawWeight"
-                    value={selectedDrawWeight}
-                  />
-                ) : null}
-
-                {selectedCategory === "Bows" && selectedDrawLength ? (
-                  <input
-                    type="hidden"
-                    name="drawLength"
-                    value={selectedDrawLength}
-                  />
-                ) : null}
-
-                {selectedCategory === "Bows" && selectedHandedness ? (
-                  <input
-                    type="hidden"
-                    name="handedness"
-                    value={selectedHandedness}
-                  />
-                ) : null}
-
-                <select
-                  name="sort"
-                  defaultValue={selectedSort}
-                  className="rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-bold text-stone-950"
-                >
-                  {sortOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  type="submit"
-                  className="rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-stone-800"
-                >
-                  Apply
-                </button>
-              </form>
-            </div>
-
-            {selectedCategory === "Bows" ? (
-              <form
-                action="/browse"
-                className="mb-5 rounded-2xl border border-stone-300 bg-white p-5 shadow-sm lg:hidden"
-              >
-                <input type="hidden" name="category" value="Bows" />
-
-                {selectedConditions.length > 0 ? (
-                  <input
-                    type="hidden"
-                    name="conditions"
-                    value={selectedConditions.join(",")}
-                  />
-                ) : null}
-
-                {searchTerm ? (
-                  <input type="hidden" name="search" value={searchTerm} />
-                ) : null}
-
-                {selectedSort !== "newest" ? (
-                  <input type="hidden" name="sort" value={selectedSort} />
-                ) : null}
-
-                <p className="text-sm font-black text-stone-800">
-                  Bow Details
-                </p>
-
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  <div>
-                    <label className="text-xs font-black uppercase tracking-[0.16em] text-stone-600">
-                      Draw Weight
-                    </label>
-                    <input
-                      type="text"
-                      name="drawWeight"
-                      defaultValue={selectedDrawWeight}
-                      placeholder="60"
-                      className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-700"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-black uppercase tracking-[0.16em] text-stone-600">
-                      Draw Length
-                    </label>
-                    <input
-                      type="text"
-                      name="drawLength"
-                      defaultValue={selectedDrawLength}
-                      placeholder="29"
-                      className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-700"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-black uppercase tracking-[0.16em] text-stone-600">
-                      Handedness
-                    </label>
-                    <select
-                      name="handedness"
-                      defaultValue={selectedHandedness}
-                      className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-emerald-700"
-                    >
-                      <option value="">Any Hand</option>
-                      {handednessOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {selectedCategory !== "All" ||
+                  selectedConditions.length > 0 ||
+                  searchTerm ||
+                  selectedSort !== "newest" ||
+                  bowFiltersAreActive ? (
+                    <p className="mt-2 text-sm font-bold leading-6 text-stone-500">
+                      Category: {selectedCategory} • Conditions:{" "}
+                      {conditionLabel} • {selectedSortLabel}
+                      {searchTerm ? ` • Search: “${searchTerm}”` : ""}
+                      {selectedDrawWeight
+                        ? ` • Draw Weight: ${selectedDrawWeight}`
+                        : ""}
+                      {selectedDrawLength
+                        ? ` • Draw Length: ${selectedDrawLength}`
+                        : ""}
+                      {selectedHandedness
+                        ? ` • Handedness: ${selectedHandedness}`
+                        : ""}
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-sm font-bold text-stone-500">
+                      Listings are reviewed before they appear here.
+                    </p>
+                  )}
                 </div>
 
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <form action="/browse" className="flex flex-col gap-2 sm:flex-row">
+                  {selectedCategory !== "All" ? (
+                    <input
+                      type="hidden"
+                      name="category"
+                      value={selectedCategory}
+                    />
+                  ) : null}
+
+                  {selectedConditions.length > 0 ? (
+                    <input
+                      type="hidden"
+                      name="conditions"
+                      value={selectedConditions.join(",")}
+                    />
+                  ) : null}
+
+                  {searchTerm ? (
+                    <input type="hidden" name="search" value={searchTerm} />
+                  ) : null}
+
+                  {selectedCategory === "Bows" && selectedDrawWeight ? (
+                    <input
+                      type="hidden"
+                      name="drawWeight"
+                      value={selectedDrawWeight}
+                    />
+                  ) : null}
+
+                  {selectedCategory === "Bows" && selectedDrawLength ? (
+                    <input
+                      type="hidden"
+                      name="drawLength"
+                      value={selectedDrawLength}
+                    />
+                  ) : null}
+
+                  {selectedCategory === "Bows" && selectedHandedness ? (
+                    <input
+                      type="hidden"
+                      name="handedness"
+                      value={selectedHandedness}
+                    />
+                  ) : null}
+
+                  <select
+                    name="sort"
+                    defaultValue={selectedSort}
+                    className="rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-bold text-stone-950"
+                  >
+                    {sortOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+
                   <button
                     type="submit"
-                    className="rounded-xl bg-emerald-700 px-4 py-3 text-sm font-black text-white hover:bg-emerald-600"
+                    className="rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-stone-800"
                   >
-                    Apply Bow Filters
+                    Apply
                   </button>
-
-                  {bowFiltersAreActive ? (
-                    <Link
-                      href={buildBrowseHref({
-                        category: selectedCategory,
-                        selectedConditions,
-                        search: searchTerm,
-                        sort: selectedSort,
-                        drawWeight: "",
-                        drawLength: "",
-                        handedness: "",
-                      })}
-                      scroll={false}
-                      className="rounded-xl border border-stone-400 px-4 py-3 text-center text-sm font-black text-stone-950 hover:bg-stone-100"
-                    >
-                      Clear Bow Filters
-                    </Link>
-                  ) : null}
-                </div>
-              </form>
-            ) : null}
+                </form>
+              </div>
+            </div>
 
             {error ? (
               <div className="rounded-2xl border border-red-300 bg-red-50 p-5 text-sm font-bold text-red-800">
@@ -944,7 +841,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
             ) : null}
 
             {!error && listings && listings.length > 0 ? (
-              <div className="grid items-stretch gap-6 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {(listings as Listing[]).map((item) => {
                   const brandModelText = getBrandModelText(item);
                   const compactSpecs = getCompactSpecs(item);
@@ -953,82 +850,87 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                   return (
                     <article
                       key={item.id}
-                      className="flex h-full flex-col overflow-hidden rounded-2xl border border-stone-300 bg-white shadow-sm"
+                      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-stone-300 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                     >
                       {photoUrl ? (
-                        <div className="flex h-48 items-center justify-center bg-stone-200 p-3">
+                        <Link
+                          href={`/listing/${item.id}`}
+                          className="flex h-40 items-center justify-center bg-stone-200 p-3"
+                        >
                           <img
                             src={photoUrl}
                             alt={item.title}
-                            className="max-h-full max-w-full object-contain"
+                            className="max-h-full max-w-full object-contain transition group-hover:scale-[1.02]"
                           />
-                        </div>
+                        </Link>
                       ) : (
-                        <BrowsePhotoPlaceholder />
+                        <Link href={`/listing/${item.id}`}>
+                          <BrowsePhotoPlaceholder />
+                        </Link>
                       )}
 
-                      <div className="flex flex-1 flex-col p-5">
+                      <div className="flex flex-1 flex-col p-4">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-800">
+                          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-800">
                             {item.category}
                           </p>
 
-                          <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-black text-stone-700">
+                          <span className="rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-black text-stone-700">
                             {item.condition}
                           </span>
                         </div>
 
-                        <h4 className="mt-2 text-xl font-black">
-                          {item.title}
-                        </h4>
+                        <Link href={`/listing/${item.id}`}>
+                          <h4 className="mt-2 line-clamp-2 text-lg font-black leading-6 hover:text-emerald-800">
+                            {item.title}
+                          </h4>
+                        </Link>
 
                         {brandModelText ? (
-                          <p className="mt-1 text-sm font-black text-stone-700">
+                          <p className="mt-1 line-clamp-1 text-sm font-black text-stone-700">
                             {brandModelText}
                           </p>
                         ) : null}
 
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {compactSpecs.map((spec) => (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {compactSpecs.slice(0, 3).map((spec) => (
                             <span
                               key={spec}
-                              className="rounded-full border border-stone-300 bg-stone-50 px-3 py-1 text-xs font-bold text-stone-700"
+                              className="rounded-full border border-stone-300 bg-stone-50 px-2.5 py-1 text-[11px] font-bold text-stone-700"
                             >
                               {spec}
                             </span>
                           ))}
 
                           <span
-                            className={`rounded-full border px-3 py-1 text-xs font-bold ${
+                            className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${
                               item.shipping_available
                                 ? "border-emerald-300 bg-emerald-50 text-emerald-900"
                                 : "border-stone-300 bg-stone-50 text-stone-700"
                             }`}
                           >
-                            {item.shipping_available
-                              ? "Shipping Available"
-                              : "Local Only"}
+                            {item.shipping_available ? "Ships" : "Local"}
                           </span>
                         </div>
 
-                        <p className="mt-3 text-sm font-bold text-stone-500">
+                        <p className="mt-3 line-clamp-1 text-sm font-bold text-stone-500">
                           {item.location || "Location not listed"}
                         </p>
 
-                        <p className="mt-3 line-clamp-3 text-sm leading-6 text-stone-600">
+                        <p className="mt-2 line-clamp-2 text-sm leading-6 text-stone-600">
                           {item.description}
                         </p>
 
-                        <div className="mt-auto flex flex-col gap-3 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="mt-auto flex items-center justify-between gap-3 pt-4">
                           <p className="text-2xl font-black">
                             ${Number(item.price).toLocaleString()}
                           </p>
 
                           <Link
                             href={`/listing/${item.id}`}
-                            className="rounded-xl bg-stone-950 px-4 py-2 text-center text-sm font-black text-white hover:bg-stone-800"
+                            className="shrink-0 rounded-xl bg-stone-950 px-3.5 py-2 text-center text-sm font-black text-white hover:bg-stone-800"
                           >
-                            View Listing
+                            View
                           </Link>
                         </div>
                       </div>
