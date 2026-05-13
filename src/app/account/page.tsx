@@ -78,7 +78,11 @@ function statusLabel(status: string) {
   }
 
   if (status === "inactive") {
-    return "Inactive / Sold";
+    return "Inactive";
+  }
+
+  if (status === "sold") {
+    return "Sold";
   }
 
   return status || "Unknown";
@@ -115,6 +119,10 @@ function statusClassName(status: string) {
 
   if (status === "denied") {
     return "bg-red-100 text-red-900";
+  }
+
+  if (status === "sold") {
+    return "bg-stone-950 text-white";
   }
 
   return "bg-stone-200 text-stone-800";
@@ -394,7 +402,7 @@ export default function AccountPage() {
     }
 
     const confirmed = window.confirm(
-      `Mark "${listing.title}" as inactive/sold? This will hide it from Browse.`
+      `Mark "${listing.title}" as inactive? This will hide it from Browse, but you can reactivate it later.`
     );
 
     if (!confirmed) {
@@ -419,7 +427,7 @@ export default function AccountPage() {
     }
 
     setListingActionMessage(
-      `"${listing.title}" has been marked inactive/sold and is now hidden from Browse.`
+      `"${listing.title}" has been marked inactive and is now hidden from Browse.`
     );
 
     await loadMyListings(user);
@@ -484,7 +492,7 @@ export default function AccountPage() {
     if (nextStatus === "accepted") {
       confirmMessage = `Accept the offer of $${Number(
         offer.amount
-      ).toLocaleString()} for "${listingTitle}"?`;
+      ).toLocaleString()} for "${listingTitle}"? This will mark the listing sold and hide it from Browse.`;
     } else if (nextStatus === "declined") {
       confirmMessage = `Decline the offer of $${Number(
         offer.amount
@@ -522,16 +530,60 @@ export default function AccountPage() {
 
     const { error } = await query;
 
-    setUpdatingOfferId(null);
-
     if (error) {
+      setUpdatingOfferId(null);
       setOfferActionErrorMessage(error.message);
       return;
     }
 
     if (nextStatus === "accepted") {
-      setOfferActionMessage(`Offer accepted for "${listingTitle}".`);
-    } else if (nextStatus === "declined") {
+      const { error: listingError } = await supabase
+        .from("listings")
+        .update({ status: "sold" })
+        .eq("id", offer.listing_id)
+        .eq("user_id", user.id);
+
+      if (listingError) {
+        setUpdatingOfferId(null);
+        setOfferActionErrorMessage(
+          `Offer was accepted, but the listing could not be marked sold: ${listingError.message}`
+        );
+        await loadMyOffers(user);
+        return;
+      }
+
+      const { error: otherOffersError } = await supabase
+        .from("offers")
+        .update({
+          status: "declined",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("listing_id", offer.listing_id)
+        .eq("seller_id", user.id)
+        .eq("status", "pending")
+        .neq("id", offer.id);
+
+      if (otherOffersError) {
+        setUpdatingOfferId(null);
+        setOfferActionErrorMessage(
+          `Offer was accepted and the listing was marked sold, but other offers could not be declined: ${otherOffersError.message}`
+        );
+        await refreshAccountData(user);
+        return;
+      }
+
+      setUpdatingOfferId(null);
+      setOfferActionMessage(
+        `Offer accepted for "${listingTitle}". The listing was marked sold and other pending offers were declined.`
+      );
+
+      await refreshAccountData(user);
+      return;
+    }
+
+    setUpdatingOfferId(null);
+
+    if (nextStatus === "declined") {
       setOfferActionMessage(`Offer declined for "${listingTitle}".`);
     } else {
       setOfferActionMessage(`Offer withdrawn for "${listingTitle}".`);
@@ -759,7 +811,8 @@ export default function AccountPage() {
                     <h3 className="text-2xl font-black">My Offers</h3>
                     <p className="mt-2 text-sm leading-6 text-stone-600">
                       Review offers you sent as a buyer and offers you received
-                      as a seller. Accept and decline tools will come next.
+                      as a seller. Accepting an offer marks the listing sold and
+                      hides it from Browse.
                     </p>
                   </div>
 
@@ -849,7 +902,7 @@ export default function AccountPage() {
                     <p className="mt-2 text-sm leading-6 text-stone-600">
                       These are the listings submitted from your signed-in
                       account. You can edit details, mark active listings
-                      inactive/sold, and reactivate inactive listings.
+                      inactive, and review sold listings.
                     </p>
                   </div>
 
@@ -975,6 +1028,15 @@ export default function AccountPage() {
                             </Link>
                           ) : null}
 
+                          {listing.status === "sold" ? (
+                            <Link
+                              href={`/listing/${listing.id}`}
+                              className="inline-block rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-stone-800"
+                            >
+                              View Sold Listing
+                            </Link>
+                          ) : null}
+
                           {listing.status === "active" ? (
                             <button
                               type="button"
@@ -984,7 +1046,7 @@ export default function AccountPage() {
                             >
                               {updatingListingId === listing.id
                                 ? "Updating..."
-                                : "Mark Inactive / Sold"}
+                                : "Mark Inactive"}
                             </button>
                           ) : null}
                         </div>
@@ -1010,8 +1072,8 @@ export default function AccountPage() {
                         {listing.status === "inactive" ? (
                           <div className="mt-4 rounded-xl border border-stone-300 bg-stone-100 p-3 text-sm font-bold leading-6 text-stone-700">
                             <p>
-                              This listing is inactive/sold and is not visible
-                              in Browse.
+                              This listing is inactive and is not visible in
+                              Browse. You can reactivate it when you are ready.
                             </p>
 
                             <button
@@ -1024,6 +1086,15 @@ export default function AccountPage() {
                                 ? "Updating..."
                                 : "Reactivate Listing"}
                             </button>
+                          </div>
+                        ) : null}
+
+                        {listing.status === "sold" ? (
+                          <div className="mt-4 rounded-xl border border-stone-300 bg-stone-950 p-3 text-sm font-bold leading-6 text-white">
+                            <p>
+                              This listing is sold. It is hidden from Browse and
+                              cannot be reactivated from this page.
+                            </p>
                           </div>
                         ) : null}
                       </div>
@@ -1150,8 +1221,8 @@ export default function AccountPage() {
             <div className="rounded-2xl border border-stone-300 bg-stone-50 p-5">
               <p className="text-lg font-black">Listing control</p>
               <p className="mt-2 text-sm leading-6 text-stone-600">
-                Users can now edit listings, mark active listings inactive/sold,
-                and reactivate inactive listings from My Listings.
+                Users can edit listings, mark active listings inactive, review
+                sold listings, and reactivate inactive listings.
               </p>
             </div>
           </div>
@@ -1163,10 +1234,14 @@ export default function AccountPage() {
               <li>• Submitting listings for review works now.</li>
               <li>• Admin approval tools work now.</li>
               <li>• Signed-in users can now view listings they submitted.</li>
-              <li>• Active listings can now be marked inactive/sold.</li>
+              <li>• Active listings can now be marked inactive.</li>
               <li>• Inactive listings can now be reactivated.</li>
               <li>• Listing details can now be edited from My Listings.</li>
-              <li>• Users can now view sent and received offers.</li>
+              <li>• Users can now view, accept, decline, and withdraw offers.</li>
+              <li>
+                • Accepted offers now mark listings sold and hide them from
+                Browse.
+              </li>
             </ul>
           </div>
         </div>
@@ -1202,7 +1277,8 @@ export default function AccountPage() {
             <div className="rounded-2xl bg-stone-950 p-5 text-white">
               <p className="font-black text-emerald-300">Next foundation step</p>
               <p className="mt-2 text-sm leading-6 text-stone-300">
-                Next, we can add accept and decline controls for offers.
+                Next, we can add a cleaner buying action area with Buy Now and
+                Make Offer side by side.
               </p>
             </div>
           </div>

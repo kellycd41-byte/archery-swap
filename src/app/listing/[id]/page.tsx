@@ -80,7 +80,6 @@ export default async function ListingDetailPage({
     .from("listings")
     .select("*")
     .eq("id", id)
-    .eq("status", "active")
     .single();
 
   if (error || !listing) {
@@ -88,9 +87,15 @@ export default async function ListingDetailPage({
   }
 
   const item = listing as Listing;
+
+  if (item.status !== "active" && item.status !== "sold") {
+    notFound();
+  }
+
   const photos = buildPhotoList(item);
   const postedDate = formatPostedDate(item.created_at);
-  const offersAllowed = item.offers_allowed !== false;
+  const isSold = item.status === "sold";
+  const offersAllowed = item.offers_allowed !== false && !isSold;
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
@@ -104,6 +109,24 @@ export default async function ListingDetailPage({
           ← Back to Browse Gear
         </Link>
 
+        {isSold ? (
+          <div className="mt-6 rounded-3xl border border-stone-800 bg-stone-950 p-5 text-white shadow-sm">
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-300">
+              Sold Listing
+            </p>
+
+            <h1 className="mt-3 text-2xl font-black">
+              This item has been sold.
+            </h1>
+
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-stone-300">
+              This listing is hidden from Browse and is no longer accepting
+              offers or messages. The page remains viewable from Account for
+              seller records.
+            </p>
+          </div>
+        ) : null}
+
         <div className="mt-6 grid gap-8 md:grid-cols-[520px_minmax(0,1fr)] md:items-start">
           <section>
             <div className="rounded-3xl border border-stone-300 bg-white p-4 shadow-sm">
@@ -113,13 +136,23 @@ export default async function ListingDetailPage({
             <div className="mt-5 rounded-2xl border border-stone-300 bg-white p-5 shadow-sm">
               <h3 className="font-black">Listing notes</h3>
               <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-600">
-                <li>• This listing has been reviewed before appearing publicly.</li>
-                <li>• Review all photos, specs, and description before buying.</li>
-                <li>• Use messaging to ask the seller questions before making arrangements.</li>
-                {offersAllowed ? (
-                  <li>• This seller is open to offers on this listing.</li>
+                {isSold ? (
+                  <>
+                    <li>• This listing has been marked sold.</li>
+                    <li>• It is hidden from Browse.</li>
+                    <li>• Offers and seller messages are turned off for sold listings.</li>
+                  </>
                 ) : (
-                  <li>• This seller is not accepting offers on this listing.</li>
+                  <>
+                    <li>• This listing has been reviewed before appearing publicly.</li>
+                    <li>• Review all photos, specs, and description before buying.</li>
+                    <li>• Use messaging to ask the seller questions before making arrangements.</li>
+                    {offersAllowed ? (
+                      <li>• This seller is open to offers on this listing.</li>
+                    ) : (
+                      <li>• This seller is not accepting offers on this listing.</li>
+                    )}
+                  </>
                 )}
               </ul>
             </div>
@@ -127,8 +160,14 @@ export default async function ListingDetailPage({
 
           <section className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-emerald-900">
-                Approved Listing
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.16em] ${
+                  isSold
+                    ? "bg-stone-950 text-white"
+                    : "bg-emerald-100 text-emerald-900"
+                }`}
+              >
+                {isSold ? "Sold Listing" : "Approved Listing"}
               </span>
 
               <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-stone-700">
@@ -165,12 +204,14 @@ export default async function ListingDetailPage({
 
               <span
                 className={`rounded-full border px-3 py-1 text-sm font-black ${
-                  offersAllowed
-                    ? "border-emerald-300 bg-emerald-50 text-emerald-900"
-                    : "border-stone-300 bg-stone-50 text-stone-800"
+                  isSold
+                    ? "border-stone-800 bg-stone-950 text-white"
+                    : offersAllowed
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                      : "border-stone-300 bg-stone-50 text-stone-800"
                 }`}
               >
-                {offersAllowed ? "Offers Welcome" : "No Offers"}
+                {isSold ? "Sold" : offersAllowed ? "Offers Welcome" : "No Offers"}
               </span>
             </div>
 
@@ -178,20 +219,40 @@ export default async function ListingDetailPage({
               ${Number(item.price).toLocaleString()}
             </p>
 
-            {offersAllowed ? (
-              <MakeOfferBox
-                listingId={item.id}
-                listingTitle={item.title}
-                listingPrice={item.price}
-                sellerUserId={item.user_id}
-              />
-            ) : null}
+            {isSold ? (
+              <div className="mt-6 rounded-2xl border border-stone-300 bg-stone-100 p-5">
+                <h3 className="font-black">Sold item</h3>
 
-            <MessageSellerBox
-              listingId={item.id}
-              listingTitle={item.title}
-              sellerUserId={item.user_id}
-            />
+                <p className="mt-2 text-sm font-bold leading-6 text-stone-700">
+                  This item is no longer available. Offers and seller messages
+                  are disabled for this listing.
+                </p>
+
+                <Link
+                  href="/account"
+                  className="mt-4 inline-block rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-stone-800"
+                >
+                  Back to Account
+                </Link>
+              </div>
+            ) : (
+              <>
+                {offersAllowed ? (
+                  <MakeOfferBox
+                    listingId={item.id}
+                    listingTitle={item.title}
+                    listingPrice={item.price}
+                    sellerUserId={item.user_id}
+                  />
+                ) : null}
+
+                <MessageSellerBox
+                  listingId={item.id}
+                  listingTitle={item.title}
+                  sellerUserId={item.user_id}
+                />
+              </>
+            )}
 
             <div className="mt-6 rounded-2xl bg-stone-100 p-5">
               <h3 className="font-black">Seller</h3>
@@ -211,6 +272,13 @@ export default async function ListingDetailPage({
               <h3 className="text-xl font-black">Item details</h3>
 
               <div className="mt-4 grid gap-3 text-sm">
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Status</span>
+                  <span className="text-right font-black">
+                    {isSold ? "Sold" : "Available"}
+                  </span>
+                </div>
+
                 <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
                   <span className="font-bold text-stone-600">Condition</span>
                   <span className="text-right font-black">{item.condition}</span>
@@ -273,7 +341,11 @@ export default async function ListingDetailPage({
                 <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
                   <span className="font-bold text-stone-600">Offers</span>
                   <span className="text-right font-black">
-                    {offersAllowed ? "Allowed" : "Not accepted"}
+                    {isSold
+                      ? "Closed"
+                      : offersAllowed
+                        ? "Allowed"
+                        : "Not accepted"}
                   </span>
                 </div>
 
@@ -304,17 +376,19 @@ export default async function ListingDetailPage({
           </p>
         </section>
 
-        <section className="mt-8 rounded-3xl bg-stone-950 p-5 text-white sm:p-6">
-          <h3 className="text-2xl font-black">Buyer safety</h3>
+        {!isSold ? (
+          <section className="mt-8 rounded-3xl bg-stone-950 p-5 text-white sm:p-6">
+            <h3 className="text-2xl font-black">Buyer safety</h3>
 
-          <ul className="mt-4 space-y-2 text-stone-300">
-            <li>• Review photos, specs, price, and description carefully.</li>
-            <li>• Ask the seller questions if anything is unclear.</li>
-            <li>• Be careful with payment, pickup, or shipping arrangements.</li>
-            <li>• Do not send payment outside a method you trust.</li>
-            <li>• Report suspicious listings to the Archery Swap team.</li>
-          </ul>
-        </section>
+            <ul className="mt-4 space-y-2 text-stone-300">
+              <li>• Review photos, specs, price, and description carefully.</li>
+              <li>• Ask the seller questions if anything is unclear.</li>
+              <li>• Be careful with payment, pickup, or shipping arrangements.</li>
+              <li>• Do not send payment outside a method you trust.</li>
+              <li>• Report suspicious listings to the Archery Swap team.</li>
+            </ul>
+          </section>
+        ) : null}
       </section>
     </main>
   );
