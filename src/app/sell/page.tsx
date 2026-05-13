@@ -36,6 +36,51 @@ function makeSafeFileName(fileName: string) {
     .replace(/-+/g, "-");
 }
 
+function isHeicPhoto(file: File) {
+  const fileName = file.name.toLowerCase();
+
+  return (
+    file.type === "image/heic" ||
+    file.type === "image/heif" ||
+    fileName.endsWith(".heic") ||
+    fileName.endsWith(".heif")
+  );
+}
+
+function isDirectUploadPhoto(file: File) {
+  return (
+    file.type === "image/jpeg" ||
+    file.type === "image/png" ||
+    file.type === "image/webp" ||
+    file.type === "image/gif"
+  );
+}
+
+function isSupportedPhoto(file: File) {
+  return isDirectUploadPhoto(file) || isHeicPhoto(file);
+}
+
+function getConvertedHeicName(fileName: string) {
+  const cleanName = fileName.replace(/\.(heic|heif)$/i, "");
+
+  return `${cleanName || "converted-iphone-photo"}.jpg`;
+}
+
+async function readFilePreview(file: File) {
+  return new Promise<PhotoPreview>((resolve) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      resolve({
+        name: file.name,
+        url: typeof reader.result === "string" ? reader.result : "",
+      });
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function SellPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -63,6 +108,7 @@ export default function SellPage() {
   const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState<PhotoPreview[]>([]);
 
+  const [isConvertingPhotos, setIsConvertingPhotos] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -102,16 +148,87 @@ export default function SellPage() {
     };
   }, []);
 
-  function validatePhoto(file: File) {
-    if (!file.type.startsWith("image/")) {
-      return "Please choose image files only.";
+  function validateOriginalPhoto(file: File) {
+    if (!isSupportedPhoto(file)) {
+      return "Please choose JPG, PNG, WEBP, GIF, HEIC, or HEIF image files only.";
     }
 
-    if (file.size > maxPhotoSizeInBytes) {
+    if (!isHeicPhoto(file) && file.size > maxPhotoSizeInBytes) {
       return "Each photo must be smaller than 5 MB.";
     }
 
     return "";
+  }
+
+  function validateFinalPhoto(file: File) {
+    if (!isDirectUploadPhoto(file)) {
+      return "Please choose JPG, PNG, WEBP, GIF, HEIC, or HEIF image files only.";
+    }
+
+    if (file.size > maxPhotoSizeInBytes) {
+      return "Each photo must be smaller than 5 MB after conversion.";
+    }
+
+    return "";
+  }
+
+  async function convertHeicPhoto(file: File) {
+    try {
+      const { heicTo } = await import("heic-to");
+
+      const convertedPhoto = await heicTo({
+        blob: file,
+        type: "image/jpeg",
+        quality: 0.82,
+      });
+
+      if (!(convertedPhoto instanceof Blob)) {
+        throw new Error("The HEIC photo could not be converted.");
+      }
+
+      const convertedFile = new File(
+        [convertedPhoto],
+        getConvertedHeicName(file.name),
+        {
+          type: "image/jpeg",
+          lastModified: Date.now(),
+        }
+      );
+
+      const finalPhotoError = validateFinalPhoto(convertedFile);
+
+      if (finalPhotoError) {
+        throw new Error(finalPhotoError);
+      }
+
+      return convertedFile;
+    } catch (error) {
+      throw new Error(
+        error instanceof Error
+          ? `HEIC conversion failed: ${error.message}`
+          : "HEIC conversion failed. Please try saving the photo as JPG and uploading it again."
+      );
+    }
+  }
+
+  async function preparePhotoForUpload(file: File) {
+    const originalPhotoError = validateOriginalPhoto(file);
+
+    if (originalPhotoError) {
+      throw new Error(originalPhotoError);
+    }
+
+    if (isHeicPhoto(file)) {
+      return convertHeicPhoto(file);
+    }
+
+    const finalPhotoError = validateFinalPhoto(file);
+
+    if (finalPhotoError) {
+      throw new Error(finalPhotoError);
+    }
+
+    return file;
   }
 
   function resetFileInput() {
@@ -138,7 +255,7 @@ export default function SellPage() {
     resetFileInput();
   }
 
-  function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
+  async function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
     setSuccessMessage("");
     setErrorMessage("");
 
@@ -149,16 +266,6 @@ export default function SellPage() {
       return;
     }
 
-    for (const file of newFiles) {
-      const photoError = validatePhoto(file);
-
-      if (photoError) {
-        setErrorMessage(photoError);
-        resetFileInput();
-        return;
-      }
-    }
-
     const remainingSlots = maxPhotoCount - selectedPhotos.length;
 
     if (remainingSlots <= 0) {
@@ -167,7 +274,7 @@ export default function SellPage() {
       return;
     }
 
-    const filesToAdd = newFiles.slice(0, remainingSlots);
+    const filesToPrepare = newFiles.slice(0, remainingSlots);
 
     if (newFiles.length > remainingSlots) {
       setErrorMessage(
@@ -177,30 +284,39 @@ export default function SellPage() {
       );
     }
 
-    const previewPromises = filesToAdd.map(
-      (file) =>
-        new Promise<PhotoPreview>((resolve) => {
-          const reader = new FileReader();
+    setIsConvertingPhotos(true);
 
-          reader.onload = () => {
-            resolve({
-              name: file.name,
-              url: typeof reader.result === "string" ? reader.result : "",
-            });
-          };
+    try {
+      const preparedFiles: File[] = [];
 
-          reader.readAsDataURL(file);
-        })
-    );
+      for (const file of filesToPrepare) {
+        const preparedFile = await preparePhotoForUpload(file);
+        preparedFiles.push(preparedFile);
+      }
 
-    Promise.all(previewPromises).then((newPreviews) => {
-      setSelectedPhotos((currentPhotos) => [...currentPhotos, ...filesToAdd]);
+      const newPreviews = await Promise.all(
+        preparedFiles.map((file) => readFilePreview(file))
+      );
+
+      setSelectedPhotos((currentPhotos) => [
+        ...currentPhotos,
+        ...preparedFiles,
+      ]);
+
       setPhotoPreviewUrls((currentPreviews) => [
         ...currentPreviews,
         ...newPreviews.filter((preview) => preview.url),
       ]);
-      resetFileInput();
-    });
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while preparing your photos."
+      );
+    }
+
+    setIsConvertingPhotos(false);
+    resetFileInput();
   }
 
   async function uploadListingPhotos() {
@@ -215,7 +331,7 @@ export default function SellPage() {
     const uploadedUrls: string[] = [];
 
     for (const selectedPhoto of selectedPhotos) {
-      const photoError = validatePhoto(selectedPhoto);
+      const photoError = validateFinalPhoto(selectedPhoto);
 
       if (photoError) {
         throw new Error(photoError);
@@ -393,7 +509,11 @@ export default function SellPage() {
               </div>
 
               <div className="rounded-2xl bg-white/10 p-4">
-                5 MB max per photo
+                5 MB max per final photo
+              </div>
+
+              <div className="rounded-2xl bg-white/10 p-4">
+                iPhone HEIC photos convert to JPG
               </div>
 
               <div className="rounded-2xl bg-white/10 p-4">
@@ -473,8 +593,8 @@ export default function SellPage() {
                 <ul className="mt-4 space-y-3 text-sm font-bold leading-6 text-emerald-950">
                   <li>• Required fields are marked clearly.</li>
                   <li>• Add clear photos from multiple angles if possible.</li>
-                  <li>• JPG, PNG, WEBP, and GIF photos work right now.</li>
-                  <li>• HEIC iPhone photos are not supported yet.</li>
+                  <li>• JPG, PNG, WEBP, GIF, and iPhone HEIC photos work.</li>
+                  <li>• HEIC and HEIF photos are converted to JPG.</li>
                   <li>• Listings are approved before showing publicly.</li>
                 </ul>
               </div>
@@ -864,14 +984,16 @@ export default function SellPage() {
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
                         multiple
                         onChange={handlePhotoChange}
                         className="sr-only"
                       />
 
                       <span className="inline-block rounded-xl bg-stone-950 px-5 py-3 text-sm font-black text-white">
-                        Choose Photos
+                        {isConvertingPhotos
+                          ? "Preparing Photos..."
+                          : "Choose Photos"}
                       </span>
 
                       <span className="mt-3 block text-sm font-bold text-stone-700">
@@ -880,10 +1002,17 @@ export default function SellPage() {
                       </span>
 
                       <span className="mt-1 block text-xs leading-5 text-stone-500">
-                        JPG, PNG, WEBP, or GIF. Max size: 5 MB each. HEIC is not
-                        supported yet.
+                        JPG, PNG, WEBP, GIF, HEIC, or HEIF. iPhone photos will
+                        be converted to JPG. Max final size: 5 MB each.
                       </span>
                     </label>
+
+                    {isConvertingPhotos ? (
+                      <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">
+                        Preparing your photos. HEIC iPhone photos may take a few
+                        seconds to convert.
+                      </div>
+                    ) : null}
 
                     {photoPreviewUrls.length > 0 ? (
                       <div className="mt-5">
@@ -945,12 +1074,14 @@ export default function SellPage() {
 
                   <button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isConvertingPhotos}
                     className="rounded-xl bg-emerald-600 px-6 py-3 font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-stone-400"
                   >
                     {isSubmitting
                       ? "Submitting Listing..."
-                      : "Submit Listing for Review"}
+                      : isConvertingPhotos
+                        ? "Preparing Photos..."
+                        : "Submit Listing for Review"}
                   </button>
                 </div>
               </form>
