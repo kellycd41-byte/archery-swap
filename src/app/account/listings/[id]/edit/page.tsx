@@ -7,6 +7,21 @@ import { User } from "@supabase/supabase-js";
 import Header from "@/components/Header";
 import { supabase } from "@/lib/supabase";
 
+const categories = [
+  "Bows",
+  "Crossbows",
+  "Sights",
+  "Releases",
+  "Arrows",
+  "Cases",
+  "Targets",
+  "Accessories",
+];
+
+const conditions = ["New", "Excellent", "Very Good", "Good", "Fair"];
+
+const handednessOptions = ["Right Hand", "Left Hand", "Ambidextrous", "N/A"];
+
 type ListingForm = {
   title: string;
   description: string;
@@ -40,6 +55,22 @@ const emptyForm: ListingForm = {
   shipping_available: false,
   offers_allowed: true,
 };
+
+function formatStatus(status: string) {
+  if (!status) {
+    return "Unknown";
+  }
+
+  if (status === "active") {
+    return "Approved";
+  }
+
+  if (status === "pending") {
+    return "Pending Review";
+  }
+
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
 
 export default function EditListingPage() {
   const params = useParams();
@@ -225,31 +256,49 @@ export default function EditListingPage() {
     <main className="min-h-screen bg-stone-100 text-stone-950">
       <Header activePage="account" />
 
-      <section className="bg-stone-950 px-4 py-14 text-white sm:px-6 md:py-16">
-        <div className="mx-auto max-w-7xl">
-          <Link
-            href="/account"
-            className="inline-block rounded-xl border border-stone-700 px-4 py-2 text-sm font-black text-stone-200 hover:bg-stone-900"
-          >
-            ← Back to Account
-          </Link>
+      <section className="bg-stone-950 px-4 py-12 text-white sm:px-6 md:py-16">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.35fr_0.65fr] lg:items-end">
+          <div>
+            <Link
+              href="/account"
+              className="inline-block rounded-xl border border-stone-700 px-4 py-2 text-sm font-black text-stone-200 hover:bg-stone-900"
+            >
+              ← Back to Account
+            </Link>
 
-          <p className="mt-6 text-sm font-black uppercase tracking-[0.25em] text-emerald-300">
-            Edit Listing
-          </p>
+            <p className="mt-6 text-sm font-black uppercase tracking-[0.25em] text-emerald-300">
+              Edit Listing
+            </p>
 
-          <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">
-            Update your listing details.
-          </h2>
+            <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">
+              Update your listing details.
+            </h2>
 
-          <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
-            Edit the basic details for your gear. Photo editing will be added
-            later as a separate step.
-          </p>
+            <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
+              Keep your price, condition, specs, shipping choice, and offer
+              settings accurate. Photo editing will be added later as a separate
+              step.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-sm">
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-300">
+              Current Status
+            </p>
+
+            <p className="mt-4 rounded-2xl bg-white/10 p-4 text-2xl font-black">
+              {formatStatus(listingStatus)}
+            </p>
+
+            <p className="mt-4 text-sm leading-6 text-stone-300">
+              Editing details does not change approval status. Pending and
+              denied listings still need admin review.
+            </p>
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
+      <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
         <div className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6 md:p-8">
           {isLoadingSession || isLoadingListing ? (
             <div className="rounded-2xl border border-stone-300 bg-stone-50 p-5">
@@ -281,16 +330,18 @@ export default function EditListingPage() {
             </div>
           ) : (
             <>
-              <div className="mb-6 rounded-2xl border border-stone-300 bg-stone-50 p-5">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-stone-500">
-                  Current Status
+              <div className="mb-8 border-b border-stone-200 pb-6">
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-700">
+                  Listing Editor
                 </p>
-                <p className="mt-2 text-lg font-black">
-                  {listingStatus || "Unknown"}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-stone-600">
-                  Editing these details does not change approval status. Pending
-                  and denied listings still need admin review.
+
+                <h3 className="mt-3 text-3xl font-black tracking-tight">
+                  Make safe changes to your listing.
+                </h3>
+
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-600">
+                  This page updates listing details only. Existing photos stay
+                  the same for now.
                 </p>
               </div>
 
@@ -306,213 +357,222 @@ export default function EditListingPage() {
                 </div>
               ) : null}
 
-              <form onSubmit={handleSave} className="grid gap-6">
-                <label className="grid gap-2">
-                  <span className="text-sm font-black">Title</span>
-                  <input
-                    type="text"
-                    value={form.title}
-                    onChange={(event) =>
-                      updateField("title", event.target.value)
-                    }
-                    className="rounded-2xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
-                  />
-                </label>
+              <form onSubmit={handleSave} className="space-y-6">
+                <section className="rounded-3xl border border-stone-200 bg-stone-50 p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h4 className="text-xl font-black">Basic details</h4>
+                      <p className="mt-1 text-sm leading-6 text-stone-600">
+                        These are the main details buyers see first.
+                      </p>
+                    </div>
 
-                <label className="grid gap-2">
-                  <span className="text-sm font-black">Description</span>
-                  <textarea
-                    value={form.description}
-                    onChange={(event) =>
-                      updateField("description", event.target.value)
-                    }
-                    rows={6}
-                    className="rounded-2xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
-                  />
-                </label>
+                    <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-red-700">
+                      Required
+                    </span>
+                  </div>
 
-                <div className="grid gap-5 md:grid-cols-3">
-                  <label className="grid gap-2">
-                    <span className="text-sm font-black">Price</span>
+                  <div className="mt-5">
+                    <label className="text-sm font-black text-stone-700">
+                      Title <span className="text-red-700">Required</span>
+                    </label>
+
                     <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={form.price}
+                      type="text"
+                      value={form.title}
                       onChange={(event) =>
-                        updateField("price", event.target.value)
+                        updateField("title", event.target.value)
                       }
-                      className="rounded-2xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                      className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
                     />
-                  </label>
+                  </div>
 
-                  <label className="grid gap-2">
-                    <span className="text-sm font-black">Category</span>
-                    <select
-                      value={form.category}
+                  <div className="mt-5 grid gap-5 md:grid-cols-3">
+                    <div>
+                      <label className="text-sm font-black text-stone-700">
+                        Price <span className="text-red-700">Required</span>
+                      </label>
+
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={form.price}
+                        onChange={(event) =>
+                          updateField("price", event.target.value)
+                        }
+                        className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-black text-stone-700">
+                        Category <span className="text-red-700">Required</span>
+                      </label>
+
+                      <select
+                        value={form.category}
+                        onChange={(event) =>
+                          updateField("category", event.target.value)
+                        }
+                        className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                      >
+                        <option value="">Choose category</option>
+                        {categories.map((categoryOption) => (
+                          <option key={categoryOption} value={categoryOption}>
+                            {categoryOption}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-black text-stone-700">
+                        Condition{" "}
+                        <span className="text-red-700">Required</span>
+                      </label>
+
+                      <select
+                        value={form.condition}
+                        onChange={(event) =>
+                          updateField("condition", event.target.value)
+                        }
+                        className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                      >
+                        <option value="">Choose condition</option>
+                        {conditions.map((conditionOption) => (
+                          <option
+                            key={conditionOption}
+                            value={conditionOption}
+                          >
+                            {conditionOption}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-5">
+                    <label className="text-sm font-black text-stone-700">
+                      Location
+                    </label>
+
+                    <input
+                      type="text"
+                      value={form.location}
                       onChange={(event) =>
-                        updateField("category", event.target.value)
+                        updateField("location", event.target.value)
                       }
-                      className="rounded-2xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
-                    >
-                      <option value="">Choose category</option>
-                      <option value="Compound Bows">Compound Bows</option>
-                      <option value="Recurve Bows">Recurve Bows</option>
-                      <option value="Traditional Bows">Traditional Bows</option>
-                      <option value="Crossbows">Crossbows</option>
-                      <option value="Arrows">Arrows</option>
-                      <option value="Releases">Releases</option>
-                      <option value="Sights">Sights</option>
-                      <option value="Rests">Rests</option>
-                      <option value="Stabilizers">Stabilizers</option>
-                      <option value="Cases">Cases</option>
-                      <option value="Accessories">Accessories</option>
-                    </select>
-                  </label>
+                      placeholder="Example: Pennsylvania"
+                      className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                    />
+                  </div>
+                </section>
 
-                  <label className="grid gap-2">
-                    <span className="text-sm font-black">Condition</span>
-                    <select
-                      value={form.condition}
-                      onChange={(event) =>
-                        updateField("condition", event.target.value)
-                      }
-                      className="rounded-2xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
-                    >
-                      <option value="">Choose condition</option>
-                      <option value="New">New</option>
-                      <option value="Like New">Like New</option>
-                      <option value="Good">Good</option>
-                      <option value="Fair">Fair</option>
-                      <option value="Needs Work">Needs Work</option>
-                    </select>
-                  </label>
-                </div>
+                <section className="rounded-3xl border border-stone-200 p-5">
+                  <h4 className="text-xl font-black">Archery specs</h4>
 
-                <label className="grid gap-2">
-                  <span className="text-sm font-black">Location</span>
-                  <input
-                    type="text"
-                    value={form.location}
-                    onChange={(event) =>
-                      updateField("location", event.target.value)
-                    }
-                    className="rounded-2xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
-                  />
-                </label>
-
-                <div className="rounded-3xl border border-stone-300 bg-stone-50 p-5">
-                  <h3 className="text-xl font-black">Archery Specs</h3>
+                  <p className="mt-1 text-sm leading-6 text-stone-600">
+                    Optional, but helpful for bows and technical gear.
+                  </p>
 
                   <div className="mt-5 grid gap-5 md:grid-cols-2">
-                    <label className="grid gap-2">
-                      <span className="text-sm font-black">Brand</span>
+                    <div>
+                      <label className="text-sm font-black text-stone-700">
+                        Brand
+                      </label>
+
                       <input
                         type="text"
                         value={form.brand}
                         onChange={(event) =>
                           updateField("brand", event.target.value)
                         }
-                        className="rounded-2xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                        placeholder="Example: Mathews"
+                        className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
                       />
-                    </label>
+                    </div>
 
-                    <label className="grid gap-2">
-                      <span className="text-sm font-black">Model</span>
+                    <div>
+                      <label className="text-sm font-black text-stone-700">
+                        Model
+                      </label>
+
                       <input
                         type="text"
                         value={form.model}
                         onChange={(event) =>
                           updateField("model", event.target.value)
                         }
-                        className="rounded-2xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                        placeholder="Example: V3X 33"
+                        className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
                       />
-                    </label>
+                    </div>
+                  </div>
 
-                    <label className="grid gap-2">
-                      <span className="text-sm font-black">Draw Weight</span>
+                  <div className="mt-5 grid gap-5 md:grid-cols-3">
+                    <div>
+                      <label className="text-sm font-black text-stone-700">
+                        Draw weight
+                      </label>
+
                       <input
                         type="text"
                         value={form.draw_weight}
                         onChange={(event) =>
                           updateField("draw_weight", event.target.value)
                         }
-                        placeholder="Example: 60 lb"
-                        className="rounded-2xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                        placeholder="Example: 60-70 lbs"
+                        className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
                       />
-                    </label>
+                    </div>
 
-                    <label className="grid gap-2">
-                      <span className="text-sm font-black">Draw Length</span>
+                    <div>
+                      <label className="text-sm font-black text-stone-700">
+                        Draw length
+                      </label>
+
                       <input
                         type="text"
                         value={form.draw_length}
                         onChange={(event) =>
                           updateField("draw_length", event.target.value)
                         }
-                        placeholder='Example: 28"'
-                        className="rounded-2xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                        placeholder="Example: 28.5 in"
+                        className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
                       />
-                    </label>
+                    </div>
 
-                    <label className="grid gap-2">
-                      <span className="text-sm font-black">Handedness</span>
+                    <div>
+                      <label className="text-sm font-black text-stone-700">
+                        Handedness
+                      </label>
+
                       <select
                         value={form.handedness}
                         onChange={(event) =>
                           updateField("handedness", event.target.value)
                         }
-                        className="rounded-2xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                        className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
                       >
                         <option value="">Choose handedness</option>
-                        <option value="Right Hand">Right Hand</option>
-                        <option value="Left Hand">Left Hand</option>
-                        <option value="Ambidextrous">Ambidextrous</option>
+                        {handednessOptions.map((handednessOption) => (
+                          <option
+                            key={handednessOption}
+                            value={handednessOption}
+                          >
+                            {handednessOption}
+                          </option>
+                        ))}
                       </select>
-                    </label>
-
-                    <label className="flex items-center gap-3 rounded-2xl border border-stone-300 bg-white px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={form.shipping_available}
-                        onChange={(event) =>
-                          updateField(
-                            "shipping_available",
-                            event.target.checked
-                          )
-                        }
-                        className="h-5 w-5"
-                      />
-                      <span className="text-sm font-black">
-                        Shipping Available
-                      </span>
-                    </label>
-
-                    <label className="flex items-center gap-3 rounded-2xl border border-stone-300 bg-white px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={form.offers_allowed}
-                        onChange={(event) =>
-                          updateField("offers_allowed", event.target.checked)
-                        }
-                        className="h-5 w-5"
-                      />
-                      <span>
-                        <span className="block text-sm font-black">
-                          Allow buyers to make offers
-                        </span>
-                        <span className="mt-1 block text-xs font-bold text-stone-600">
-                          Uncheck this if you only want buyers to use the future
-                          Buy Now option.
-                        </span>
-                      </span>
-                    </label>
+                    </div>
                   </div>
 
-                  <label className="mt-5 grid gap-2">
-                    <span className="text-sm font-black">
-                      Included Accessories
-                    </span>
+                  <div className="mt-5">
+                    <label className="text-sm font-black text-stone-700">
+                      Included accessories
+                    </label>
+
                     <textarea
                       value={form.included_accessories}
                       onChange={(event) =>
@@ -522,26 +582,130 @@ export default function EditListingPage() {
                         )
                       }
                       rows={4}
-                      className="rounded-2xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                      placeholder="Example: Sight, rest, quiver, stabilizer, case, arrows."
+                      className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
                     />
-                  </label>
+                  </div>
+                </section>
+
+                <section className="rounded-3xl border border-stone-200 p-5">
+                  <h4 className="text-xl font-black">
+                    Shipping and offer settings
+                  </h4>
+
+                  <p className="mt-1 text-sm leading-6 text-stone-600">
+                    These settings affect what buyers can do on your listing.
+                  </p>
+
+                  <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    <label className="flex items-start gap-3 rounded-2xl border border-stone-300 bg-stone-50 p-4">
+                      <input
+                        type="checkbox"
+                        checked={form.shipping_available}
+                        onChange={(event) =>
+                          updateField(
+                            "shipping_available",
+                            event.target.checked
+                          )
+                        }
+                        className="mt-1"
+                      />
+
+                      <span>
+                        <span className="block font-black">
+                          Shipping is available
+                        </span>
+
+                        <span className="mt-1 block text-sm leading-6 text-stone-600">
+                          Check this if you are willing to ship this item to a
+                          buyer.
+                        </span>
+                      </span>
+                    </label>
+
+                    <label className="flex items-start gap-3 rounded-2xl border border-stone-300 bg-stone-50 p-4">
+                      <input
+                        type="checkbox"
+                        checked={form.offers_allowed}
+                        onChange={(event) =>
+                          updateField("offers_allowed", event.target.checked)
+                        }
+                        className="mt-1"
+                      />
+
+                      <span>
+                        <span className="block font-black">
+                          Allow buyers to make offers
+                        </span>
+
+                        <span className="mt-1 block text-sm leading-6 text-stone-600">
+                          Uncheck this if you only want buyers to use the future
+                          Buy Now option.
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                </section>
+
+                <section className="rounded-3xl border border-stone-200 bg-stone-50 p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h4 className="text-xl font-black">Description</h4>
+
+                      <p className="mt-1 text-sm leading-6 text-stone-600">
+                        Be honest about condition, wear, age, included items,
+                        and anything buyers should know.
+                      </p>
+                    </div>
+
+                    <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-red-700">
+                      Required
+                    </span>
+                  </div>
+
+                  <div className="mt-5">
+                    <label className="text-sm font-black text-stone-700">
+                      Description{" "}
+                      <span className="text-red-700">Required</span>
+                    </label>
+
+                    <textarea
+                      value={form.description}
+                      onChange={(event) =>
+                        updateField("description", event.target.value)
+                      }
+                      rows={6}
+                      className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                    />
+                  </div>
+                </section>
+
+                <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5">
+                  <h4 className="font-black text-amber-950">
+                    Photo editing is coming later
+                  </h4>
+
+                  <p className="mt-2 text-sm font-bold leading-6 text-amber-900">
+                    This page currently updates listing details only. Your
+                    existing listing photos will stay unchanged.
+                  </p>
                 </div>
 
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="submit"
-                    disabled={isSaving}
-                    className="cursor-pointer rounded-2xl bg-emerald-600 px-6 py-4 text-sm font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isSaving ? "Saving..." : "Save Changes"}
-                  </button>
-
+                <div className="flex flex-col gap-3 border-t border-stone-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
                   <button
                     type="button"
                     onClick={() => router.push("/account")}
                     className="cursor-pointer rounded-2xl border border-stone-300 bg-white px-6 py-4 text-sm font-black hover:bg-stone-100"
                   >
                     Back to Account
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="cursor-pointer rounded-2xl bg-emerald-600 px-6 py-4 text-sm font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSaving ? "Saving..." : "Save Changes"}
                   </button>
                 </div>
               </form>
