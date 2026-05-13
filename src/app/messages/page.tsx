@@ -27,6 +27,7 @@ type Conversation = {
   listing_id: string;
   other_user_id: string;
   listingTitle: string;
+  listingStatus: string;
   lastMessage: MessageRecord;
   messages: MessageRecord[];
   unreadCount: number;
@@ -73,6 +74,37 @@ function getListingTitle(
   return listingMap[listingId]?.title || "Listing";
 }
 
+function getListingStatus(
+  listingId: string,
+  listingMap: Record<string, ListingSummary>
+) {
+  return listingMap[listingId]?.status || "unknown";
+}
+
+function formatListingStatus(status: string) {
+  if (status === "active") {
+    return "Active";
+  }
+
+  if (status === "pending") {
+    return "Pending Review";
+  }
+
+  if (status === "denied") {
+    return "Denied";
+  }
+
+  if (status === "inactive") {
+    return "Inactive";
+  }
+
+  if (status === "sold") {
+    return "Sold";
+  }
+
+  return "Listing";
+}
+
 function getConversationId(message: MessageRecord, currentUserId: string) {
   const otherUserId =
     message.sender_id === currentUserId ? message.receiver_id : message.sender_id;
@@ -114,6 +146,7 @@ export default function MessagesPage() {
       const conversationId = getConversationId(message, user.id);
       const otherUserId = getOtherUserId(message, user.id);
       const listingTitle = getListingTitle(message.listing_id, listingMap);
+      const listingStatus = getListingStatus(message.listing_id, listingMap);
       const isUnreadForMe =
         message.receiver_id === user.id && message.read_at === null;
 
@@ -123,6 +156,7 @@ export default function MessagesPage() {
           listing_id: message.listing_id,
           other_user_id: otherUserId,
           listingTitle,
+          listingStatus,
           lastMessage: message,
           messages: [],
           unreadCount: 0,
@@ -374,19 +408,34 @@ export default function MessagesPage() {
     <main className="min-h-screen bg-stone-100 text-stone-950">
       <Header activePage="messages" />
 
-      <section className="bg-stone-950 px-4 py-14 text-white sm:px-6 md:py-16">
+      <section className="bg-stone-950 px-4 py-12 text-white sm:px-6 md:py-16">
         <div className="mx-auto max-w-7xl">
           <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-300">
             Messages
           </p>
 
-          <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">
-            Your Archery Swap messages.
-          </h2>
+          <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_360px] lg:items-end">
+            <div>
+              <h2 className="max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">
+                Buyer and seller conversations.
+              </h2>
 
-          <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
-            Keep buyer and seller conversations organized by listing.
-          </p>
+              <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
+                Keep every conversation tied to the listing it belongs to, so
+                buying and selling archery gear stays organized.
+              </p>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-stone-400">
+                Message Tip
+              </p>
+              <p className="mt-3 text-sm font-bold leading-6 text-stone-200">
+                Keep payment and shipping details clear before meeting or
+                sending gear. Real checkout will be added later.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -428,37 +477,62 @@ export default function MessagesPage() {
           </div>
         ) : (
           <>
-            <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 shadow-sm sm:p-8">
-              <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6">
+              <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
                 <div>
-                  <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-800">
+                  <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-700">
                     Inbox
                   </p>
 
-                  <h3 className="mt-4 text-3xl font-black tracking-tight text-stone-950">
+                  <h3 className="mt-3 text-3xl font-black tracking-tight text-stone-950">
                     Messages for your account.
                   </h3>
 
-                  <p className="mt-4 max-w-2xl text-base leading-7 text-stone-700">
-                    Signed in as <span className="font-black">{user.email}</span>
-                  </p>
-
-                  <p className="mt-2 text-sm font-black text-emerald-800">
-                    {totalUnreadCount === 0
-                      ? "No unread messages"
-                      : `${totalUnreadCount} unread message${
-                          totalUnreadCount === 1 ? "" : "s"
-                        }`}
+                  <p className="mt-3 text-sm leading-6 text-stone-600">
+                    Signed in as{" "}
+                    <span className="font-black text-stone-950">
+                      {user.email}
+                    </span>
                   </p>
                 </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[340px]">
+                  <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-stone-500">
+                      Conversations
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-stone-950">
+                      {conversations.length}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-700">
+                      Unread
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-emerald-800">
+                      {totalUnreadCount}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-stone-200 pt-5">
+                <p className="text-sm font-bold text-stone-600">
+                  {totalUnreadCount === 0
+                    ? "You are caught up."
+                    : `${totalUnreadCount} unread message${
+                        totalUnreadCount === 1 ? "" : "s"
+                      }`}
+                </p>
 
                 <button
                   type="button"
                   onClick={() => loadMessages(user)}
                   disabled={isLoadingMessages}
-                  className="cursor-pointer rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-black text-emerald-950 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="cursor-pointer rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-black text-emerald-950 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isLoadingMessages ? "Refreshing..." : "Refresh"}
+                  {isLoadingMessages ? "Refreshing..." : "Refresh Messages"}
                 </button>
               </div>
             </div>
@@ -474,32 +548,48 @@ export default function MessagesPage() {
                 <p className="font-bold text-stone-700">Loading messages...</p>
               </div>
             ) : messages.length === 0 ? (
-              <div className="mt-6 rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
-                <p className="font-black">No messages yet.</p>
+              <div className="mt-6 rounded-3xl border border-stone-300 bg-white p-6 shadow-sm sm:p-8">
+                <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-700">
+                  No Messages Yet
+                </p>
 
-                <p className="mt-2 text-sm leading-6 text-stone-600">
+                <h3 className="mt-4 text-3xl font-black tracking-tight">
+                  Your inbox is empty.
+                </h3>
+
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-600">
                   When you send a message to a seller, or someone messages you
-                  about your listing, it will appear here.
+                  about your listing, the conversation will appear here.
                 </p>
 
                 <Link
                   href="/browse"
-                  className="mt-5 inline-block rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-500"
+                  className="mt-6 inline-block rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-500"
                 >
                   Browse Gear
                 </Link>
               </div>
             ) : (
-              <div className="mt-6 grid overflow-hidden rounded-3xl border border-stone-300 bg-white shadow-sm md:grid-cols-[320px_1fr] lg:grid-cols-[360px_1fr]">
-                <aside className="border-b border-stone-300 bg-stone-50 md:border-b-0 md:border-r">
+              <div className="mt-6 grid overflow-hidden rounded-3xl border border-stone-300 bg-white shadow-sm lg:grid-cols-[360px_1fr]">
+                <aside className="border-b border-stone-300 bg-stone-50 lg:border-b-0 lg:border-r">
                   <div className="border-b border-stone-300 p-5">
-                    <h3 className="text-xl font-black">Conversations</h3>
-                    <p className="mt-1 text-sm font-bold text-stone-500">
-                      {conversations.length} total
-                    </p>
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-xl font-black">Conversations</h3>
+                        <p className="mt-1 text-sm font-bold text-stone-500">
+                          Newest messages first
+                        </p>
+                      </div>
+
+                      {totalUnreadCount > 0 ? (
+                        <span className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-black text-white">
+                          {totalUnreadCount} unread
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
 
-                  <div className="max-h-[700px] overflow-y-auto p-3">
+                  <div className="max-h-[420px] overflow-y-auto p-3 lg:max-h-[720px]">
                     {conversations.map((conversation) => {
                       const isSelected =
                         selectedConversation?.id === conversation.id;
@@ -518,7 +608,7 @@ export default function MessagesPage() {
                           }}
                           className={`mb-3 w-full cursor-pointer rounded-2xl border p-4 text-left transition ${
                             isSelected
-                              ? "border-emerald-400 bg-emerald-50"
+                              ? "border-emerald-500 bg-emerald-50 shadow-sm"
                               : hasUnreadMessages
                               ? "border-emerald-300 bg-white shadow-sm hover:bg-emerald-50"
                               : "border-stone-300 bg-white hover:bg-stone-100"
@@ -544,8 +634,12 @@ export default function MessagesPage() {
                                 ) : null}
                               </div>
 
+                              <p className="mt-1 text-xs font-black uppercase tracking-[0.16em] text-stone-400">
+                                {formatListingStatus(conversation.listingStatus)}
+                              </p>
+
                               <p
-                                className={`mt-1 truncate text-xs ${
+                                className={`mt-2 line-clamp-2 text-xs leading-5 ${
                                   hasUnreadMessages
                                     ? "font-black text-stone-800"
                                     : "font-bold text-stone-500"
@@ -582,8 +676,10 @@ export default function MessagesPage() {
                               {selectedConversation.listingTitle}
                             </h3>
 
-                            <p className="mt-1 text-sm font-bold text-stone-500">
-                              Messages about this listing
+                            <p className="mt-2 inline-flex rounded-full bg-stone-100 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-stone-600">
+                              {formatListingStatus(
+                                selectedConversation.listingStatus
+                              )}
                             </p>
                           </div>
 
@@ -596,7 +692,7 @@ export default function MessagesPage() {
                         </div>
                       </div>
 
-                      <div className="flex-1 space-y-4 overflow-y-auto bg-stone-100 p-5">
+                      <div className="flex-1 space-y-4 overflow-y-auto bg-stone-100 p-4 sm:p-5">
                         {selectedConversation.messages.map((message) => {
                           const isSentByMe = message.sender_id === user.id;
                           const isUnreadForMe =
@@ -611,7 +707,7 @@ export default function MessagesPage() {
                               }`}
                             >
                               <div
-                                className={`max-w-[85%] rounded-2xl p-4 shadow-sm sm:max-w-[70%] ${
+                                className={`max-w-[88%] rounded-2xl p-4 shadow-sm sm:max-w-[70%] ${
                                   isSentByMe
                                     ? "bg-emerald-600 text-white"
                                     : isUnreadForMe
@@ -641,7 +737,7 @@ export default function MessagesPage() {
 
                       <form
                         onSubmit={handleSendReply}
-                        className="border-t border-stone-300 bg-white p-5"
+                        className="border-t border-stone-300 bg-white p-4 sm:p-5"
                       >
                         <label
                           htmlFor="conversation-reply"
@@ -674,7 +770,11 @@ export default function MessagesPage() {
                           </p>
                         ) : null}
 
-                        <div className="mt-3 flex justify-end">
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                          <p className="text-xs font-bold leading-5 text-stone-500">
+                            Keep personal, payment, and shipping details safe.
+                          </p>
+
                           <button
                             type="submit"
                             disabled={isSendingReply}
@@ -692,7 +792,7 @@ export default function MessagesPage() {
                           Choose a conversation.
                         </p>
                         <p className="mt-2 text-sm font-bold text-stone-500">
-                          Select a conversation from the left to read messages.
+                          Select a conversation to read and reply.
                         </p>
                       </div>
                     </div>
@@ -700,18 +800,6 @@ export default function MessagesPage() {
                 </section>
               </div>
             )}
-
-            <div className="mt-8 rounded-2xl bg-white p-5 shadow-sm">
-              <h3 className="text-xl font-black">Current status</h3>
-              <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-700">
-                <li>• Buyers can send messages from listing pages.</li>
-                <li>• Messages are grouped by listing and person.</li>
-                <li>• Buyers and sellers can reply from one chat window.</li>
-                <li>• Unread messages are marked when a conversation is opened.</li>
-                <li>• The top Messages tab now supports an unread bubble.</li>
-                <li>• Offers and checkout will come later.</li>
-              </ul>
-            </div>
           </>
         )}
       </section>
