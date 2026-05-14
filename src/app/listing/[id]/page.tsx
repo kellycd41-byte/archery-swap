@@ -319,7 +319,7 @@ export default async function ListingDetailPage({
               </div>
             ) : (
               <>
-                <BuyNowBox listingTitle={item.title} />
+                <BuyNowBox listingId={item.id} listingTitle={item.title} />
 
                 {offersAllowed ? (
                   <MakeOfferBox
