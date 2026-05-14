@@ -23,6 +23,7 @@ function GreenDot({ label }: { label: string }) {
 export default function Header({ activePage }: HeaderProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingReceivedOfferCount, setPendingReceivedOfferCount] = useState(0);
+  const [acceptedSentOfferCount, setAcceptedSentOfferCount] = useState(0);
 
   async function loadHeaderAlerts() {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -31,6 +32,7 @@ export default function Header({ activePage }: HeaderProps) {
     if (!signedInUser) {
       setUnreadCount(0);
       setPendingReceivedOfferCount(0);
+      setAcceptedSentOfferCount(0);
       return;
     }
 
@@ -46,16 +48,30 @@ export default function Header({ activePage }: HeaderProps) {
       setUnreadCount(messageCount || 0);
     }
 
-    const { count: offerCount, error: offerError } = await supabase
-      .from("offers")
-      .select("id", { count: "exact", head: true })
-      .eq("seller_id", signedInUser.id)
-      .eq("status", "pending");
+    const { count: pendingOfferCount, error: pendingOfferError } =
+      await supabase
+        .from("offers")
+        .select("id", { count: "exact", head: true })
+        .eq("seller_id", signedInUser.id)
+        .eq("status", "pending");
 
-    if (offerError) {
+    if (pendingOfferError) {
       setPendingReceivedOfferCount(0);
     } else {
-      setPendingReceivedOfferCount(offerCount || 0);
+      setPendingReceivedOfferCount(pendingOfferCount || 0);
+    }
+
+    const { count: acceptedOfferCount, error: acceptedOfferError } =
+      await supabase
+        .from("offers")
+        .select("id", { count: "exact", head: true })
+        .eq("buyer_id", signedInUser.id)
+        .eq("status", "accepted");
+
+    if (acceptedOfferError) {
+      setAcceptedSentOfferCount(0);
+    } else {
+      setAcceptedSentOfferCount(acceptedOfferCount || 0);
     }
   }
 
@@ -91,6 +107,11 @@ export default function Header({ activePage }: HeaderProps) {
 
   const hasUnreadMessages = unreadCount > 0;
   const hasPendingReceivedOffers = pendingReceivedOfferCount > 0;
+  const hasAcceptedSentOffers = acceptedSentOfferCount > 0;
+  const hasAccountAlert = hasPendingReceivedOffers || hasAcceptedSentOffers;
+  const accountAlertLabel = hasAcceptedSentOffers
+    ? "Accepted offer ready for payment"
+    : "Pending received offers";
 
   return (
     <header className="border-b border-stone-800 bg-stone-950 text-white">
@@ -162,9 +183,7 @@ export default function Header({ activePage }: HeaderProps) {
               }`}
             >
               Account
-              {hasPendingReceivedOffers ? (
-                <GreenDot label="Pending received offers" />
-              ) : null}
+              {hasAccountAlert ? <GreenDot label={accountAlertLabel} /> : null}
             </Link>
           </nav>
 
@@ -231,9 +250,7 @@ export default function Header({ activePage }: HeaderProps) {
                 }`}
               >
                 Account
-                {hasPendingReceivedOffers ? (
-                  <GreenDot label="Pending received offers" />
-                ) : null}
+                {hasAccountAlert ? <GreenDot label={accountAlertLabel} /> : null}
               </Link>
             </div>
           </details>
