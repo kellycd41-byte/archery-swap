@@ -241,7 +241,7 @@ export default async function ListingDetailPage({
                     : "border-stone-300 bg-stone-50 text-stone-800"
                 }`}
               >
-                {item.shipping_available ? "Shipping Available" : "Local Only"}
+                "Shipping Required"
               </span>
 
               <span
@@ -327,7 +327,7 @@ export default async function ListingDetailPage({
                 <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
                   <span className="font-bold text-stone-600">Shipping</span>
                   <span className="text-right font-black">
-                    {item.shipping_available ? "Available" : "Local only"}
+                    "Required"
                   </span>
                 </div>
 
@@ -350,7 +350,7 @@ export default async function ListingDetailPage({
 
               <p className="mt-4 text-sm font-bold leading-6 text-stone-600">
                 Seller profiles, ratings, checkout, and shipping tools will be
-                added later. Use caution with payment, pickup, and shipping
+                added later. Use caution with payment and shipping
                 arrangements.
               </p>
             </div>
@@ -382,7 +382,7 @@ export default async function ListingDetailPage({
             <ul className="mt-4 space-y-2 text-stone-300">
               <li>• Review photos, specs, price, and description carefully.</li>
               <li>• Ask the seller questions if anything is unclear.</li>
-              <li>• Be careful with payment, pickup, or shipping arrangements.</li>
+              <li>• Be careful with payment and shipping arrangements.</li>
               <li>• Do not send payment outside a method you trust.</li>
               <li>• Report suspicious listings to the Archery Outlet team.</li>
             </ul>

@@ -102,7 +102,7 @@ export default function SellPage() {
   const [drawLength, setDrawLength] = useState("");
   const [handedness, setHandedness] = useState("");
   const [includedAccessories, setIncludedAccessories] = useState("");
-  const [shippingAvailable, setShippingAvailable] = useState(false);
+  const [shippingAvailable, setShippingAvailable] = useState(true);
   const [offersAllowed, setOffersAllowed] = useState(true);
 
   const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
@@ -462,7 +462,7 @@ export default function SellPage() {
       setDrawLength("");
       setHandedness("");
       setIncludedAccessories("");
-      setShippingAvailable(false);
+      setShippingAvailable(true);
       setOffersAllowed(true);
       resetPhotoSelection();
     } catch (error) {
@@ -890,27 +890,16 @@ export default function SellPage() {
                   </div>
 
                   <div className="mt-5 grid gap-4 md:grid-cols-2">
-                    <label className="flex items-start gap-3 rounded-2xl border border-stone-300 bg-stone-50 p-4">
-                      <input
-                        type="checkbox"
-                        checked={shippingAvailable}
-                        onChange={(event) =>
-                          setShippingAvailable(event.target.checked)
-                        }
-                        className="mt-1"
-                      />
-
-                      <span>
-                        <span className="block font-black">
-                          Shipping is available
-                        </span>
-
-                        <span className="mt-1 block text-sm leading-6 text-stone-600">
-                          Check this if you are willing to ship this item to a
-                          buyer.
-                        </span>
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                      <span className="block font-black text-emerald-950">
+                        Shipping required
                       </span>
-                    </label>
+
+                      <span className="mt-1 block text-sm leading-6 text-emerald-900">
+                        Archery Outlet listings are set up for shipped sales.
+                        Shipping cost will be shown to buyers before checkout.
+                      </span>
+                    </div>
 
                     <label className="flex items-start gap-3 rounded-2xl border border-stone-300 bg-stone-50 p-4">
                       <input

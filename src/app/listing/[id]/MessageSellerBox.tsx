@@ -97,7 +97,7 @@ export default function MessageSellerBox({
       <h3 className="text-xl font-black">Message Seller</h3>
 
       <p className="mt-2 text-sm font-bold leading-6 text-stone-600">
-        Ask a question about this listing before arranging payment, pickup, or
+        Ask a question about this listing before arranging payment or
         shipping.
       </p>
 

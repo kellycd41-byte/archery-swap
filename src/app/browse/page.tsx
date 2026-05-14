@@ -909,7 +909,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                                 : "border-stone-300 bg-stone-50 text-stone-700"
                             }`}
                           >
-                            {item.shipping_available ? "Ships" : "Local"}
+                            "Ships"
                           </span>
                         </div>
 

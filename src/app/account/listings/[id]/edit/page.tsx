@@ -52,7 +52,7 @@ const emptyForm: ListingForm = {
   draw_length: "",
   handedness: "",
   included_accessories: "",
-  shipping_available: false,
+  shipping_available: true,
   offers_allowed: true,
 };
 
@@ -166,7 +166,7 @@ export default function EditListingPage() {
         draw_length: data.draw_length || "",
         handedness: data.handedness || "",
         included_accessories: data.included_accessories || "",
-        shipping_available: Boolean(data.shipping_available),
+        shipping_available: true,
         offers_allowed: data.offers_allowed !== false,
       });
     }
@@ -248,7 +248,7 @@ export default function EditListingPage() {
         draw_length: form.draw_length.trim() || null,
         handedness: form.handedness || null,
         included_accessories: form.included_accessories.trim() || null,
-        shipping_available: form.shipping_available,
+        shipping_available: true,
         offers_allowed: form.offers_allowed,
       })
       .eq("id", listingId)
@@ -610,30 +610,16 @@ export default function EditListingPage() {
                   </p>
 
                   <div className="mt-5 grid gap-4 md:grid-cols-2">
-                    <label className="flex items-start gap-3 rounded-2xl border border-stone-300 bg-stone-50 p-4">
-                      <input
-                        type="checkbox"
-                        checked={form.shipping_available}
-                        onChange={(event) =>
-                          updateField(
-                            "shipping_available",
-                            event.target.checked
-                          )
-                        }
-                        className="mt-1"
-                      />
-
-                      <span>
-                        <span className="block font-black">
-                          Shipping is available
-                        </span>
-
-                        <span className="mt-1 block text-sm leading-6 text-stone-600">
-                          Check this if you are willing to ship this item to a
-                          buyer.
-                        </span>
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                      <span className="block font-black text-emerald-950">
+                        Shipping required
                       </span>
-                    </label>
+
+                      <span className="mt-1 block text-sm leading-6 text-emerald-900">
+                        Archery Outlet listings are set up for shipped sales.
+                        Shipping cost will be shown to buyers before checkout.
+                      </span>
+                    </div>
 
                     <label className="flex items-start gap-3 rounded-2xl border border-stone-300 bg-stone-50 p-4">
                       <input

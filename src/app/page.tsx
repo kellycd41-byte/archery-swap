@@ -402,9 +402,7 @@ export default async function Home() {
                               : "border-stone-300 bg-white text-stone-700"
                           }`}
                         >
-                          {item.shipping_available
-                            ? "Shipping Available"
-                            : "Local Only"}
+                          "Shipping Required"
                         </span>
                       </div>
 
