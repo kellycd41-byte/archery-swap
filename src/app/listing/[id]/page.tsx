@@ -13,6 +13,7 @@ type Listing = {
   title: string;
   description: string;
   price: number;
+  shipping_cost: number | null;
   category: string;
   condition: string;
   location: string | null;
@@ -72,6 +73,13 @@ function formatPostedDate(dateValue: string) {
   });
 }
 
+function formatMoney(value: number) {
+  return `$${Number(value).toLocaleString(undefined, {
+    minimumFractionDigits: value % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
 export default async function ListingDetailPage({
   params,
 }: ListingDetailPageProps) {
@@ -97,6 +105,9 @@ export default async function ListingDetailPage({
   const postedDate = formatPostedDate(item.created_at);
   const isSold = item.status === "sold";
   const offersAllowed = item.offers_allowed !== false && !isSold;
+  const itemPrice = Number(item.price) || 0;
+  const shippingCost = Number(item.shipping_cost) || 0;
+  const totalBeforeCheckout = itemPrice + shippingCost;
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
@@ -241,7 +252,7 @@ export default async function ListingDetailPage({
                     : "border-stone-300 bg-stone-50 text-stone-800"
                 }`}
               >
-                "Shipping Required"
+                Shipping Required
               </span>
 
               <span
@@ -258,8 +269,37 @@ export default async function ListingDetailPage({
             </div>
 
             <p className="mt-6 text-4xl font-black sm:text-5xl">
-              ${Number(item.price).toLocaleString()}
+              {formatMoney(itemPrice)}
             </p>
+
+            <div className="mt-5 rounded-2xl border border-stone-300 bg-stone-50 p-5">
+              <h3 className="text-xl font-black">Price Summary</h3>
+
+              <div className="mt-4 grid gap-3 text-sm">
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Item price</span>
+                  <span className="text-right font-black">
+                    {formatMoney(itemPrice)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
+                  <span className="font-bold text-stone-600">Shipping</span>
+                  <span className="text-right font-black">
+                    {shippingCost === 0 ? "Free" : formatMoney(shippingCost)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-4">
+                  <span className="font-bold text-stone-600">
+                    Total before checkout
+                  </span>
+                  <span className="text-right font-black">
+                    {formatMoney(totalBeforeCheckout)}
+                  </span>
+                </div>
+              </div>
+            </div>
 
             {isSold ? (
               <div className="mt-6 rounded-2xl border border-stone-300 bg-stone-100 p-5">
@@ -327,7 +367,7 @@ export default async function ListingDetailPage({
                 <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
                   <span className="font-bold text-stone-600">Shipping</span>
                   <span className="text-right font-black">
-                    Calculated at checkout
+                    {shippingCost === 0 ? "Free" : formatMoney(shippingCost)}
                   </span>
                 </div>
 

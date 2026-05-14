@@ -91,6 +91,7 @@ export default function SellPage() {
   const [category, setCategory] = useState("");
   const [condition, setCondition] = useState("");
   const [price, setPrice] = useState("");
+  const [shippingCost, setShippingCost] = useState("");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [sellerName, setSellerName] = useState("");
@@ -373,6 +374,7 @@ export default function SellPage() {
     }
 
     const cleanedPrice = Number(price.replace(/[^0-9.]/g, ""));
+    const cleanedShippingCost = Number(shippingCost.replace(/[^0-9.]/g, ""));
     const cleanedSellerEmail = user.email?.trim() || sellerEmail.trim();
 
     if (!title.trim()) {
@@ -392,6 +394,16 @@ export default function SellPage() {
 
     if (!cleanedPrice || cleanedPrice <= 0) {
       setErrorMessage("Please enter a valid price.");
+      return;
+    }
+
+    if (!shippingCost.trim()) {
+      setErrorMessage("Please enter a shipping cost. Enter 0 for free shipping.");
+      return;
+    }
+
+    if (!Number.isFinite(cleanedShippingCost) || cleanedShippingCost < 0) {
+      setErrorMessage("Please enter a valid shipping cost.");
       return;
     }
 
@@ -421,6 +433,7 @@ export default function SellPage() {
         title: title.trim(),
         description: description.trim(),
         price: cleanedPrice,
+        shipping_cost: cleanedShippingCost,
         category,
         condition,
         location: location.trim() || null,
@@ -452,6 +465,7 @@ export default function SellPage() {
       setCategory("");
       setCondition("");
       setPrice("");
+      setShippingCost("");
       setLocation("");
       setDescription("");
       setSellerName("");
@@ -607,6 +621,7 @@ export default function SellPage() {
                 <ul className="mt-4 space-y-3 text-sm leading-6 text-stone-700">
                   <li>• Show wear, damage, and missing parts clearly.</li>
                   <li>• Include draw weight and draw length when possible.</li>
+                  <li>• Enter a shipping cost buyers can see before checkout.</li>
                   <li>• Do not share payment information in the listing.</li>
                   <li>• Use messages for buyer questions.</li>
                 </ul>
@@ -897,7 +912,8 @@ export default function SellPage() {
 
                       <span className="mt-1 block text-sm leading-6 text-emerald-900">
                         Archery Outlet listings are set up for shipped sales.
-                        Shipping cost will be shown to buyers before checkout.
+                        Enter the shipping cost buyers should see before
+                        checkout.
                       </span>
                     </div>
 
@@ -922,6 +938,26 @@ export default function SellPage() {
                         </span>
                       </span>
                     </label>
+                  </div>
+
+                  <div className="mt-5">
+                    <label className="text-sm font-black text-stone-700">
+                      Shipping cost{" "}
+                      <span className="text-red-700">Required</span>
+                    </label>
+
+                    <input
+                      type="text"
+                      value={shippingCost}
+                      onChange={(event) => setShippingCost(event.target.value)}
+                      placeholder="$25"
+                      className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 outline-none focus:border-emerald-700"
+                    />
+
+                    <p className="mt-2 text-sm font-bold leading-6 text-stone-600">
+                      Enter 0 for free shipping. Buyers will see this before
+                      checkout.
+                    </p>
                   </div>
                 </section>
 
