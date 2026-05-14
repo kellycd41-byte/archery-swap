@@ -3,7 +3,10 @@ export function calculatePlatformFeeCents(itemAmountCents: number) {
     throw new Error("Item amount must be a positive number of cents.");
   }
 
-  return Math.round(itemAmountCents * 0.08);
+  const eightPercentFeeCents = Math.round(itemAmountCents * 0.08);
+  const minimumFeeCents = 100;
+
+  return Math.max(eightPercentFeeCents, minimumFeeCents);
 }
 
 export function centsToDollars(cents: number) {
