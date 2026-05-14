@@ -327,7 +327,7 @@ export default async function ListingDetailPage({
                 <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
                   <span className="font-bold text-stone-600">Shipping</span>
                   <span className="text-right font-black">
-                    "Required"
+                    Calculated at checkout
                   </span>
                 </div>
 

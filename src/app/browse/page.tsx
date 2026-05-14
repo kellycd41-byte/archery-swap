@@ -902,15 +902,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                             </span>
                           ))}
 
-                          <span
-                            className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${
-                              item.shipping_available
-                                ? "border-emerald-300 bg-emerald-50 text-emerald-900"
-                                : "border-stone-300 bg-stone-50 text-stone-700"
-                            }`}
-                          >
-                            "Ships"
-                          </span>
+
                         </div>
 
                         <p className="mt-3 line-clamp-1 text-sm font-bold text-stone-500">
