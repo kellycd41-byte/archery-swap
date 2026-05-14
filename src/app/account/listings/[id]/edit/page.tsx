@@ -26,6 +26,7 @@ type ListingForm = {
   title: string;
   description: string;
   price: string;
+  shipping_cost: string;
   category: string;
   condition: string;
   location: string;
@@ -43,6 +44,7 @@ const emptyForm: ListingForm = {
   title: "",
   description: "",
   price: "",
+  shipping_cost: "",
   category: "",
   condition: "",
   location: "",
@@ -129,7 +131,7 @@ export default function EditListingPage() {
       const { data, error } = await supabase
         .from("listings")
         .select(
-          "title,description,price,category,condition,location,brand,model,draw_weight,draw_length,handedness,included_accessories,shipping_available,offers_allowed,status,image_url,image_urls"
+          "title,description,price,shipping_cost,category,condition,location,brand,model,draw_weight,draw_length,handedness,included_accessories,shipping_available,offers_allowed,status,image_url,image_urls"
         )
         .eq("id", listingId)
         .eq("user_id", signedInUser.id)
@@ -157,6 +159,10 @@ export default function EditListingPage() {
           data.price === null || data.price === undefined
             ? ""
             : String(data.price),
+        shipping_cost:
+          data.shipping_cost === null || data.shipping_cost === undefined
+            ? "0"
+            : String(data.shipping_cost),
         category: data.category || "",
         condition: data.condition || "",
         location: data.location || "",
@@ -198,6 +204,7 @@ export default function EditListingPage() {
     const cleanedTitle = form.title.trim();
     const cleanedDescription = form.description.trim();
     const cleanedPrice = form.price.trim();
+    const cleanedShippingCost = form.shipping_cost.trim();
 
     if (!cleanedTitle) {
       setErrorMessage("Please enter a listing title.");
@@ -221,6 +228,18 @@ export default function EditListingPage() {
       return;
     }
 
+    if (!cleanedShippingCost) {
+      setErrorMessage("Please enter a shipping cost. Enter 0 for free shipping.");
+      return;
+    }
+
+    const shippingCostNumber = Number(cleanedShippingCost);
+
+    if (!Number.isFinite(shippingCostNumber) || shippingCostNumber < 0) {
+      setErrorMessage("Please enter a valid shipping cost.");
+      return;
+    }
+
     if (!form.category) {
       setErrorMessage("Please choose a category.");
       return;
@@ -239,6 +258,7 @@ export default function EditListingPage() {
         title: cleanedTitle,
         description: cleanedDescription,
         price: priceNumber,
+        shipping_cost: shippingCostNumber,
         category: form.category,
         condition: form.condition,
         location: form.location.trim() || null,
@@ -287,7 +307,7 @@ export default function EditListingPage() {
             </h2>
 
             <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
-              Keep your price, condition, specs, shipping choice, and offer
+              Keep your price, condition, specs, shipping cost, and offer
               settings accurate. Photo editing will be added later as a separate
               step.
             </p>
@@ -642,6 +662,29 @@ export default function EditListingPage() {
                         </span>
                       </span>
                     </label>
+                  </div>
+
+                  <div className="mt-5">
+                    <label className="text-sm font-black text-stone-700">
+                      Shipping cost{" "}
+                      <span className="text-red-700">Required</span>
+                    </label>
+
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.shipping_cost}
+                      onChange={(event) =>
+                        updateField("shipping_cost", event.target.value)
+                      }
+                      className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                    />
+
+                    <p className="mt-2 text-sm font-bold leading-6 text-stone-600">
+                      Enter 0 for free shipping. Buyers will see this amount on
+                      the listing and before checkout.
+                    </p>
                   </div>
                 </section>
 
