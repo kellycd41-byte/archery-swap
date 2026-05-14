@@ -87,7 +87,7 @@ export default function BuyNowBox({ listingId, listingTitle }: BuyNowBoxProps) {
         type="button"
         onClick={handleBuyNow}
         disabled={isStartingCheckout}
-        className="mt-4 w-full rounded-xl bg-emerald-700 px-5 py-3 text-sm font-black text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-stone-400"
+        className="mt-4 w-full cursor-pointer rounded-xl bg-emerald-700 px-5 py-3 text-sm font-black text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-stone-400"
       >
         {isStartingCheckout ? "Starting Checkout..." : "Buy Now"}
       </button>
