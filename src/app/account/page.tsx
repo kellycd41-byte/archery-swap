@@ -547,7 +547,7 @@ export default function AccountPage() {
     if (nextStatus === "accepted") {
       confirmMessage = `Accept the offer of $${Number(
         offer.amount
-      ).toLocaleString()} for "${listingTitle}"? This will mark the listing sold and hide it from Browse.`;
+      ).toLocaleString()} for "${listingTitle}"? The buyer will still need to pay before the listing is marked sold.`;
     } else if (nextStatus === "declined") {
       confirmMessage = `Decline the offer of $${Number(
         offer.amount
@@ -592,47 +592,12 @@ export default function AccountPage() {
     }
 
     if (nextStatus === "accepted") {
-      const { error: listingError } = await supabase
-        .from("listings")
-        .update({ status: "sold" })
-        .eq("id", offer.listing_id)
-        .eq("user_id", user.id);
-
-      if (listingError) {
-        setUpdatingOfferId(null);
-        setOfferActionErrorMessage(
-          `Offer was accepted, but the listing could not be marked sold: ${listingError.message}`
-        );
-        await loadMyOffers(user);
-        return;
-      }
-
-      const { error: otherOffersError } = await supabase
-        .from("offers")
-        .update({
-          status: "declined",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("listing_id", offer.listing_id)
-        .eq("seller_id", user.id)
-        .eq("status", "pending")
-        .neq("id", offer.id);
-
-      if (otherOffersError) {
-        setUpdatingOfferId(null);
-        setOfferActionErrorMessage(
-          `Offer was accepted and the listing was marked sold, but other offers could not be declined: ${otherOffersError.message}`
-        );
-        await refreshAccountData(user);
-        return;
-      }
-
       setUpdatingOfferId(null);
       setOfferActionMessage(
-        `Offer accepted for "${listingTitle}". The listing was marked sold and other pending offers were declined.`
+        `Offer accepted for "${listingTitle}". The buyer still needs to pay before the listing is marked sold.`
       );
 
-      await refreshAccountData(user);
+      await loadMyOffers(user);
       return;
     }
 
