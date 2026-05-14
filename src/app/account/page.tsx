@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import Header from "@/components/Header";
+import PayoutSetupBox from "./PayoutSetupBox";
 import { supabase } from "@/lib/supabase";
 
 type UserListing = {
@@ -1014,6 +1015,8 @@ export default function AccountPage() {
               </div>
 
               <div className="mt-8 grid gap-5">
+                <PayoutSetupBox />
+
                 <section className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6">
                   <button
                     type="button"
