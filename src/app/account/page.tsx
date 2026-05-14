@@ -216,6 +216,12 @@ export default function AccountPage() {
     (offer) => offer.status === "pending"
   );
 
+  const hasAcceptedSentOffers = sentOffers.some(
+    (offer) => offer.status === "accepted"
+  );
+
+  const hasOfferAlert = hasPendingReceivedOffers || hasAcceptedSentOffers;
+
   const sortedSentOffers = sortPendingOffersFirst(sentOffers);
   const sortedReceivedOffers = sortPendingOffersFirst(receivedOffers);
 
@@ -1086,10 +1092,14 @@ export default function AccountPage() {
                       <div className="flex items-center gap-3">
                         <h3 className="text-2xl font-black">My Offers</h3>
 
-                        {hasPendingReceivedOffers ? (
+                        {hasOfferAlert ? (
                           <span
                             className="h-3 w-3 rounded-full bg-emerald-500"
-                            title="Pending received offers"
+                            title={
+                              hasAcceptedSentOffers
+                                ? "Accepted offer ready for payment"
+                                : "Pending received offers"
+                            }
                           />
                         ) : null}
                       </div>
@@ -1121,7 +1131,16 @@ export default function AccountPage() {
                                 : "border border-stone-300 bg-white text-stone-950 hover:bg-stone-100"
                             }`}
                           >
-                            Offers I Sent
+                            <span className="inline-flex items-center gap-2">
+                              Offers I Sent
+                              {hasAcceptedSentOffers ? (
+                                <span
+                                  className="h-3 w-3 rounded-full bg-emerald-500"
+                                  title="Accepted offer ready for payment"
+                                />
+                              ) : null}
+                            </span>
+
                             <span className="ml-2 rounded-full bg-stone-200 px-2 py-1 text-xs text-stone-900">
                               {sentOffers.length}
                             </span>
