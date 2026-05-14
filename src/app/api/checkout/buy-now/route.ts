@@ -1,7 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
-import { calculatePlatformFeeCents, centsToDollars, dollarsToCents } from "@/lib/fees";
+import {
+  calculatePlatformFeeCents,
+  centsToDollars,
+  dollarsToCents,
+} from "@/lib/fees";
 import { stripe } from "@/lib/stripe";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type Listing = {
   id: string;
@@ -14,9 +19,6 @@ type Listing = {
 
 type SellerPayoutAccount = {
   stripe_account_id: string;
-  charges_enabled: boolean | null;
-  payouts_enabled: boolean | null;
-  details_submitted: boolean | null;
 };
 
 export async function POST(request: NextRequest) {
@@ -120,13 +122,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: payoutAccountData, error: payoutAccountError } = await supabase
-      .from("seller_payout_accounts")
-      .select(
-        "stripe_account_id, charges_enabled, payouts_enabled, details_submitted"
-      )
-      .eq("user_id", listing.user_id)
-      .maybeSingle();
+    const { data: payoutAccountData, error: payoutAccountError } =
+      await supabaseAdmin
+        .from("seller_payout_accounts")
+        .select("stripe_account_id")
+        .eq("user_id", listing.user_id)
+        .maybeSingle();
 
     if (payoutAccountError) {
       return NextResponse.json(
@@ -137,11 +138,34 @@ export async function POST(request: NextRequest) {
 
     const payoutAccount = payoutAccountData as SellerPayoutAccount | null;
 
+    if (!payoutAccount?.stripe_account_id) {
+      return NextResponse.json(
+        {
+          error:
+            "This seller has not finished payout setup yet. Please try again later.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const stripeAccount = await stripe.accounts.retrieve(
+      payoutAccount.stripe_account_id
+    );
+
+    await supabaseAdmin
+      .from("seller_payout_accounts")
+      .update({
+        charges_enabled: stripeAccount.charges_enabled,
+        payouts_enabled: stripeAccount.payouts_enabled,
+        details_submitted: stripeAccount.details_submitted,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", listing.user_id);
+
     if (
-      !payoutAccount?.stripe_account_id ||
-      !payoutAccount.charges_enabled ||
-      !payoutAccount.payouts_enabled ||
-      !payoutAccount.details_submitted
+      !stripeAccount.charges_enabled ||
+      !stripeAccount.payouts_enabled ||
+      !stripeAccount.details_submitted
     ) {
       return NextResponse.json(
         {
@@ -153,7 +177,9 @@ export async function POST(request: NextRequest) {
     }
 
     const itemAmountCents = dollarsToCents(Number(listing.price) || 0);
-    const shippingAmountCents = dollarsToCents(Number(listing.shipping_cost) || 0);
+    const shippingAmountCents = dollarsToCents(
+      Number(listing.shipping_cost) || 0
+    );
     const totalAmountCents = itemAmountCents + shippingAmountCents;
     const platformFeeCents = calculatePlatformFeeCents(itemAmountCents);
 
@@ -164,7 +190,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: orderData, error: orderError } = await supabase
+    const lineItems = [
+      {
+        quantity: 1,
+        price_data: {
+          currency: "usd",
+          unit_amount: itemAmountCents,
+          product_data: {
+            name: listing.title,
+          },
+        },
+      },
+    ];
+
+    if (shippingAmountCents > 0) {
+      lineItems.push({
+        quantity: 1,
+        price_data: {
+          currency: "usd",
+          unit_amount: shippingAmountCents,
+          product_data: {
+            name: "Shipping",
+          },
+        },
+      });
+    }
+
+    const { data: orderData, error: orderError } = await supabaseAdmin
       .from("orders")
       .insert({
         listing_id: listing.id,
@@ -198,28 +250,7 @@ export async function POST(request: NextRequest) {
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: "usd",
-            unit_amount: itemAmountCents,
-            product_data: {
-              name: listing.title,
-            },
-          },
-        },
-        {
-          quantity: 1,
-          price_data: {
-            currency: "usd",
-            unit_amount: shippingAmountCents,
-            product_data: {
-              name: "Shipping",
-            },
-          },
-        },
-      ],
+      line_items: lineItems,
       payment_intent_data: {
         application_fee_amount: platformFeeCents,
         transfer_data: {
@@ -244,7 +275,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { error: updateOrderError } = await supabase
+    const { error: updateOrderError } = await supabaseAdmin
       .from("orders")
       .update({
         stripe_checkout_session_id: checkoutSession.id,
