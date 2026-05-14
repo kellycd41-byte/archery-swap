@@ -3,19 +3,7 @@ export function calculatePlatformFeeCents(itemAmountCents: number) {
     throw new Error("Item amount must be a positive number of cents.");
   }
 
-  if (itemAmountCents <= 30000) {
-    return Math.round(itemAmountCents * 0.06);
-  }
-
-  if (itemAmountCents <= 50000) {
-    return 2500;
-  }
-
-  if (itemAmountCents <= 100000) {
-    return 3500;
-  }
-
-  return 5000;
+  return Math.round(itemAmountCents * 0.08);
 }
 
 export function centsToDollars(cents: number) {
