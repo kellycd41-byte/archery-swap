@@ -194,6 +194,9 @@ export default function AccountPage() {
   const [offerActionMessage, setOfferActionMessage] = useState("");
   const [offerActionErrorMessage, setOfferActionErrorMessage] = useState("");
   const [updatingOfferId, setUpdatingOfferId] = useState<string | null>(null);
+  const [payingAcceptedOfferId, setPayingAcceptedOfferId] = useState<
+    string | null
+  >(null);
 
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -329,6 +332,7 @@ export default function AccountPage() {
         setActiveOfferPanel(null);
         setIsListingsOpen(false);
         setActiveListingPanel("active");
+        setPayingAcceptedOfferId(null);
       }
     });
 
@@ -443,6 +447,7 @@ export default function AccountPage() {
     setActiveOfferPanel(null);
     setIsListingsOpen(false);
     setActiveListingPanel("active");
+    setPayingAcceptedOfferId(null);
     setMessage("You are signed out.");
   }
 
@@ -624,11 +629,68 @@ export default function AccountPage() {
     await updateOfferStatus(offer, "withdrawn");
   }
 
+  async function handlePayAcceptedOffer(offer: UserOffer) {
+    setOfferActionMessage("");
+    setOfferActionErrorMessage("");
+    setPayingAcceptedOfferId(offer.id);
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.access_token) {
+        setOfferActionErrorMessage(
+          "Please sign in again before paying for this accepted offer."
+        );
+        setPayingAcceptedOfferId(null);
+        return;
+      }
+
+      const response = await fetch("/api/checkout/accepted-offer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          offerId: offer.id,
+        }),
+      });
+
+      const result = (await response.json()) as {
+        url?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !result.url) {
+        setOfferActionErrorMessage(
+          result.error || "Accepted offer checkout could not be started."
+        );
+        setPayingAcceptedOfferId(null);
+        return;
+      }
+
+      window.location.href = result.url;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while starting accepted offer checkout.";
+
+      setOfferActionErrorMessage(errorMessage);
+      setPayingAcceptedOfferId(null);
+    }
+  }
+
   function renderOfferCard(offer: UserOffer, kind: "sent" | "received") {
     const listing = getOfferListing(offer);
     const listingTitle = listing?.title || "Listing unavailable";
     const listingStatus = listing?.status || "";
     const needsResponse = kind === "received" && offer.status === "pending";
+    const canPayAcceptedOffer =
+      kind === "sent" && offer.status === "accepted" && listingStatus === "active";
 
     return (
       <div
@@ -636,13 +698,23 @@ export default function AccountPage() {
         className={`overflow-hidden rounded-2xl border bg-white ${
           needsResponse
             ? "border-emerald-300 shadow-sm"
-            : "border-stone-300"
+            : canPayAcceptedOffer
+              ? "border-emerald-300 shadow-sm"
+              : "border-stone-300"
         }`}
       >
         {needsResponse ? (
           <div className="border-b border-emerald-200 bg-emerald-50 px-5 py-3">
             <p className="text-sm font-black text-emerald-900">
               Needs response — accept or decline this offer.
+            </p>
+          </div>
+        ) : null}
+
+        {canPayAcceptedOffer ? (
+          <div className="border-b border-emerald-200 bg-emerald-50 px-5 py-3">
+            <p className="text-sm font-black text-emerald-900">
+              Offer accepted — complete checkout to buy this item.
             </p>
           </div>
         ) : null}
@@ -717,6 +789,19 @@ export default function AccountPage() {
               >
                 View Listing
               </Link>
+            ) : null}
+
+            {canPayAcceptedOffer ? (
+              <button
+                type="button"
+                onClick={() => handlePayAcceptedOffer(offer)}
+                disabled={payingAcceptedOfferId === offer.id}
+                className="cursor-pointer rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {payingAcceptedOfferId === offer.id
+                  ? "Starting Checkout..."
+                  : "Pay Accepted Offer"}
+              </button>
             ) : null}
 
             {kind === "received" && offer.status === "pending" ? (
