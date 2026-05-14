@@ -541,7 +541,7 @@ export default function SellPage() {
               </h3>
 
               <p className="mt-4 max-w-2xl text-base leading-7 text-stone-700">
-                Archery Swap connects each new listing to the seller account
+                Archery Outlet connects each new listing to the seller account
                 that created it. This is needed for seller tools, messages,
                 offers, and future checkout.
               </p>

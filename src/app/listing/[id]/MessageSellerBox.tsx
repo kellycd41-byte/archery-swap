@@ -123,7 +123,7 @@ export default function MessageSellerBox({
           </p>
 
           <p className="mt-2 text-xs font-bold leading-5 text-stone-500">
-            You need an Archery Swap account before sending messages.
+            You need an Archery Outlet account before sending messages.
           </p>
 
           <Link

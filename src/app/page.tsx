@@ -138,7 +138,7 @@ export default async function Home() {
             </h2>
 
             <p className="mt-6 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
-              Archery Swap is a rugged but clean marketplace for bows,
+              Archery Outlet is a rugged but clean marketplace for bows,
               crossbows, arrows, sights, releases, cases, targets, and
               accessories.
             </p>
@@ -486,7 +486,7 @@ export default async function Home() {
 
             <p className="mt-4 max-w-2xl text-emerald-50">
               List bows, crossbows, sights, releases, arrows, cases, targets,
-              and accessories on Archery Swap.
+              and accessories on Archery Outlet.
             </p>
           </div>
 

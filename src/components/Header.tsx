@@ -97,8 +97,8 @@ export default function Header({ activePage }: HeaderProps) {
       <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
         <div className="flex items-center justify-between gap-4">
           <Link href="/" className="min-w-0">
-            <h1 className="text-xl font-black tracking-tight sm:text-2xl">
-              Archery Swap
+            <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
+              Archery Outlet
             </h1>
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-300 sm:text-xs">
               Buy • Sell • Archery Gear

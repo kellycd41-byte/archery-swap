@@ -313,7 +313,7 @@ export default async function ListingDetailPage({
                 <div className="flex justify-between gap-4 border-b border-stone-200 pb-2">
                   <span className="font-bold text-stone-600">Seller</span>
                   <span className="text-right font-black">
-                    {item.seller_name || "Archery Swap Seller"}
+                    {item.seller_name || "Archery Outlet Seller"}
                   </span>
                 </div>
 
@@ -384,7 +384,7 @@ export default async function ListingDetailPage({
               <li>• Ask the seller questions if anything is unclear.</li>
               <li>• Be careful with payment, pickup, or shipping arrangements.</li>
               <li>• Do not send payment outside a method you trust.</li>
-              <li>• Report suspicious listings to the Archery Swap team.</li>
+              <li>• Report suspicious listings to the Archery Outlet team.</li>
             </ul>
           </section>
         ) : null}

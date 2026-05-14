@@ -554,7 +554,7 @@ export default function AdminPage() {
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
             <Link href="/" className="block">
               <h1 className="text-2xl font-black tracking-tight">
-                Archery Swap
+                Archery Outlet
               </h1>
               <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-300">
                 Buy • Sell • Archery Gear
@@ -582,7 +582,7 @@ export default function AdminPage() {
 
             <p className="mt-4 leading-7 text-stone-600">
               This temporary password gate keeps casual visitors away from the
-              admin dashboard while Archery Swap is still in development.
+              admin dashboard while Archery Outlet is still in development.
             </p>
 
             <form onSubmit={handleAdminLogin} className="mt-6 space-y-4">
@@ -639,7 +639,7 @@ export default function AdminPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <Link href="/" className="block">
             <h1 className="text-2xl font-black tracking-tight">
-              Archery Swap
+              Archery Outlet
             </h1>
             <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-300">
               Buy • Sell • Archery Gear
@@ -693,7 +693,7 @@ export default function AdminPage() {
           </p>
 
           <h2 className="mt-4 max-w-4xl text-5xl font-black tracking-tight">
-            Review and manage Archery Swap listings.
+            Review and manage Archery Outlet listings.
           </h2>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
