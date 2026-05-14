@@ -113,6 +113,7 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
         "id,listing_id,buyer_id,seller_id,item_amount,shipping_amount,platform_fee_amount,total_amount,status,paid_at,created_at,listing:listings(id,title,status)"
       )
       .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+      .eq("status", "paid")
       .order("created_at", { ascending: false });
 
     setIsLoadingOrders(false);
