@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
 
       const orderId = session.metadata?.orderId;
       const listingId = session.metadata?.listingId;
+      const offerId = session.metadata?.offerId;
       const paymentIntentId =
         typeof session.payment_intent === "string"
           ? session.payment_intent
@@ -57,13 +58,15 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      const paidAt = new Date().toISOString();
+
       const { error: orderUpdateError } = await supabaseAdmin
         .from("orders")
         .update({
           status: "paid",
           stripe_payment_intent_id: paymentIntentId,
-          paid_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          paid_at: paidAt,
+          updated_at: paidAt,
         })
         .eq("id", orderId);
 
@@ -87,6 +90,41 @@ export async function POST(request: NextRequest) {
           { error: listingUpdateError.message },
           { status: 500 }
         );
+      }
+
+      if (offerId) {
+        const { error: paidOfferUpdateError } = await supabaseAdmin
+          .from("offers")
+          .update({
+            status: "paid",
+            updated_at: paidAt,
+          })
+          .eq("id", offerId)
+          .eq("listing_id", listingId);
+
+        if (paidOfferUpdateError) {
+          return NextResponse.json(
+            { error: paidOfferUpdateError.message },
+            { status: 500 }
+          );
+        }
+
+        const { error: otherOffersUpdateError } = await supabaseAdmin
+          .from("offers")
+          .update({
+            status: "declined",
+            updated_at: paidAt,
+          })
+          .eq("listing_id", listingId)
+          .eq("status", "pending")
+          .neq("id", offerId);
+
+        if (otherOffersUpdateError) {
+          return NextResponse.json(
+            { error: otherOffersUpdateError.message },
+            { status: 500 }
+          );
+        }
       }
     }
 
