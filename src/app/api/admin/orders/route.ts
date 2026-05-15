@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminUser } from "@/lib/requireAdminUser";
 
 type ListingForAdminOrder = {
   id: string;
@@ -42,26 +43,10 @@ function getOrderListing(order: AdminOrder) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as {
-      adminPassword?: string;
-    };
+    const adminCheck = await requireAdminUser(request);
 
-    const adminPassword = body.adminPassword?.trim();
-    const savedAdminPassword =
-      process.env.NEXT_PUBLIC_ADMIN_PASSWORD?.trim() || "";
-
-    if (!savedAdminPassword) {
-      return NextResponse.json(
-        { error: "Admin password is missing on the server." },
-        { status: 500 }
-      );
-    }
-
-    if (!adminPassword || adminPassword !== savedAdminPassword) {
-      return NextResponse.json(
-        { error: "Admin access is required." },
-        { status: 403 }
-      );
+    if (!adminCheck.ok) {
+      return adminCheck.response;
     }
 
     const { data, error } = await supabaseAdmin
