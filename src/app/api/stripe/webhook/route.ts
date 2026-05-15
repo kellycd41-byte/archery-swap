@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
         typeof session.payment_intent === "string"
           ? session.payment_intent
           : session.payment_intent?.id || null;
+      const buyerPhone = session.customer_details?.phone || null;
 
       if (!orderId || !listingId) {
         return NextResponse.json(
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
         .update({
           status: "paid",
           stripe_payment_intent_id: paymentIntentId,
+          buyer_phone: buyerPhone,
           paid_at: paidAt,
           updated_at: paidAt,
         })
