@@ -60,24 +60,35 @@ function formatOrderDate(dateValue: string | null) {
   });
 }
 
-function orderStatusLabel(status: string) {
-  if (status === "paid") {
-    return "Paid";
+function orderStatusLabel(
+  order: UserOrder,
+  kind: "bought" | "sold"
+) {
+  if (order.transfer_status === "released") {
+    return kind === "sold" ? "Seller Paid" : "Order Complete";
   }
 
-  if (status === "shipped") {
-    return "Shipped";
+  if (order.status === "paid") {
+    return kind === "sold"
+      ? "Paid — Ship This Order"
+      : "Paid — Waiting for Seller to Ship";
   }
 
-  if (status === "pending") {
+  if (order.status === "shipped") {
+    return kind === "sold"
+      ? "Shipped — Waiting for Payout Review"
+      : "Shipped — Tracking Submitted";
+  }
+
+  if (order.status === "pending") {
     return "Pending";
   }
 
-  if (status === "cancelled") {
+  if (order.status === "cancelled") {
     return "Cancelled";
   }
 
-  return status || "Unknown";
+  return order.status || "Unknown";
 }
 
 function orderStatusClassName(status: string) {
@@ -293,7 +304,7 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
                 order.status
               )}`}
             >
-              {orderStatusLabel(order.status)}
+              {orderStatusLabel(order, kind)}
             </span>
           </div>
 
