@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 
@@ -22,6 +22,8 @@ type UserOrder = {
   total_amount: number;
   status: string;
   transfer_status: string | null;
+  shipping_carrier: string | null;
+  tracking_number: string | null;
   shipped_at: string | null;
   ship_by_date: string | null;
   paid_at: string | null;
@@ -63,6 +65,10 @@ function orderStatusLabel(status: string) {
     return "Paid";
   }
 
+  if (status === "shipped") {
+    return "Shipped";
+  }
+
   if (status === "pending") {
     return "Pending";
   }
@@ -77,6 +83,10 @@ function orderStatusLabel(status: string) {
 function orderStatusClassName(status: string) {
   if (status === "paid") {
     return "bg-emerald-100 text-emerald-900";
+  }
+
+  if (status === "shipped") {
+    return "bg-blue-100 text-blue-900";
   }
 
   if (status === "pending") {
@@ -102,6 +112,18 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
   );
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [ordersErrorMessage, setOrdersErrorMessage] = useState("");
+  const [shippingCarrierByOrderId, setShippingCarrierByOrderId] = useState<
+    Record<string, string>
+  >({});
+  const [trackingNumberByOrderId, setTrackingNumberByOrderId] = useState<
+    Record<string, string>
+  >({});
+  const [updatingShippingOrderId, setUpdatingShippingOrderId] = useState<
+    string | null
+  >(null);
+  const [shippingActionMessage, setShippingActionMessage] = useState("");
+  const [shippingActionErrorMessage, setShippingActionErrorMessage] =
+    useState("");
 
   const boughtOrders = orders.filter((order) => order.buyer_id === user.id);
   const soldOrders = orders.filter((order) => order.seller_id === user.id);
@@ -121,10 +143,10 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
     const { data, error } = await supabase
       .from("orders")
       .select(
-        "id,listing_id,buyer_id,seller_id,item_amount,shipping_amount,platform_fee_amount,total_amount,status,transfer_status,shipped_at,ship_by_date,paid_at,created_at,listing:listings(id,title,status)"
+        "id,listing_id,buyer_id,seller_id,item_amount,shipping_amount,platform_fee_amount,total_amount,status,transfer_status,shipping_carrier,tracking_number,shipped_at,ship_by_date,paid_at,created_at,listing:listings(id,title,status)"
       )
       .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
-      .eq("status", "paid")
+      .in("status", ["paid", "shipped"])
       .order("created_at", { ascending: false });
 
     setIsLoadingOrders(false);
@@ -142,9 +164,113 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
     loadOrders();
   }, [user.id]);
 
+  async function handleMarkShipped(
+    event: FormEvent<HTMLFormElement>,
+    order: UserOrder
+  ) {
+    event.preventDefault();
+
+    setShippingActionMessage("");
+    setShippingActionErrorMessage("");
+
+    const shippingCarrier = (shippingCarrierByOrderId[order.id] || "").trim();
+    const trackingNumber = (trackingNumberByOrderId[order.id] || "").trim();
+
+    if (!shippingCarrier) {
+      setShippingActionErrorMessage("Please enter the shipping carrier.");
+      return;
+    }
+
+    if (!trackingNumber) {
+      setShippingActionErrorMessage("Please enter the tracking number.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Mark this order shipped? Seller payment will still stay held until shipment is reviewed and released."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setUpdatingShippingOrderId(order.id);
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.access_token) {
+        setShippingActionErrorMessage(
+          "Please sign in again before updating this order."
+        );
+        setUpdatingShippingOrderId(null);
+        return;
+      }
+
+      const response = await fetch("/api/orders/mark-shipped", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+          shippingCarrier,
+          trackingNumber,
+        }),
+      });
+
+      const result = (await response.json()) as {
+        success?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok || !result.success) {
+        setShippingActionErrorMessage(
+          result.error || "This order could not be marked shipped."
+        );
+        setUpdatingShippingOrderId(null);
+        return;
+      }
+
+      setShippingActionMessage(
+        "Order marked shipped. Seller payout is still held until shipment is reviewed."
+      );
+      setShippingCarrierByOrderId((currentValues) => ({
+        ...currentValues,
+        [order.id]: "",
+      }));
+      setTrackingNumberByOrderId((currentValues) => ({
+        ...currentValues,
+        [order.id]: "",
+      }));
+
+      await loadOrders();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while marking this order shipped.";
+
+      setShippingActionErrorMessage(message);
+    }
+
+    setUpdatingShippingOrderId(null);
+  }
+
   function renderOrderCard(order: UserOrder, kind: "bought" | "sold") {
     const listing = getOrderListing(order);
     const listingTitle = listing?.title || "Listing unavailable";
+    const needsShipment =
+      kind === "sold" &&
+      order.status === "paid" &&
+      order.transfer_status === "not_released" &&
+      !order.shipped_at;
+    const hasTracking =
+      Boolean(order.shipping_carrier) || Boolean(order.tracking_number);
 
     return (
       <div
@@ -210,6 +336,100 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
               </p>
             </div>
           </div>
+
+          {kind === "bought" ? (
+            <div className="mt-4 rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm font-bold leading-6 text-stone-700">
+              {hasTracking ? (
+                <>
+                  <p className="font-black text-stone-950">
+                    Shipment information
+                  </p>
+                  <p className="mt-2">
+                    Carrier: {order.shipping_carrier || "Not provided"}
+                  </p>
+                  <p>Tracking: {order.tracking_number || "Not provided"}</p>
+                </>
+              ) : (
+                <p>Seller is preparing shipment.</p>
+              )}
+            </div>
+          ) : null}
+
+          {kind === "sold" && needsShipment ? (
+            <form
+              onSubmit={(event) => handleMarkShipped(event, order)}
+              className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
+            >
+              <p className="text-sm font-black text-emerald-950">
+                Shipment needed
+              </p>
+              <p className="mt-2 text-sm font-bold leading-6 text-emerald-900">
+                Add carrier and tracking. Seller payout will stay held until the
+                shipment is reviewed and released.
+              </p>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-2">
+                  <span className="text-sm font-black text-emerald-950">
+                    Carrier
+                  </span>
+                  <input
+                    type="text"
+                    value={shippingCarrierByOrderId[order.id] || ""}
+                    onChange={(event) =>
+                      setShippingCarrierByOrderId((currentValues) => ({
+                        ...currentValues,
+                        [order.id]: event.target.value,
+                      }))
+                    }
+                    placeholder="USPS, UPS, FedEx..."
+                    className="rounded-xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-emerald-600"
+                  />
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-sm font-black text-emerald-950">
+                    Tracking Number
+                  </span>
+                  <input
+                    type="text"
+                    value={trackingNumberByOrderId[order.id] || ""}
+                    onChange={(event) =>
+                      setTrackingNumberByOrderId((currentValues) => ({
+                        ...currentValues,
+                        [order.id]: event.target.value,
+                      }))
+                    }
+                    placeholder="Enter tracking number"
+                    className="rounded-xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-emerald-600"
+                  />
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={updatingShippingOrderId === order.id}
+                className="mt-4 cursor-pointer rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {updatingShippingOrderId === order.id
+                  ? "Saving..."
+                  : "Mark Shipped"}
+              </button>
+            </form>
+          ) : null}
+
+          {kind === "sold" && !needsShipment && hasTracking ? (
+            <div className="mt-4 rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm font-bold leading-6 text-stone-700">
+              <p className="font-black text-stone-950">Shipment submitted</p>
+              <p className="mt-2">
+                Carrier: {order.shipping_carrier || "Not provided"}
+              </p>
+              <p>Tracking: {order.tracking_number || "Not provided"}</p>
+              <p className="mt-2 text-stone-600">
+                Seller payout is still held until shipment is reviewed.
+              </p>
+            </div>
+          ) : null}
 
           <div className="mt-4 grid gap-3 sm:flex sm:flex-wrap">
             {listing ? (
@@ -331,6 +551,18 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
                   {sellerOrdersNeedingShipment.length === 1 ? "" : "s"} to ship.
                 </span>
               </div>
+            </div>
+          ) : null}
+
+          {shippingActionMessage ? (
+            <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
+              {shippingActionMessage}
+            </div>
+          ) : null}
+
+          {shippingActionErrorMessage ? (
+            <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+              {shippingActionErrorMessage}
             </div>
           ) : null}
 
