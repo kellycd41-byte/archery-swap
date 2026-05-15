@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripe } from "@/lib/stripe";
+import { sendEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -92,6 +93,71 @@ export async function POST(request: NextRequest) {
           { error: listingUpdateError.message },
           { status: 500 }
         );
+      }
+
+      const { data: orderForEmail, error: orderEmailError } = await supabaseAdmin
+        .from("orders")
+        .select(
+          "id,seller_id,item_amount,shipping_amount,total_amount,ship_by_date,listing:listings(id,title)"
+        )
+        .eq("id", orderId)
+        .maybeSingle();
+
+      if (orderEmailError) {
+        console.error("Could not load order for seller email:", orderEmailError.message);
+      }
+
+      if (orderForEmail?.seller_id) {
+        const { data: sellerUserData, error: sellerUserError } =
+          await supabaseAdmin.auth.admin.getUserById(orderForEmail.seller_id);
+
+        if (sellerUserError) {
+          console.error("Could not load seller email:", sellerUserError.message);
+        }
+
+        const sellerEmail = sellerUserData?.user?.email || "";
+        const listing = Array.isArray(orderForEmail.listing)
+          ? orderForEmail.listing[0]
+          : orderForEmail.listing;
+        const listingTitle = listing?.title || "your item";
+        const siteUrl =
+          process.env.NEXT_PUBLIC_SITE_URL || "https://archeryoutlet.net";
+        const accountUrl = `${siteUrl}/account`;
+        const shipByText = orderForEmail.ship_by_date
+          ? new Date(orderForEmail.ship_by_date).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "as soon as possible";
+
+        if (sellerEmail) {
+          try {
+            await sendEmail({
+              to: sellerEmail,
+              subject: `Your Archery Outlet item sold: ${listingTitle}`,
+              text: `Good news — your item sold on Archery Outlet. Item: ${listingTitle}. Please sign in to your account, open My Orders, and add carrier and tracking. Ship by: ${shipByText}. ${accountUrl}`,
+              html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1c1917;">
+                  <h2 style="margin: 0 0 12px;">Your item sold on Archery Outlet</h2>
+                  <p>Good news — <strong>${listingTitle}</strong> has sold.</p>
+                  <p>Please sign in to your account, open <strong>My Orders</strong>, and add the carrier and tracking number after you ship.</p>
+                  <p><strong>Ship by:</strong> ${shipByText}</p>
+                  <p>
+                    <a href="${accountUrl}" style="display: inline-block; background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 10px; text-decoration: none; font-weight: bold;">
+                      Open My Orders
+                    </a>
+                  </p>
+                  <p style="font-size: 13px; color: #57534e;">
+                    Seller payout stays held until shipment is reviewed and released.
+                  </p>
+                </div>
+              `,
+            });
+          } catch (emailError) {
+            console.error("Seller order email failed:", emailError);
+          }
+        }
       }
 
       if (offerId) {
