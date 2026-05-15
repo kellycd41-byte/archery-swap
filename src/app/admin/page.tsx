@@ -67,6 +67,8 @@ type EditForm = {
   denial_reason: string;
 };
 
+type AdminTab = "ready" | "released" | "allOrders" | "listings";
+
 function formatMoney(value: number | null) {
   return `$${Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -149,6 +151,14 @@ function getStatusBadgeClasses(status: string) {
   return "bg-stone-200 text-stone-700";
 }
 
+function getAdminTabButtonClasses(isActive: boolean) {
+  if (isActive) {
+    return "rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white";
+  }
+
+  return "rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-black text-stone-700 hover:bg-stone-100";
+}
+
 export default function AdminPage() {
   const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "";
 
@@ -175,6 +185,7 @@ export default function AdminPage() {
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [ordersErrorMessage, setOrdersErrorMessage] = useState("");
   const [releasingOrderId, setReleasingOrderId] = useState<string | null>(null);
+  const [adminTab, setAdminTab] = useState<AdminTab>("ready");
 
   async function loadAdminOrders() {
     setIsLoadingOrders(true);
@@ -479,6 +490,7 @@ export default function AdminPage() {
     setOrdersErrorMessage("");
     setIsLoadingOrders(false);
     setReleasingOrderId(null);
+    setAdminTab("ready");
   }
 
   function updateEditForm(field: keyof EditForm, value: string) {
@@ -741,6 +753,29 @@ export default function AdminPage() {
     photoFilter !== "all" ||
     categoryFilter !== "all";
 
+  const adminTabs: { id: AdminTab; label: string; count: number }[] = [
+    {
+      id: "ready",
+      label: "Ready for Release",
+      count: ordersReadyForRelease.length,
+    },
+    {
+      id: "released",
+      label: "Released Payments",
+      count: releasedOrders.length,
+    },
+    {
+      id: "allOrders",
+      label: "All Orders",
+      count: adminOrders.length,
+    },
+    {
+      id: "listings",
+      label: "All Listings",
+      count: listings.length,
+    },
+  ];
+
   if (!isAdminUnlocked) {
     return (
       <main className="min-h-screen bg-stone-100 text-stone-950">
@@ -949,6 +984,25 @@ export default function AdminPage() {
           </div>
         </div>
 
+        <div className="mt-8 rounded-3xl border border-stone-300 bg-white p-4 shadow-sm">
+          <div className="grid gap-3 md:grid-cols-4">
+            {adminTabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setAdminTab(tab.id)}
+                className={getAdminTabButtonClasses(adminTab === tab.id)}
+              >
+                {tab.label}
+                <span className="ml-2 rounded-full bg-stone-100 px-2 py-1 text-xs text-stone-700">
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {adminTab === "ready" ? (
         <div className="mt-8 rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
@@ -992,7 +1046,7 @@ export default function AdminPage() {
 
             <div className="rounded-2xl bg-stone-100 p-4">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-stone-600">
-                Total Paid/Shipped
+                Total Orders
               </p>
               <p className="mt-2 text-3xl font-black">{adminOrders.length}</p>
             </div>
@@ -1129,6 +1183,9 @@ export default function AdminPage() {
           ) : null}
         </div>
 
+        ) : null}
+
+        {adminTab === "released" ? (
         <div className="mt-8 rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
@@ -1270,6 +1327,9 @@ export default function AdminPage() {
           ) : null}
         </div>
 
+        ) : null}
+
+        {adminTab === "allOrders" ? (
         <div className="mt-8 rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
@@ -1427,6 +1487,10 @@ export default function AdminPage() {
           ) : null}
         </div>
 
+        ) : null}
+
+        {adminTab === "listings" ? (
+          <>
         <div className="mt-8 rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
@@ -2073,6 +2137,9 @@ export default function AdminPage() {
             </div>
           ) : null}
         </div>
+
+          </>
+        ) : null}
 
         <div className="mt-8 rounded-3xl bg-stone-950 p-6 text-white">
           <h3 className="text-2xl font-black">Admin note</h3>
