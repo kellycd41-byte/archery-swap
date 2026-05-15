@@ -294,14 +294,27 @@ export default function AdminPage() {
     setReleasingOrderId(order.id);
 
     try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.access_token) {
+        setOrdersErrorMessage(
+          "Please sign in with your admin account before releasing seller payment."
+        );
+        setReleasingOrderId(null);
+        return;
+      }
+
       const response = await fetch("/api/orders/release-seller-payment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           orderId: order.id,
-          adminPassword,
         }),
       });
 
