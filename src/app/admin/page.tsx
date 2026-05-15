@@ -1273,6 +1273,163 @@ export default function AdminPage() {
         <div className="mt-8 rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
+              <h3 className="text-2xl font-black">All orders</h3>
+              <p className="mt-2 text-stone-600">
+                Complete admin order history for payment, shipping, payout, and
+                dispute lookup.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={loadAdminOrders}
+              className="rounded-xl border border-stone-400 px-4 py-2 text-sm font-black hover:bg-stone-100"
+            >
+              {isLoadingOrders ? "Refreshing..." : "Refresh Orders"}
+            </button>
+          </div>
+
+          {!isLoadingOrders && adminOrders.length === 0 ? (
+            <div className="mt-5 rounded-2xl border border-stone-300 bg-stone-50 p-5">
+              <p className="font-black">No orders found.</p>
+              <p className="mt-2 text-sm leading-6 text-stone-600">
+                Once buyers complete checkout, orders will appear here.
+              </p>
+            </div>
+          ) : null}
+
+          {!isLoadingOrders && adminOrders.length > 0 ? (
+            <div className="mt-5 overflow-hidden rounded-2xl border border-stone-300">
+              <div className="hidden grid-cols-[1.2fr_0.5fr_0.6fr_0.6fr_0.6fr_0.8fr] gap-4 bg-stone-950 px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-white lg:grid">
+                <div>Order</div>
+                <div>Status</div>
+                <div>Buyer Total</div>
+                <div>Seller Payout</div>
+                <div>Released</div>
+                <div>Actions</div>
+              </div>
+
+              <div className="divide-y divide-stone-300 bg-white">
+                {adminOrders.map((order) => (
+                  <div
+                    key={order.id}
+                    className="grid gap-4 px-4 py-5 lg:grid-cols-[1.2fr_0.5fr_0.6fr_0.6fr_0.6fr_0.8fr] lg:items-center"
+                  >
+                    <div>
+                      <p className="text-lg font-black">
+                        {order.listing?.title || "Listing unavailable"}
+                      </p>
+
+                      <p className="mt-1 text-sm font-bold text-stone-500">
+                        Paid: {formatDate(order.paid_at || order.created_at)}
+                      </p>
+
+                      <p className="mt-1 text-xs font-bold text-stone-400">
+                        Shipped: {formatDate(order.shipped_at)}
+                      </p>
+
+                      <p className="mt-2 break-all text-xs font-bold text-stone-500">
+                        Order ID: {order.id}
+                      </p>
+
+                      <p className="mt-1 break-all text-xs font-bold text-stone-500">
+                        Buyer ID: {order.buyer_id}
+                      </p>
+
+                      <p className="mt-1 break-all text-xs font-bold text-stone-500">
+                        Seller ID: {order.seller_id}
+                      </p>
+
+                      <p className="mt-2 text-xs font-bold text-stone-500">
+                        Carrier: {order.shipping_carrier || "Not provided"}
+                      </p>
+
+                      <p className="mt-1 break-all text-xs font-bold text-stone-500">
+                        Tracking: {order.tracking_number || "Not provided"}
+                      </p>
+
+                      <div className="mt-3 rounded-xl bg-stone-50 p-3 text-xs font-bold leading-6 text-stone-600">
+                        <p className="break-all">
+                          Payment Intent: {order.stripe_payment_intent_id || "Missing"}
+                        </p>
+                        <p className="break-all">
+                          Charge: {order.stripe_charge_id || "Missing"}
+                        </p>
+                        <p className="break-all">
+                          Transfer: {order.stripe_transfer_id || "Missing"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500 lg:hidden">
+                        Status
+                      </p>
+
+                      <div className="mt-2 flex flex-wrap gap-2 lg:mt-0">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.14em] ${getOrderStatusBadgeClasses(
+                            order.status
+                          )}`}
+                        >
+                          {order.status}
+                        </span>
+
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.14em] ${getTransferStatusBadgeClasses(
+                            order.transfer_status
+                          )}`}
+                        >
+                          {order.transfer_status || "unknown"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500 lg:hidden">
+                        Buyer Total
+                      </p>
+                      <p className="font-black">
+                        {formatMoney(order.total_amount)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500 lg:hidden">
+                        Seller Payout
+                      </p>
+                      <p className="font-black">
+                        {formatMoney(order.seller_payout_amount)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500 lg:hidden">
+                        Released
+                      </p>
+                      <p className="text-sm font-bold text-stone-600">
+                        {formatDate(order.seller_payout_released_at)}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <Link
+                        href={`/listing/${order.listing_id}`}
+                        className="rounded-xl border border-stone-400 px-4 py-2 text-center text-sm font-black hover:bg-stone-100"
+                      >
+                        View Listing
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-8 rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div>
               <h3 className="text-2xl font-black">Find listings</h3>
               <p className="text-stone-600">
                 Search by listing details, seller name, seller email, status,
