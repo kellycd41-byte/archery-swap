@@ -24,6 +24,8 @@ export default function Header({ activePage }: HeaderProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingReceivedOfferCount, setPendingReceivedOfferCount] = useState(0);
   const [acceptedSentOfferCount, setAcceptedSentOfferCount] = useState(0);
+  const [sellerOrdersNeedingShipmentCount, setSellerOrdersNeedingShipmentCount] =
+    useState(0);
 
   async function loadHeaderAlerts() {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -33,6 +35,7 @@ export default function Header({ activePage }: HeaderProps) {
       setUnreadCount(0);
       setPendingReceivedOfferCount(0);
       setAcceptedSentOfferCount(0);
+      setSellerOrdersNeedingShipmentCount(0);
       return;
     }
 
@@ -64,14 +67,32 @@ export default function Header({ activePage }: HeaderProps) {
     const { count: acceptedOfferCount, error: acceptedOfferError } =
       await supabase
         .from("offers")
-        .select("id", { count: "exact", head: true })
+        .select("id,listing:listings!inner(id,status)", {
+          count: "exact",
+          head: true,
+        })
         .eq("buyer_id", signedInUser.id)
-        .eq("status", "accepted");
+        .eq("status", "accepted")
+        .eq("listing.status", "active");
 
     if (acceptedOfferError) {
       setAcceptedSentOfferCount(0);
     } else {
       setAcceptedSentOfferCount(acceptedOfferCount || 0);
+    }
+
+    const { count: orderCount, error: orderError } = await supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("seller_id", signedInUser.id)
+      .eq("status", "paid")
+      .eq("transfer_status", "not_released")
+      .is("shipped_at", null);
+
+    if (orderError) {
+      setSellerOrdersNeedingShipmentCount(0);
+    } else {
+      setSellerOrdersNeedingShipmentCount(orderCount || 0);
     }
   }
 
@@ -108,10 +129,17 @@ export default function Header({ activePage }: HeaderProps) {
   const hasUnreadMessages = unreadCount > 0;
   const hasPendingReceivedOffers = pendingReceivedOfferCount > 0;
   const hasAcceptedSentOffers = acceptedSentOfferCount > 0;
-  const hasAccountAlert = hasPendingReceivedOffers || hasAcceptedSentOffers;
-  const accountAlertLabel = hasAcceptedSentOffers
-    ? "Accepted offer ready for payment"
-    : "Pending received offers";
+  const hasSellerOrdersNeedingShipment =
+    sellerOrdersNeedingShipmentCount > 0;
+  const hasAccountAlert =
+    hasPendingReceivedOffers ||
+    hasAcceptedSentOffers ||
+    hasSellerOrdersNeedingShipment;
+  const accountAlertLabel = hasSellerOrdersNeedingShipment
+    ? "Paid order needs shipping"
+    : hasAcceptedSentOffers
+      ? "Accepted offer ready for payment"
+      : "Pending received offers";
 
   return (
     <header className="border-b border-stone-800 bg-stone-950 text-white">
