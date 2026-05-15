@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type Listing = {
@@ -194,15 +194,13 @@ function getAdminTabButtonClasses(isActive: boolean) {
 }
 
 export default function AdminPage() {
-  const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "";
-
   const [listings, setListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const [passwordInput, setPasswordInput] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [isCheckingAdminAccess, setIsCheckingAdminAccess] = useState(true);
+  const [adminAccessError, setAdminAccessError] = useState("");
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
 
   const [searchText, setSearchText] = useState("");
@@ -651,39 +649,54 @@ export default function AdminPage() {
     await loadListings();
   }
 
-  function handleAdminLogin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function checkAdminAccess() {
+    setIsCheckingAdminAccess(true);
+    setAdminAccessError("");
 
-    const typedPassword = passwordInput.trim();
-    const savedPassword = adminPassword.trim();
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
 
-    setPasswordError("");
-
-    if (!savedPassword) {
-      setPasswordError(
-        "Admin password is missing. Check NEXT_PUBLIC_ADMIN_PASSWORD in .env.local, then restart npm run dev."
+    if (sessionError || !session?.user) {
+      setIsAdminUnlocked(false);
+      setAdminAccessError(
+        "Please sign in with your admin account before opening Admin."
       );
+      setIsCheckingAdminAccess(false);
       return;
     }
 
-    if (typedPassword !== savedPassword) {
-      setPasswordError("Incorrect password. Please try again.");
+    const { data: adminUser, error: adminError } = await supabase
+      .from("admin_users")
+      .select("user_id")
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+
+    if (adminError) {
+      setIsAdminUnlocked(false);
+      setAdminAccessError(adminError.message);
+      setIsCheckingAdminAccess(false);
       return;
     }
 
-    window.sessionStorage.setItem("archerySwapAdminUnlocked", "true");
+    if (!adminUser) {
+      setIsAdminUnlocked(false);
+      setAdminAccessError("This signed-in account does not have admin access.");
+      setIsCheckingAdminAccess(false);
+      return;
+    }
+
     setIsAdminUnlocked(true);
-    setPasswordInput("");
+    setAdminAccessError("");
+    setIsCheckingAdminAccess(false);
   }
 
   function handleAdminLogout() {
-    window.sessionStorage.removeItem("archerySwapAdminUnlocked");
     setIsAdminUnlocked(false);
     setListings([]);
     setActionMessage("");
     setErrorMessage("");
-    setPasswordInput("");
-    setPasswordError("");
     setSearchText("");
     setSellerSearchText("");
     setStatusFilter("all");
@@ -696,6 +709,7 @@ export default function AdminPage() {
     setOrdersErrorMessage("");
     setIsLoadingOrders(false);
     setReleasingOrderId(null);
+    setAdminAccessError("Admin view locked. Click Check Admin Access to reopen.");
   }
 
   function clearFilters() {
@@ -707,13 +721,7 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    const savedAdminAccess = window.sessionStorage.getItem(
-      "archerySwapAdminUnlocked"
-    );
-
-    if (savedAdminAccess === "true") {
-      setIsAdminUnlocked(true);
-    }
+    checkAdminAccess();
   }, []);
 
   useEffect(() => {
@@ -896,56 +904,43 @@ export default function AdminPage() {
             </p>
 
             <h2 className="mt-4 text-4xl font-black tracking-tight">
-              Enter admin password.
+              Sign in with an admin account.
             </h2>
 
             <p className="mt-4 leading-7 text-stone-600">
-              This temporary password gate keeps casual visitors away from the
-              admin dashboard while Archery Outlet is still in development.
+              Admin access now uses your signed-in Archery Outlet account. Only
+              accounts listed in the admin users table can open this page.
             </p>
 
-            <form onSubmit={handleAdminLogin} className="mt-6 space-y-4">
-              <div>
-                <label
-                  htmlFor="admin-password"
-                  className="text-sm font-black uppercase tracking-[0.14em] text-stone-700"
-                >
-                  Password
-                </label>
-
-                <input
-                  id="admin-password"
-                  type="password"
-                  value={passwordInput}
-                  onChange={(event) => setPasswordInput(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
-                  placeholder="Enter password"
-                />
+            {isCheckingAdminAccess ? (
+              <div className="mt-6 rounded-2xl border border-stone-300 bg-stone-50 p-4 text-sm font-bold text-stone-700">
+                Checking admin access...
               </div>
+            ) : null}
 
-              {passwordError ? (
-                <div className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm font-bold text-red-800">
-                  {passwordError}
-                </div>
-              ) : null}
+            {adminAccessError ? (
+              <div className="mt-6 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm font-bold text-red-800">
+                {adminAccessError}
+              </div>
+            ) : null}
 
+            <div className="mt-6 grid gap-3">
               <button
-                type="submit"
-                className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-500"
+                type="button"
+                onClick={checkAdminAccess}
+                disabled={isCheckingAdminAccess}
+                className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Unlock Admin
+                {isCheckingAdminAccess ? "Checking..." : "Check Admin Access"}
               </button>
-            </form>
 
-            <div className="mt-5 rounded-2xl bg-stone-100 p-4 text-sm font-bold text-stone-600">
-              Admin password setting:{" "}
-              {adminPassword ? "Loaded" : "Missing from .env.local"}
+              <Link
+                href="/account"
+                className="w-full rounded-xl border border-stone-400 px-4 py-3 text-center text-sm font-black hover:bg-stone-100"
+              >
+                Go to Account / Sign In
+              </Link>
             </div>
-
-            <p className="mt-5 text-sm font-bold text-stone-500">
-              Later, this will be replaced with real admin accounts using
-              Supabase Auth.
-            </p>
           </div>
         </section>
       </main>
@@ -992,7 +987,7 @@ export default function AdminPage() {
               onClick={handleAdminLogout}
               className="rounded-xl border border-stone-500 px-4 py-2 text-sm font-black text-white hover:bg-stone-800"
             >
-              Lock Admin
+              Lock Admin View
             </button>
 
             <Link
