@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-type ActivePage = "home" | "browse" | "sell" | "messages" | "account";
+type ActivePage = "home" | "browse" | "sell" | "messages" | "account" | "howItWorks";
 
 type HeaderProps = {
   activePage?: ActivePage;
@@ -189,6 +189,17 @@ export default function Header({ activePage }: HeaderProps) {
             </Link>
 
             <Link
+              href="/how-it-works"
+              className={
+                activePage === "howItWorks"
+                  ? "text-emerald-300"
+                  : "hover:text-emerald-300"
+              }
+            >
+              How It Works
+            </Link>
+
+            <Link
               href="/messages"
               className={`inline-flex items-center ${
                 activePage === "messages"
@@ -255,6 +266,15 @@ export default function Header({ activePage }: HeaderProps) {
                 }`}
               >
                 Sell Gear
+              </Link>
+
+              <Link
+                href="/how-it-works"
+                className={`block border-b border-stone-800 px-4 py-3 text-sm font-bold hover:bg-stone-800 ${
+                  activePage === "howItWorks" ? "text-emerald-300" : ""
+                }`}
+              >
+                How It Works
               </Link>
 
               <Link

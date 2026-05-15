@@ -430,51 +430,6 @@ export default async function Home() {
         </div>
       </section>
 
-      <section id="how" className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
-        <div className="rounded-3xl bg-stone-950 p-8 text-white md:p-12">
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-300">
-            How it works
-          </p>
-
-          <h2 className="mt-2 text-3xl font-black sm:text-4xl">
-            Buy and sell archery gear in a few clear steps.
-          </h2>
-
-          <div className="mt-8 grid gap-5 md:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
-                Step 1
-              </p>
-              <h3 className="mt-3 text-xl font-black">List your gear</h3>
-              <p className="mt-2 text-sm leading-6 text-stone-300">
-                Add photos, price, condition, category, specs, and description.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
-                Step 2
-              </p>
-              <h3 className="mt-3 text-xl font-black">Wait for review</h3>
-              <p className="mt-2 text-sm leading-6 text-stone-300">
-                Listings are reviewed before they show publicly on Browse Gear.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
-                Step 3
-              </p>
-              <h3 className="mt-3 text-xl font-black">Connect with buyers</h3>
-              <p className="mt-2 text-sm leading-6 text-stone-300">
-                Buyers can message sellers or make offers on eligible active
-                listings.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section id="sell" className="bg-emerald-950 px-4 py-16 text-white sm:px-6">
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 md:flex-row md:items-center">
           <div>
