@@ -22,6 +22,36 @@ type Listing = {
   model: string | null;
 };
 
+type AdminOrderListing = {
+  id: string;
+  title: string;
+};
+
+type AdminOrder = {
+  id: string;
+  listing_id: string;
+  buyer_id: string;
+  seller_id: string;
+  item_amount: number;
+  shipping_amount: number;
+  platform_fee_amount: number;
+  seller_payout_amount: number | null;
+  total_amount: number;
+  status: string;
+  transfer_status: string | null;
+  stripe_connected_account_id: string | null;
+  stripe_payment_intent_id: string | null;
+  stripe_charge_id: string | null;
+  stripe_transfer_id: string | null;
+  shipping_carrier: string | null;
+  tracking_number: string | null;
+  shipped_at: string | null;
+  seller_payout_released_at: string | null;
+  paid_at: string | null;
+  created_at: string;
+  listing: AdminOrderListing | null;
+};
+
 type EditForm = {
   title: string;
   description: string;
@@ -37,7 +67,18 @@ type EditForm = {
   denial_reason: string;
 };
 
-function formatDate(dateValue: string) {
+function formatMoney(value: number | null) {
+  return `$${Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function formatDate(dateValue: string | null) {
+  if (!dateValue) {
+    return "Unknown date";
+  }
+
   const date = new Date(dateValue);
 
   if (Number.isNaN(date.getTime())) {
@@ -66,6 +107,30 @@ function makeEditForm(listing: Listing): EditForm {
     status: listing.status || "pending",
     denial_reason: listing.denial_reason || "",
   };
+}
+
+function getOrderStatusBadgeClasses(status: string) {
+  if (status === "shipped") {
+    return "bg-blue-100 text-blue-900";
+  }
+
+  if (status === "paid") {
+    return "bg-emerald-100 text-emerald-900";
+  }
+
+  return "bg-stone-200 text-stone-700";
+}
+
+function getTransferStatusBadgeClasses(status: string | null) {
+  if (status === "released") {
+    return "bg-emerald-100 text-emerald-900";
+  }
+
+  if (status === "not_released") {
+    return "bg-amber-100 text-amber-900";
+  }
+
+  return "bg-stone-200 text-stone-700";
 }
 
 function getStatusBadgeClasses(status: string) {
@@ -105,6 +170,113 @@ export default function AdminPage() {
   const [editingListingId, setEditingListingId] = useState("");
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const [adminOrders, setAdminOrders] = useState<AdminOrder[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [ordersErrorMessage, setOrdersErrorMessage] = useState("");
+  const [releasingOrderId, setReleasingOrderId] = useState<string | null>(null);
+
+  async function loadAdminOrders() {
+    setIsLoadingOrders(true);
+    setOrdersErrorMessage("");
+
+    try {
+      const response = await fetch("/api/admin/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          adminPassword,
+        }),
+      });
+
+      const result = (await response.json()) as {
+        orders?: AdminOrder[];
+        error?: string;
+      };
+
+      if (!response.ok || !result.orders) {
+        setOrdersErrorMessage(
+          result.error || "Admin orders could not be loaded."
+        );
+        setAdminOrders([]);
+        setIsLoadingOrders(false);
+        return;
+      }
+
+      setAdminOrders(result.orders);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while loading admin orders.";
+
+      setOrdersErrorMessage(message);
+      setAdminOrders([]);
+    }
+
+    setIsLoadingOrders(false);
+  }
+
+  async function releaseSellerPayment(order: AdminOrder) {
+    const listingTitle = order.listing?.title || "this order";
+
+    const confirmed = window.confirm(
+      `Release seller payment for "${listingTitle}"?\n\nOnly do this after you verify the shipment is real and at least in transit.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setActionMessage("");
+    setErrorMessage("");
+    setOrdersErrorMessage("");
+    setReleasingOrderId(order.id);
+
+    try {
+      const response = await fetch("/api/orders/release-seller-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+          adminPassword,
+        }),
+      });
+
+      const result = (await response.json()) as {
+        success?: boolean;
+        transferId?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !result.success) {
+        setOrdersErrorMessage(
+          result.error || "Seller payment could not be released."
+        );
+        setReleasingOrderId(null);
+        return;
+      }
+
+      setActionMessage(
+        `Seller payment released for "${listingTitle}". Stripe transfer: ${result.transferId}`
+      );
+
+      await loadAdminOrders();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while releasing seller payment.";
+
+      setOrdersErrorMessage(message);
+    }
+
+    setReleasingOrderId(null);
+  }
 
   async function loadListings() {
     setIsLoading(true);
@@ -303,6 +475,10 @@ export default function AdminPage() {
     setEditingListingId("");
     setEditForm(null);
     setIsSavingEdit(false);
+    setAdminOrders([]);
+    setOrdersErrorMessage("");
+    setIsLoadingOrders(false);
+    setReleasingOrderId(null);
   }
 
   function updateEditForm(field: keyof EditForm, value: string) {
@@ -443,6 +619,10 @@ export default function AdminPage() {
     setEditingListingId("");
     setEditForm(null);
     setIsSavingEdit(false);
+    setAdminOrders([]);
+    setOrdersErrorMessage("");
+    setIsLoadingOrders(false);
+    setReleasingOrderId(null);
   }
 
   function clearFilters() {
@@ -466,6 +646,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (isAdminUnlocked) {
       loadListings();
+      loadAdminOrders();
     }
   }, [isAdminUnlocked]);
 
@@ -539,6 +720,19 @@ export default function AdminPage() {
       matchesCategory
     );
   });
+
+  const ordersReadyForRelease = adminOrders.filter(
+    (order) =>
+      order.status === "shipped" &&
+      order.transfer_status === "not_released" &&
+      Boolean(order.shipping_carrier) &&
+      Boolean(order.tracking_number) &&
+      Boolean(order.shipped_at)
+  );
+
+  const releasedOrders = adminOrders.filter(
+    (order) => order.transfer_status === "released"
+  );
 
   const filtersAreActive =
     searchText.trim() !== "" ||
@@ -753,6 +947,186 @@ export default function AdminPage() {
               {inactiveListings.length}
             </p>
           </div>
+        </div>
+
+        <div className="mt-8 rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div>
+              <h3 className="text-2xl font-black">
+                Orders waiting for seller payment release
+              </h3>
+              <p className="mt-2 text-stone-600">
+                Review shipment details before releasing seller payout. Only
+                release after shipment is verified as real and at least in
+                transit.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={loadAdminOrders}
+              className="rounded-xl border border-stone-400 px-4 py-2 text-sm font-black hover:bg-stone-100"
+            >
+              {isLoadingOrders ? "Refreshing..." : "Refresh Orders"}
+            </button>
+          </div>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl bg-stone-100 p-4">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-stone-600">
+                Ready to Review
+              </p>
+              <p className="mt-2 text-3xl font-black">
+                {ordersReadyForRelease.length}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-stone-100 p-4">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-stone-600">
+                Released
+              </p>
+              <p className="mt-2 text-3xl font-black">
+                {releasedOrders.length}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-stone-100 p-4">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-stone-600">
+                Total Paid/Shipped
+              </p>
+              <p className="mt-2 text-3xl font-black">{adminOrders.length}</p>
+            </div>
+          </div>
+
+          {ordersErrorMessage ? (
+            <div className="mt-5 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm font-bold text-red-800">
+              {ordersErrorMessage}
+            </div>
+          ) : null}
+
+          {isLoadingOrders ? (
+            <div className="mt-5 rounded-2xl border border-stone-300 bg-stone-50 p-5 text-sm font-bold text-stone-700">
+              Loading admin orders...
+            </div>
+          ) : null}
+
+          {!isLoadingOrders && ordersReadyForRelease.length === 0 ? (
+            <div className="mt-5 rounded-2xl border border-stone-300 bg-stone-50 p-5">
+              <p className="font-black">No orders ready for release.</p>
+              <p className="mt-2 text-sm leading-6 text-stone-600">
+                Once a seller submits tracking, shipped orders waiting for
+                payout release will appear here.
+              </p>
+            </div>
+          ) : null}
+
+          {!isLoadingOrders && ordersReadyForRelease.length > 0 ? (
+            <div className="mt-5 grid gap-4">
+              {ordersReadyForRelease.map((order) => (
+                <div
+                  key={order.id}
+                  className="rounded-2xl border border-stone-300 bg-stone-50 p-5"
+                >
+                  <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                    <div>
+                      <h4 className="text-xl font-black">
+                        {order.listing?.title || "Listing unavailable"}
+                      </h4>
+                      <p className="mt-1 text-sm font-bold text-stone-500">
+                        Paid {formatDate(order.paid_at || order.created_at)}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.14em] ${getOrderStatusBadgeClasses(
+                          order.status
+                        )}`}
+                      >
+                        {order.status}
+                      </span>
+
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.14em] ${getTransferStatusBadgeClasses(
+                          order.transfer_status
+                        )}`}
+                      >
+                        {order.transfer_status || "unknown"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 text-sm md:grid-cols-4">
+                    <div className="rounded-xl bg-white p-3">
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                        Seller Payout
+                      </p>
+                      <p className="mt-1 font-black">
+                        {formatMoney(order.seller_payout_amount)}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3">
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                        Platform Fee
+                      </p>
+                      <p className="mt-1 font-black">
+                        {formatMoney(order.platform_fee_amount)}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3">
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                        Buyer Total
+                      </p>
+                      <p className="mt-1 font-black">
+                        {formatMoney(order.total_amount)}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3">
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                        Shipped
+                      </p>
+                      <p className="mt-1 font-black">
+                        {formatDate(order.shipped_at)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-stone-300 bg-white p-4 text-sm font-bold leading-6 text-stone-700">
+                    <p className="font-black text-stone-950">
+                      Shipment submitted by seller
+                    </p>
+                    <p className="mt-2">
+                      Carrier: {order.shipping_carrier || "Not provided"}
+                    </p>
+                    <p>Tracking: {order.tracking_number || "Not provided"}</p>
+                  </div>
+
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => releaseSellerPayment(order)}
+                      disabled={releasingOrderId === order.id}
+                      className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {releasingOrderId === order.id
+                        ? "Releasing..."
+                        : "Release Seller Payment"}
+                    </button>
+
+                    <Link
+                      href={`/listing/${order.listing_id}`}
+                      className="rounded-xl border border-stone-400 bg-white px-4 py-3 text-center text-sm font-black hover:bg-stone-100"
+                    >
+                      View Listing
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-8 rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
