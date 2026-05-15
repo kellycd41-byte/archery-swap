@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminUser } from "@/lib/requireAdminUser";
 
 type OrderForRelease = {
   id: string;
@@ -34,26 +35,14 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as {
       orderId?: string;
-      adminPassword?: string;
     };
 
     const orderId = body.orderId?.trim();
-    const adminPassword = body.adminPassword?.trim();
-    const savedAdminPassword =
-      process.env.NEXT_PUBLIC_ADMIN_PASSWORD?.trim() || "";
 
-    if (!savedAdminPassword) {
-      return NextResponse.json(
-        { error: "Admin password is missing on the server." },
-        { status: 500 }
-      );
-    }
+    const adminCheck = await requireAdminUser(request);
 
-    if (!adminPassword || adminPassword !== savedAdminPassword) {
-      return NextResponse.json(
-        { error: "Admin access is required to release seller payment." },
-        { status: 403 }
-      );
+    if (!adminCheck.ok) {
+      return adminCheck.response;
     }
 
     if (!orderId) {
