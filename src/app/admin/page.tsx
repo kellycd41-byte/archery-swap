@@ -219,6 +219,7 @@ export default function AdminPage() {
   const [releasingOrderId, setReleasingOrderId] = useState<string | null>(null);
   const [adminTab, setAdminTab] = useState<AdminTab>("ready");
   const [orderSearchText, setOrderSearchText] = useState("");
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
 
   async function loadAdminOrders() {
     setIsLoadingOrders(true);
@@ -712,6 +713,62 @@ export default function AdminPage() {
     setAdminAccessError("Admin view locked. Click Check Admin Access to reopen.");
   }
 
+  async function sendTestEmail() {
+    setActionMessage("");
+    setErrorMessage("");
+    setIsSendingTestEmail(true);
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.access_token) {
+        setErrorMessage("Please sign in with your admin account first.");
+        setIsSendingTestEmail(false);
+        return;
+      }
+
+      const response = await fetch("/api/admin/test-email", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      const result = (await response.json()) as {
+        success?: boolean;
+        sentTo?: string;
+        skipped?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok || !result.success) {
+        setErrorMessage(result.error || "Test email could not be sent.");
+        setIsSendingTestEmail(false);
+        return;
+      }
+
+      if (result.skipped) {
+        setActionMessage(
+          "Test email route worked, but SMTP settings are missing so email was skipped."
+        );
+      } else {
+        setActionMessage(`Test email sent to ${result.sentTo}.`);
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while sending the test email.";
+
+      setErrorMessage(message);
+    }
+
+    setIsSendingTestEmail(false);
+  }
+
   function clearFilters() {
     setSearchText("");
     setSellerSearchText("");
@@ -988,6 +1045,15 @@ export default function AdminPage() {
               className="rounded-xl border border-stone-500 px-4 py-2 text-sm font-black text-white hover:bg-stone-800"
             >
               Lock Admin View
+            </button>
+
+            <button
+              type="button"
+              onClick={sendTestEmail}
+              disabled={isSendingTestEmail}
+              className="rounded-xl border border-emerald-400 px-4 py-2 text-sm font-black text-emerald-200 hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSendingTestEmail ? "Sending..." : "Send Test Email"}
             </button>
 
             <Link
