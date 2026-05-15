@@ -227,14 +227,26 @@ export default function AdminPage() {
     setOrdersErrorMessage("");
 
     try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.access_token) {
+        setOrdersErrorMessage(
+          "Please sign in with your admin account before loading admin orders."
+        );
+        setAdminOrders([]);
+        setIsLoadingOrders(false);
+        return;
+      }
+
       const response = await fetch("/api/admin/orders", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({
-          adminPassword,
-        }),
       });
 
       const result = (await response.json()) as {
