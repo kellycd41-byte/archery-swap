@@ -216,9 +216,11 @@ export default function AccountPage() {
     (offer) => offer.status === "pending"
   );
 
-  const hasAcceptedSentOffers = sentOffers.some(
-    (offer) => offer.status === "accepted"
-  );
+  const hasAcceptedSentOffers = sentOffers.some((offer) => {
+    const listing = getOfferListing(offer);
+
+    return offer.status === "accepted" && listing?.status === "active";
+  });
 
   const hasOfferAlert = hasPendingReceivedOffers || hasAcceptedSentOffers;
 

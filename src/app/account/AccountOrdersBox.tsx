@@ -21,6 +21,9 @@ type UserOrder = {
   platform_fee_amount: number;
   total_amount: number;
   status: string;
+  transfer_status: string | null;
+  shipped_at: string | null;
+  ship_by_date: string | null;
   paid_at: string | null;
   created_at: string;
   listing: OrderListing | OrderListing[] | null;
@@ -102,6 +105,14 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
 
   const boughtOrders = orders.filter((order) => order.buyer_id === user.id);
   const soldOrders = orders.filter((order) => order.seller_id === user.id);
+  const sellerOrdersNeedingShipment = soldOrders.filter(
+    (order) =>
+      order.status === "paid" &&
+      order.transfer_status === "not_released" &&
+      !order.shipped_at
+  );
+  const hasSellerOrdersNeedingShipment =
+    sellerOrdersNeedingShipment.length > 0;
 
   async function loadOrders() {
     setIsLoadingOrders(true);
@@ -110,7 +121,7 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
     const { data, error } = await supabase
       .from("orders")
       .select(
-        "id,listing_id,buyer_id,seller_id,item_amount,shipping_amount,platform_fee_amount,total_amount,status,paid_at,created_at,listing:listings(id,title,status)"
+        "id,listing_id,buyer_id,seller_id,item_amount,shipping_amount,platform_fee_amount,total_amount,status,transfer_status,shipped_at,ship_by_date,paid_at,created_at,listing:listings(id,title,status)"
       )
       .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
       .eq("status", "paid")
@@ -229,7 +240,16 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
         className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-2xl border border-stone-300 bg-stone-50 px-5 py-4 text-left hover:bg-stone-100"
       >
         <div>
-          <h3 className="text-2xl font-black">My Orders</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-2xl font-black">My Orders</h3>
+
+            {hasSellerOrdersNeedingShipment ? (
+              <span
+                className="h-3 w-3 rounded-full bg-emerald-500"
+                title="You have paid orders to ship"
+              />
+            ) : null}
+          </div>
 
           <p className="mt-2 text-sm font-bold leading-6 text-stone-600">
             View gear you bought and orders from gear you sold.
@@ -277,7 +297,15 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
                     : "border border-stone-300 bg-white text-stone-950 hover:bg-stone-100"
                 }`}
               >
-                Orders I Sold
+                <span className="inline-flex items-center gap-2">
+                  Orders I Sold
+                  {hasSellerOrdersNeedingShipment ? (
+                    <span
+                      className="h-3 w-3 rounded-full bg-emerald-500"
+                      title="Paid orders need shipping"
+                    />
+                  ) : null}
+                </span>
                 <span className="ml-2 rounded-full bg-stone-200 px-2 py-1 text-xs text-stone-900">
                   {soldOrders.length}
                 </span>
@@ -293,6 +321,18 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
               {isLoadingOrders ? "Refreshing..." : "Refresh Orders"}
             </button>
           </div>
+
+          {hasSellerOrdersNeedingShipment ? (
+            <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
+              <div className="flex items-center gap-3">
+                <span className="h-3 w-3 rounded-full bg-emerald-500" />
+                <span>
+                  You have {sellerOrdersNeedingShipment.length} paid order
+                  {sellerOrdersNeedingShipment.length === 1 ? "" : "s"} to ship.
+                </span>
+              </div>
+            </div>
+          ) : null}
 
           {ordersErrorMessage ? (
             <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
@@ -340,12 +380,22 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
           {!isLoadingOrders && activePanel === "sold" ? (
             <div className="mt-5 rounded-3xl border border-stone-300 bg-stone-50 p-4 sm:p-5">
               <div className="rounded-2xl border border-stone-200 bg-white p-4">
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-stone-500">
-                  Selling
-                </p>
+                <div className="flex items-center gap-3">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-stone-500">
+                    Selling
+                  </p>
+
+                  {hasSellerOrdersNeedingShipment ? (
+                    <span
+                      className="h-3 w-3 rounded-full bg-emerald-500"
+                      title="Paid orders need shipping"
+                    />
+                  ) : null}
+                </div>
                 <h4 className="mt-1 text-xl font-black">Orders I Sold</h4>
                 <p className="mt-2 text-sm leading-6 text-stone-600">
-                  Paid orders from your sold listings will appear here.
+                  Paid orders from your sold listings will appear here. Orders
+                  with a green dot need shipment details.
                 </p>
               </div>
 
