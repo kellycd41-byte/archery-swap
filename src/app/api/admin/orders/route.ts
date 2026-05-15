@@ -68,7 +68,6 @@ export async function POST(request: NextRequest) {
       .select(
         "id,listing_id,buyer_id,seller_id,item_amount,shipping_amount,platform_fee_amount,seller_payout_amount,total_amount,status,transfer_status,stripe_connected_account_id,stripe_payment_intent_id,stripe_charge_id,stripe_transfer_id,shipping_carrier,tracking_number,shipped_at,seller_payout_released_at,paid_at,created_at,listing:listings(id,title)"
       )
-      .in("status", ["paid", "shipped"])
       .order("created_at", { ascending: false });
 
     if (error) {
