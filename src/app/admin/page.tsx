@@ -186,6 +186,7 @@ export default function AdminPage() {
   const [ordersErrorMessage, setOrdersErrorMessage] = useState("");
   const [releasingOrderId, setReleasingOrderId] = useState<string | null>(null);
   const [adminTab, setAdminTab] = useState<AdminTab>("ready");
+  const [orderSearchText, setOrderSearchText] = useState("");
 
   async function loadAdminOrders() {
     setIsLoadingOrders(true);
@@ -491,6 +492,7 @@ export default function AdminPage() {
     setIsLoadingOrders(false);
     setReleasingOrderId(null);
     setAdminTab("ready");
+    setOrderSearchText("");
   }
 
   function updateEditForm(field: keyof EditForm, value: string) {
@@ -745,6 +747,34 @@ export default function AdminPage() {
   const releasedOrders = adminOrders.filter(
     (order) => order.transfer_status === "released"
   );
+
+  const filteredAdminOrders = adminOrders.filter((order) => {
+    const search = orderSearchText.trim().toLowerCase();
+
+    if (!search) {
+      return true;
+    }
+
+    const searchableText = [
+      order.id,
+      order.listing?.title || "",
+      order.listing_id,
+      order.buyer_id,
+      order.seller_id,
+      order.status,
+      order.transfer_status || "",
+      order.shipping_carrier || "",
+      order.tracking_number || "",
+      order.stripe_connected_account_id || "",
+      order.stripe_payment_intent_id || "",
+      order.stripe_charge_id || "",
+      order.stripe_transfer_id || "",
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return searchableText.includes(search);
+  });
 
   const filtersAreActive =
     searchText.trim() !== "" ||
@@ -1349,6 +1379,39 @@ export default function AdminPage() {
             </button>
           </div>
 
+          <div className="mt-5">
+            <label
+              htmlFor="admin-order-search"
+              className="text-sm font-black uppercase tracking-[0.14em] text-stone-700"
+            >
+              Search Orders
+            </label>
+
+            <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+              <input
+                id="admin-order-search"
+                type="text"
+                value={orderSearchText}
+                onChange={(event) => setOrderSearchText(event.target.value)}
+                className="w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+                placeholder="Search listing, order ID, buyer ID, seller ID, tracking, or Stripe ID..."
+              />
+
+              <button
+                type="button"
+                onClick={() => setOrderSearchText("")}
+                disabled={!orderSearchText.trim()}
+                className="rounded-xl border border-stone-400 px-4 py-3 text-sm font-black hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Clear
+              </button>
+            </div>
+
+            <p className="mt-2 text-sm font-bold text-stone-500">
+              Showing {filteredAdminOrders.length} of {adminOrders.length} orders.
+            </p>
+          </div>
+
           {!isLoadingOrders && adminOrders.length === 0 ? (
             <div className="mt-5 rounded-2xl border border-stone-300 bg-stone-50 p-5">
               <p className="font-black">No orders found.</p>
@@ -1358,7 +1421,19 @@ export default function AdminPage() {
             </div>
           ) : null}
 
-          {!isLoadingOrders && adminOrders.length > 0 ? (
+          {!isLoadingOrders &&
+          adminOrders.length > 0 &&
+          filteredAdminOrders.length === 0 ? (
+            <div className="mt-5 rounded-2xl border border-stone-300 bg-stone-50 p-5">
+              <p className="font-black">No matching orders found.</p>
+              <p className="mt-2 text-sm leading-6 text-stone-600">
+                Try searching by listing title, order ID, buyer ID, seller ID,
+                tracking number, carrier, or Stripe ID.
+              </p>
+            </div>
+          ) : null}
+
+          {!isLoadingOrders && filteredAdminOrders.length > 0 ? (
             <div className="mt-5 overflow-hidden rounded-2xl border border-stone-300">
               <div className="hidden grid-cols-[1.2fr_0.5fr_0.6fr_0.6fr_0.6fr_0.8fr] gap-4 bg-stone-950 px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-white lg:grid">
                 <div>Order</div>
@@ -1370,7 +1445,7 @@ export default function AdminPage() {
               </div>
 
               <div className="divide-y divide-stone-300 bg-white">
-                {adminOrders.map((order) => (
+                {filteredAdminOrders.map((order) => (
                   <div
                     key={order.id}
                     className="grid gap-4 px-4 py-5 lg:grid-cols-[1.2fr_0.5fr_0.6fr_0.6fr_0.6fr_0.8fr] lg:items-center"
