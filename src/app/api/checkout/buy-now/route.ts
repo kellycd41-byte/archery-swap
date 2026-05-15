@@ -182,6 +182,9 @@ export async function POST(request: NextRequest) {
     );
     const totalAmountCents = itemAmountCents + shippingAmountCents;
     const platformFeeCents = calculatePlatformFeeCents(itemAmountCents);
+    const sellerPayoutCents = totalAmountCents - platformFeeCents;
+    const shipByDate = new Date();
+    shipByDate.setDate(shipByDate.getDate() + 5);
 
     if (itemAmountCents <= 0 || totalAmountCents <= 0) {
       return NextResponse.json(
@@ -226,7 +229,10 @@ export async function POST(request: NextRequest) {
         item_amount: centsToDollars(itemAmountCents),
         shipping_amount: centsToDollars(shippingAmountCents),
         platform_fee_amount: centsToDollars(platformFeeCents),
+        seller_payout_amount: centsToDollars(sellerPayoutCents),
         total_amount: centsToDollars(totalAmountCents),
+        transfer_status: "not_released",
+        ship_by_date: shipByDate.toISOString(),
         status: "pending",
       })
       .select("id")
@@ -251,12 +257,6 @@ export async function POST(request: NextRequest) {
       mode: "payment",
       payment_method_types: ["card"],
       line_items: lineItems,
-      payment_intent_data: {
-        application_fee_amount: platformFeeCents,
-        transfer_data: {
-          destination: payoutAccount.stripe_account_id,
-        },
-      },
       metadata: {
         orderId: order.id,
         listingId: listing.id,
