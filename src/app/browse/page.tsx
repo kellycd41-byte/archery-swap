@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabase";
 
 const categories = [
@@ -934,6 +935,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           </div>
         </div>
       </section>
+      <Footer />
     </main>
   );
 }

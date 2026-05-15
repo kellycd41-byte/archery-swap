@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabase";
 
 const categories = [
@@ -802,6 +803,7 @@ export default function EditListingPage() {
           )}
         </div>
       </section>
+      <Footer />
     </main>
   );
 }

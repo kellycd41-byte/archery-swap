@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import AccountOrdersBox from "./AccountOrdersBox";
 import PayoutSetupBox from "./PayoutSetupBox";
 import { supabase } from "@/lib/supabase";
@@ -1599,6 +1600,7 @@ export default function AccountPage() {
           </div>
         </aside>
       </section>
+      <Footer />
     </main>
   );
 }

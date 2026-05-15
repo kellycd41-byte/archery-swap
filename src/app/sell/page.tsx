@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabase";
 
 const categories = [
@@ -1114,6 +1115,7 @@ export default function SellPage() {
           </div>
         )}
       </section>
+      <Footer />
     </main>
   );
 }

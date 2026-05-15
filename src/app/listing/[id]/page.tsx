@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabase";
 import BuyNowBox from "./BuyNowBox";
 import ListingPhotoGallery from "./ListingPhotoGallery";
@@ -429,6 +430,7 @@ export default async function ListingDetailPage({
           </section>
         ) : null}
       </section>
+      <Footer />
     </main>
   );
 }
