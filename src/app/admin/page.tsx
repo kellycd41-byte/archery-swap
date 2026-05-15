@@ -31,6 +31,7 @@ type AdminOrder = {
   id: string;
   listing_id: string;
   buyer_id: string;
+  buyer_phone: string | null;
   seller_id: string;
   item_amount: number;
   shipping_amount: number;
@@ -760,6 +761,7 @@ export default function AdminPage() {
       order.listing?.title || "",
       order.listing_id,
       order.buyer_id,
+      order.buyer_phone || "",
       order.seller_id,
       order.status,
       order.transfer_status || "",
@@ -1394,7 +1396,7 @@ export default function AdminPage() {
                 value={orderSearchText}
                 onChange={(event) => setOrderSearchText(event.target.value)}
                 className="w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
-                placeholder="Search listing, order ID, buyer ID, seller ID, tracking, or Stripe ID..."
+                placeholder="Search listing, order ID, buyer ID, phone, seller ID, tracking, or Stripe ID..."
               />
 
               <button
@@ -1428,7 +1430,7 @@ export default function AdminPage() {
               <p className="font-black">No matching orders found.</p>
               <p className="mt-2 text-sm leading-6 text-stone-600">
                 Try searching by listing title, order ID, buyer ID, seller ID,
-                tracking number, carrier, or Stripe ID.
+                tracking number, buyer phone, carrier, or Stripe ID.
               </p>
             </div>
           ) : null}
@@ -1469,6 +1471,10 @@ export default function AdminPage() {
 
                       <p className="mt-1 break-all text-xs font-bold text-stone-500">
                         Buyer ID: {order.buyer_id}
+                      </p>
+
+                      <p className="mt-1 break-all text-xs font-bold text-stone-500">
+                        Buyer Phone: {order.buyer_phone || "Not provided"}
                       </p>
 
                       <p className="mt-1 break-all text-xs font-bold text-stone-500">

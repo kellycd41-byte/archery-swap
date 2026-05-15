@@ -10,6 +10,7 @@ type AdminOrder = {
   id: string;
   listing_id: string;
   buyer_id: string;
+  buyer_phone: string | null;
   seller_id: string;
   item_amount: number;
   shipping_amount: number;
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabaseAdmin
       .from("orders")
       .select(
-        "id,listing_id,buyer_id,seller_id,item_amount,shipping_amount,platform_fee_amount,seller_payout_amount,total_amount,status,transfer_status,stripe_connected_account_id,stripe_payment_intent_id,stripe_charge_id,stripe_transfer_id,shipping_carrier,tracking_number,shipped_at,seller_payout_released_at,paid_at,created_at,listing:listings(id,title)"
+        "id,listing_id,buyer_id,buyer_phone,seller_id,item_amount,shipping_amount,platform_fee_amount,seller_payout_amount,total_amount,status,transfer_status,stripe_connected_account_id,stripe_payment_intent_id,stripe_charge_id,stripe_transfer_id,shipping_carrier,tracking_number,shipped_at,seller_payout_released_at,paid_at,created_at,listing:listings(id,title)"
       )
       .order("created_at", { ascending: false });
 
