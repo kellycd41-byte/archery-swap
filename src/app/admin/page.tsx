@@ -136,6 +136,39 @@ function getTransferStatusBadgeClasses(status: string | null) {
   return "bg-stone-200 text-stone-700";
 }
 
+function getAdminOrderStatusLabel(order: AdminOrder) {
+  if (order.transfer_status === "released") {
+    return "Seller Paid";
+  }
+
+  if (order.status === "shipped") {
+    return "Shipped — Review Payout";
+  }
+
+  if (order.status === "paid") {
+    return "Paid — Awaiting Shipment";
+  }
+
+  if (order.status === "pending") {
+    return "Pending Payment";
+  }
+
+  return order.status || "Unknown";
+}
+
+function getAdminTransferStatusLabel(status: string | null) {
+  if (status === "released") {
+    return "Payout Released";
+  }
+
+  if (status === "not_released") {
+    return "Payout Held";
+  }
+
+  return "Payout Unknown";
+}
+
+
 function getStatusBadgeClasses(status: string) {
   if (status === "active") {
     return "bg-emerald-50 text-emerald-900";
@@ -1129,7 +1162,7 @@ export default function AdminPage() {
                           order.status
                         )}`}
                       >
-                        {order.status}
+                        {getAdminOrderStatusLabel(order)}
                       </span>
 
                       <span
@@ -1137,7 +1170,7 @@ export default function AdminPage() {
                           order.transfer_status
                         )}`}
                       >
-                        {order.transfer_status || "unknown"}
+                        {getAdminTransferStatusLabel(order.transfer_status)}
                       </span>
                     </div>
                   </div>
@@ -1270,7 +1303,7 @@ export default function AdminPage() {
                           order.status
                         )}`}
                       >
-                        {order.status}
+                        {getAdminOrderStatusLabel(order)}
                       </span>
 
                       <span
@@ -1278,7 +1311,7 @@ export default function AdminPage() {
                           order.transfer_status
                         )}`}
                       >
-                        {order.transfer_status || "unknown"}
+                        {getAdminTransferStatusLabel(order.transfer_status)}
                       </span>
                     </div>
                   </div>
@@ -1513,7 +1546,7 @@ export default function AdminPage() {
                             order.status
                           )}`}
                         >
-                          {order.status}
+                          {getAdminOrderStatusLabel(order)}
                         </span>
 
                         <span
@@ -1521,7 +1554,7 @@ export default function AdminPage() {
                             order.transfer_status
                           )}`}
                         >
-                          {order.transfer_status || "unknown"}
+                          {getAdminTransferStatusLabel(order.transfer_status)}
                         </span>
                       </div>
                     </div>
