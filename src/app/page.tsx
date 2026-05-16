@@ -33,6 +33,7 @@ type Listing = {
   draw_length: string | null;
   handedness: string | null;
   shipping_available: boolean;
+  is_featured: boolean;
 };
 
 function PhotoPlaceholder() {
@@ -115,16 +116,26 @@ function getListingPhotoUrl(item: Listing) {
 }
 
 export default async function Home() {
-  const { data, error } = await supabase
+  const { data: featuredData, error: featuredError } = await supabase
+    .from("listings")
+    .select("*")
+    .eq("status", "active")
+    .eq("is_featured", true)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  const { data: latestData, error: latestError } = await supabase
     .from("listings")
     .select("*")
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(3);
 
-  const featuredListings = (data || []) as Listing[];
-  const heroListing = featuredListings[0] || null;
+  const latestListings = (latestData || []) as Listing[];
+  const heroListing = ((featuredData || []) as Listing[])[0] || null;
   const heroPhotoUrl = heroListing ? getListingPhotoUrl(heroListing) : null;
+  const featuredListings = latestListings;
+  const homeError = featuredError || latestError;
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-950">
@@ -322,13 +333,13 @@ export default async function Home() {
             </Link>
           </div>
 
-          {error ? (
+          {homeError ? (
             <div className="rounded-2xl border border-red-300 bg-red-50 p-5 text-sm font-bold text-red-800">
-              Could not load featured listings: {error.message}
+              Could not load featured listings: {homeError.message}
             </div>
           ) : null}
 
-          {!error && featuredListings.length === 0 ? (
+          {!homeError && featuredListings.length === 0 ? (
             <div className="rounded-2xl border border-stone-300 bg-stone-50 p-8 text-center shadow-sm">
               <h3 className="text-2xl font-black">No active listings yet</h3>
               <p className="mt-2 text-stone-600">
@@ -344,7 +355,7 @@ export default async function Home() {
             </div>
           ) : null}
 
-          {!error && featuredListings.length > 0 ? (
+          {!homeError && featuredListings.length > 0 ? (
             <div className="grid items-stretch gap-5 md:grid-cols-3">
               {featuredListings.map((item) => {
                 const brandModelText = getBrandModelText(item);

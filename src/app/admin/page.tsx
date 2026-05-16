@@ -20,6 +20,7 @@ type Listing = {
   created_at: string;
   brand: string | null;
   model: string | null;
+  is_featured: boolean;
 };
 
 type AdminOrderListing = {
@@ -689,6 +690,69 @@ export default function AdminPage() {
     await loadListings();
   }
 
+  async function makeListingFeatured(listingId: string, listingTitle: string) {
+    const confirmed = window.confirm(
+      `Feature "${listingTitle}" on the home page?\n\nThis will replace the current top featured listing.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setActionMessage("");
+    setErrorMessage("");
+
+    const { error: clearError } = await supabase
+      .from("listings")
+      .update({ is_featured: false })
+      .eq("is_featured", true);
+
+    if (clearError) {
+      setErrorMessage(clearError.message);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("listings")
+      .update({ is_featured: true })
+      .eq("id", listingId)
+      .eq("status", "active");
+
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+
+    setActionMessage(`"${listingTitle}" is now featured on the home page.`);
+    await loadListings();
+  }
+
+  async function removeListingFeatured(listingId: string, listingTitle: string) {
+    const confirmed = window.confirm(
+      `Remove "${listingTitle}" from the top featured spot on the home page?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setActionMessage("");
+    setErrorMessage("");
+
+    const { error } = await supabase
+      .from("listings")
+      .update({ is_featured: false })
+      .eq("id", listingId);
+
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+
+    setActionMessage(`"${listingTitle}" was removed from the top featured spot.`);
+    await loadListings();
+  }
+
   async function markListingInactive(listingId: string, listingTitle: string) {
     const confirmed = window.confirm(
       `Remove this listing from Browse?\n\n${listingTitle}\n\nThis will mark it inactive instead of permanently deleting it.`
@@ -1079,6 +1143,7 @@ export default function AdminPage() {
       listing.model || "",
       listing.status,
       listing.denial_reason || "",
+      listing.is_featured ? "featured home page" : "",
     ]
       .join(" ")
       .toLowerCase();
@@ -2543,6 +2608,12 @@ export default function AdminPage() {
                               Photo: {listing.image_url ? "Yes" : "No"}
                             </p>
 
+                            {listing.is_featured ? (
+                              <p className="mt-2 inline-block rounded-full bg-emerald-100 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-emerald-900">
+                                Featured on Home
+                              </p>
+                            ) : null}
+
                             {listing.status === "denied" &&
                             listing.denial_reason ? (
                               <p className="mt-2 rounded-xl bg-red-50 p-3 text-xs font-bold text-red-800">
@@ -2643,6 +2714,34 @@ export default function AdminPage() {
                                 >
                                   View
                                 </Link>
+
+                                {listing.is_featured ? (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      removeListingFeatured(
+                                        listing.id,
+                                        listing.title
+                                      )
+                                    }
+                                    className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-black text-amber-900 hover:bg-amber-100"
+                                  >
+                                    Remove Feature
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      makeListingFeatured(
+                                        listing.id,
+                                        listing.title
+                                      )
+                                    }
+                                    className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-900 hover:bg-emerald-100"
+                                  >
+                                    Feature on Home
+                                  </button>
+                                )}
 
                                 <button
                                   type="button"
