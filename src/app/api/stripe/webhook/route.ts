@@ -98,13 +98,63 @@ export async function POST(request: NextRequest) {
       const { data: orderForEmail, error: orderEmailError } = await supabaseAdmin
         .from("orders")
         .select(
-          "id,seller_id,item_amount,shipping_amount,total_amount,ship_by_date,listing:listings(id,title)"
+          "id,buyer_id,seller_id,item_amount,shipping_amount,total_amount,ship_by_date,listing:listings(id,title)"
         )
         .eq("id", orderId)
         .maybeSingle();
 
       if (orderEmailError) {
         console.error("Could not load order for seller email:", orderEmailError.message);
+      }
+
+      if (orderForEmail?.buyer_id) {
+        const { data: buyerUserData, error: buyerUserError } =
+          await supabaseAdmin.auth.admin.getUserById(orderForEmail.buyer_id);
+
+        if (buyerUserError) {
+          console.error("Could not load buyer email:", buyerUserError.message);
+        }
+
+        const buyerEmail = buyerUserData?.user?.email || "";
+        const listing = Array.isArray(orderForEmail.listing)
+          ? orderForEmail.listing[0]
+          : orderForEmail.listing;
+        const listingTitle = listing?.title || "your order";
+        const siteUrl =
+          process.env.NEXT_PUBLIC_SITE_URL || "https://archeryoutlet.net";
+        const accountUrl = `${siteUrl}/account`;
+        const totalText = `$${Number(orderForEmail.total_amount || 0).toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`;
+
+        if (buyerEmail) {
+          try {
+            await sendEmail({
+              to: buyerEmail,
+              subject: `Your Archery Outlet order was placed: ${listingTitle}`,
+              text: `Your Archery Outlet order was placed. Item: ${listingTitle}. Total paid: ${totalText}. The seller will ship soon. You will receive tracking when the seller marks the order shipped. You can view your order here: ${accountUrl}`,
+              html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1c1917;">
+                  <h2 style="margin: 0 0 12px;">Your order was placed</h2>
+                  <p>Thanks for your order. Your purchase of <strong>${listingTitle}</strong> is confirmed.</p>
+                  <p><strong>Total paid:</strong> ${totalText}</p>
+                  <p>The seller will ship soon. You will receive another email with tracking once the seller marks the order shipped.</p>
+                  <p>
+                    <a href="${accountUrl}" style="display: inline-block; background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 10px; text-decoration: none; font-weight: bold;">
+                      Open My Orders
+                    </a>
+                  </p>
+                  <p style="font-size: 13px; color: #57534e;">
+                    Seller payout stays held until shipment is reviewed and released.
+                  </p>
+                </div>
+              `,
+            });
+          } catch (emailError) {
+            console.error("Buyer order confirmation email failed:", emailError);
+          }
+        }
       }
 
       if (orderForEmail?.seller_id) {
