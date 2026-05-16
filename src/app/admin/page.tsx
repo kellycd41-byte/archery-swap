@@ -1189,7 +1189,18 @@ export default function AdminPage() {
     (order) => order.transfer_status === "released"
   );
 
-  const filteredAdminOrders = adminOrders.filter((order) => {
+  const visibleAdminOrders = adminOrders.filter((order) => {
+    const isUnfinishedCheckoutAttempt =
+      order.status === "pending" &&
+      !order.stripe_payment_intent_id &&
+      !order.stripe_charge_id &&
+      !order.stripe_refund_id &&
+      !order.stripe_transfer_id;
+
+    return !isUnfinishedCheckoutAttempt;
+  });
+
+  const filteredAdminOrders = visibleAdminOrders.filter((order) => {
     const search = orderSearchText.trim().toLowerCase();
 
     if (!search) {
@@ -1244,7 +1255,7 @@ export default function AdminPage() {
     {
       id: "allOrders",
       label: "All Orders",
-      count: adminOrders.length,
+      count: visibleAdminOrders.length,
     },
     {
       id: "listings",
@@ -1851,11 +1862,11 @@ export default function AdminPage() {
             </div>
 
             <p className="mt-2 text-sm font-bold text-stone-500">
-              Showing {filteredAdminOrders.length} of {adminOrders.length} orders.
+              Showing {filteredAdminOrders.length} of {visibleAdminOrders.length} orders.
             </p>
           </div>
 
-          {!isLoadingOrders && adminOrders.length === 0 ? (
+          {!isLoadingOrders && visibleAdminOrders.length === 0 ? (
             <div className="mt-5 rounded-2xl border border-stone-300 bg-stone-50 p-5">
               <p className="font-black">No orders found.</p>
               <p className="mt-2 text-sm leading-6 text-stone-600">
@@ -1865,7 +1876,7 @@ export default function AdminPage() {
           ) : null}
 
           {!isLoadingOrders &&
-          adminOrders.length > 0 &&
+          visibleAdminOrders.length > 0 &&
           filteredAdminOrders.length === 0 ? (
             <div className="mt-5 rounded-2xl border border-stone-300 bg-stone-50 p-5">
               <p className="font-black">No matching orders found.</p>
