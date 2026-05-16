@@ -1,14 +1,30 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { sendEmail } from "@/lib/email";
+
+type OrderListingForShipment = {
+  id: string;
+  title: string;
+};
 
 type OrderForShipment = {
   id: string;
+  buyer_id: string;
   seller_id: string;
   status: string;
   transfer_status: string | null;
   shipped_at: string | null;
+  listing: OrderListingForShipment | OrderListingForShipment[] | null;
 };
+
+function getOrderListing(order: OrderForShipment) {
+  if (Array.isArray(order.listing)) {
+    return order.listing[0] || null;
+  }
+
+  return order.listing;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     const { data: orderData, error: orderError } = await supabaseAdmin
       .from("orders")
-      .select("id,seller_id,status,transfer_status,shipped_at")
+      .select("id,buyer_id,seller_id,status,transfer_status,shipped_at,listing:listings(id,title)")
       .eq("id", orderId)
       .maybeSingle();
 
@@ -163,6 +179,50 @@ export async function POST(request: NextRequest) {
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    const {
+      data: { user: buyerUser },
+      error: buyerUserError,
+    } = await supabaseAdmin.auth.admin.getUserById(order.buyer_id);
+
+    if (buyerUserError) {
+      console.error("Could not load buyer email:", buyerUserError.message);
+    }
+
+    const buyerEmail = buyerUser?.email || "";
+    const listing = getOrderListing(order);
+    const listingTitle = listing?.title || "your order";
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL || "https://archeryoutlet.net";
+    const accountUrl = `${siteUrl}/account`;
+
+    if (buyerEmail) {
+      try {
+        await sendEmail({
+          to: buyerEmail,
+          subject: `Your Archery Outlet order shipped: ${listingTitle}`,
+          text: `Your Archery Outlet order has shipped. Item: ${listingTitle}. Carrier: ${shippingCarrier}. Tracking: ${trackingNumber}. You can view your order here: ${accountUrl}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1c1917;">
+              <h2 style="margin: 0 0 12px;">Your order has shipped</h2>
+              <p>Your order for <strong>${listingTitle}</strong> has been marked shipped.</p>
+              <p><strong>Carrier:</strong> ${shippingCarrier}</p>
+              <p><strong>Tracking:</strong> ${trackingNumber}</p>
+              <p>
+                <a href="${accountUrl}" style="display: inline-block; background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 10px; text-decoration: none; font-weight: bold;">
+                  Open My Orders
+                </a>
+              </p>
+              <p style="font-size: 13px; color: #57534e;">
+                Please use the carrier tracking number above to follow the shipment.
+              </p>
+            </div>
+          `,
+        });
+      } catch (emailError) {
+        console.error("Buyer shipped email failed:", emailError);
+      }
     }
 
     return NextResponse.json({
