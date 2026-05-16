@@ -51,9 +51,9 @@ export default function PoliciesPage() {
           </h2>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
-            These pages explain the basic marketplace rules for Archery Outlet.
-            They are starter policies and should be reviewed before opening the
-            site to real users.
+            These pages explain the marketplace rules for Archery Outlet,
+            including accounts, listings, buying, selling, shipping, refunds,
+            privacy, and seller payouts.
           </p>
         </div>
       </section>

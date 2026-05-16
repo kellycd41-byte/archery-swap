@@ -114,10 +114,9 @@ export default function PrivacyPage() {
 
       <section className="mx-auto max-w-4xl px-6 py-12">
         <div className="space-y-7 rounded-3xl border border-stone-300 bg-white p-8 shadow-sm">
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm font-bold leading-6 text-amber-900">
-            This Privacy Policy is a general marketplace policy for Archery
-            Outlet and should be reviewed by a qualified professional before
-            launch.
+          <div className="rounded-2xl border border-stone-300 bg-stone-50 p-5 text-sm font-bold leading-6 text-stone-700">
+            This Privacy Policy explains how information may be used to operate
+            and protect the Archery Outlet marketplace.
           </div>
 
           {sections.map((section) => (
