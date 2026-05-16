@@ -3,6 +3,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 const categories = [
   "Compound Bows",
   "Competition Bows",
