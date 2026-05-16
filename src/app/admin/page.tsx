@@ -50,6 +50,9 @@ type AdminOrder = {
   seller_payout_released_at: string | null;
   paid_at: string | null;
   created_at: string;
+  admin_issue_status: string;
+  admin_issue_notes: string | null;
+  admin_issue_updated_at: string | null;
   listing: AdminOrderListing | null;
 };
 
@@ -69,6 +72,13 @@ type EditForm = {
 };
 
 type AdminTab = "ready" | "released" | "allOrders" | "listings";
+
+const adminIssueStatusOptions = [
+  { value: "no_issue", label: "No issue" },
+  { value: "needs_review", label: "Needs review" },
+  { value: "refund_requested", label: "Refund requested" },
+  { value: "resolved", label: "Resolved" },
+];
 
 function formatMoney(value: number | null) {
   return `$${Number(value || 0).toLocaleString(undefined, {
@@ -168,6 +178,30 @@ function getAdminTransferStatusLabel(status: string | null) {
   return "Payout Unknown";
 }
 
+function getAdminIssueStatusLabel(status: string | null) {
+  const option = adminIssueStatusOptions.find(
+    (currentOption) => currentOption.value === status
+  );
+
+  return option?.label || "No issue";
+}
+
+function getAdminIssueBadgeClasses(status: string | null) {
+  if (status === "needs_review") {
+    return "bg-amber-100 text-amber-900";
+  }
+
+  if (status === "refund_requested") {
+    return "bg-red-100 text-red-900";
+  }
+
+  if (status === "resolved") {
+    return "bg-emerald-100 text-emerald-900";
+  }
+
+  return "bg-stone-200 text-stone-700";
+}
+
 
 function getStatusBadgeClasses(status: string) {
   if (status === "active") {
@@ -220,6 +254,15 @@ export default function AdminPage() {
   const [adminTab, setAdminTab] = useState<AdminTab>("ready");
   const [orderSearchText, setOrderSearchText] = useState("");
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
+  const [issueStatusByOrderId, setIssueStatusByOrderId] = useState<
+    Record<string, string>
+  >({});
+  const [issueNotesByOrderId, setIssueNotesByOrderId] = useState<
+    Record<string, string>
+  >({});
+  const [savingIssueOrderId, setSavingIssueOrderId] = useState<string | null>(
+    null
+  );
 
   async function loadAdminOrders() {
     setIsLoadingOrders(true);
@@ -236,6 +279,8 @@ export default function AdminPage() {
           "Please sign in with your admin account before loading admin orders."
         );
         setAdminOrders([]);
+        setIssueStatusByOrderId({});
+        setIssueNotesByOrderId({});
         setIsLoadingOrders(false);
         return;
       }
@@ -258,11 +303,24 @@ export default function AdminPage() {
           result.error || "Admin orders could not be loaded."
         );
         setAdminOrders([]);
+        setIssueStatusByOrderId({});
+        setIssueNotesByOrderId({});
         setIsLoadingOrders(false);
         return;
       }
 
       setAdminOrders(result.orders);
+
+      const nextIssueStatuses: Record<string, string> = {};
+      const nextIssueNotes: Record<string, string> = {};
+
+      result.orders.forEach((order) => {
+        nextIssueStatuses[order.id] = order.admin_issue_status || "no_issue";
+        nextIssueNotes[order.id] = order.admin_issue_notes || "";
+      });
+
+      setIssueStatusByOrderId(nextIssueStatuses);
+      setIssueNotesByOrderId(nextIssueNotes);
     } catch (error) {
       const message =
         error instanceof Error
@@ -271,9 +329,77 @@ export default function AdminPage() {
 
       setOrdersErrorMessage(message);
       setAdminOrders([]);
+      setIssueStatusByOrderId({});
+      setIssueNotesByOrderId({});
     }
 
     setIsLoadingOrders(false);
+  }
+
+  async function updateAdminIssue(order: AdminOrder) {
+    const listingTitle = order.listing?.title || "this order";
+    const adminIssueStatus =
+      issueStatusByOrderId[order.id] || order.admin_issue_status || "no_issue";
+    const adminIssueNotes =
+      issueNotesByOrderId[order.id] ?? order.admin_issue_notes ?? "";
+
+    setActionMessage("");
+    setErrorMessage("");
+    setOrdersErrorMessage("");
+    setSavingIssueOrderId(order.id);
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.access_token) {
+        setOrdersErrorMessage(
+          "Please sign in with your admin account before updating issue notes."
+        );
+        setSavingIssueOrderId(null);
+        return;
+      }
+
+      const response = await fetch("/api/admin/orders/update-issue", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+          adminIssueStatus,
+          adminIssueNotes,
+        }),
+      });
+
+      const result = (await response.json()) as {
+        success?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok || !result.success) {
+        setOrdersErrorMessage(
+          result.error || "Admin issue notes could not be saved."
+        );
+        setSavingIssueOrderId(null);
+        return;
+      }
+
+      setActionMessage(`Admin issue notes saved for "${listingTitle}".`);
+      await loadAdminOrders();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while updating admin issue notes.";
+
+      setOrdersErrorMessage(message);
+    }
+
+    setSavingIssueOrderId(null);
   }
 
   async function releaseSellerPayment(order: AdminOrder) {
@@ -549,6 +675,9 @@ export default function AdminPage() {
     setOrdersErrorMessage("");
     setIsLoadingOrders(false);
     setReleasingOrderId(null);
+    setSavingIssueOrderId(null);
+    setIssueStatusByOrderId({});
+    setIssueNotesByOrderId({});
     setAdminTab("ready");
     setOrderSearchText("");
   }
@@ -894,6 +1023,8 @@ export default function AdminPage() {
       order.stripe_payment_intent_id || "",
       order.stripe_charge_id || "",
       order.stripe_transfer_id || "",
+      order.admin_issue_status || "",
+      order.admin_issue_notes || "",
     ]
       .join(" ")
       .toLowerCase();
@@ -1515,7 +1646,7 @@ export default function AdminPage() {
                 value={orderSearchText}
                 onChange={(event) => setOrderSearchText(event.target.value)}
                 className="w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
-                placeholder="Search listing, order ID, buyer ID, phone, seller ID, tracking, or Stripe ID..."
+                placeholder="Search listing, order ID, buyer ID, phone, seller ID, tracking, Stripe ID, issue status, or notes..."
               />
 
               <button
@@ -1549,7 +1680,8 @@ export default function AdminPage() {
               <p className="font-black">No matching orders found.</p>
               <p className="mt-2 text-sm leading-6 text-stone-600">
                 Try searching by listing title, order ID, buyer ID, seller ID,
-                tracking number, buyer phone, carrier, or Stripe ID.
+                tracking number, buyer phone, carrier, Stripe ID, issue status,
+                or admin notes.
               </p>
             </div>
           ) : null}
@@ -1619,6 +1751,94 @@ export default function AdminPage() {
                           Transfer: {order.stripe_transfer_id || "Missing"}
                         </p>
                       </div>
+
+                      <div className="mt-3 rounded-xl border border-stone-300 bg-stone-50 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                            Dispute / Refund Tracking
+                          </p>
+
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.14em] ${getAdminIssueBadgeClasses(
+                              issueStatusByOrderId[order.id] ||
+                                order.admin_issue_status
+                            )}`}
+                          >
+                            {getAdminIssueStatusLabel(
+                              issueStatusByOrderId[order.id] ||
+                                order.admin_issue_status
+                            )}
+                          </span>
+                        </div>
+
+                        <div className="mt-3 grid gap-3">
+                          <label className="grid gap-2">
+                            <span className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                              Issue Status
+                            </span>
+                            <select
+                              value={
+                                issueStatusByOrderId[order.id] ||
+                                order.admin_issue_status ||
+                                "no_issue"
+                              }
+                              onChange={(event) =>
+                                setIssueStatusByOrderId((currentValues) => ({
+                                  ...currentValues,
+                                  [order.id]: event.target.value,
+                                }))
+                              }
+                              className="rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-emerald-600"
+                            >
+                              {adminIssueStatusOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+
+                          <label className="grid gap-2">
+                            <span className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">
+                              Private Admin Notes
+                            </span>
+                            <textarea
+                              value={
+                                issueNotesByOrderId[order.id] ??
+                                order.admin_issue_notes ??
+                                ""
+                              }
+                              onChange={(event) =>
+                                setIssueNotesByOrderId((currentValues) => ({
+                                  ...currentValues,
+                                  [order.id]: event.target.value,
+                                }))
+                              }
+                              rows={3}
+                              placeholder="Add private notes about refund requests, disputes, shipment issues, or support history."
+                              className="rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-emerald-600"
+                            />
+                          </label>
+
+                          {order.admin_issue_updated_at ? (
+                            <p className="text-xs font-bold text-stone-500">
+                              Last issue update:{" "}
+                              {formatDate(order.admin_issue_updated_at)}
+                            </p>
+                          ) : null}
+
+                          <button
+                            type="button"
+                            onClick={() => updateAdminIssue(order)}
+                            disabled={savingIssueOrderId === order.id}
+                            className="rounded-xl bg-stone-950 px-4 py-2 text-sm font-black text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {savingIssueOrderId === order.id
+                              ? "Saving..."
+                              : "Save Issue Notes"}
+                          </button>
+                        </div>
+                      </div>
                     </div>
 
                     <div>
@@ -1641,6 +1861,14 @@ export default function AdminPage() {
                           )}`}
                         >
                           {getAdminTransferStatusLabel(order.transfer_status)}
+                        </span>
+
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.14em] ${getAdminIssueBadgeClasses(
+                            order.admin_issue_status
+                          )}`}
+                        >
+                          {getAdminIssueStatusLabel(order.admin_issue_status)}
                         </span>
                       </div>
                     </div>
