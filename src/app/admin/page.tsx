@@ -53,6 +53,10 @@ type AdminOrder = {
   admin_issue_status: string;
   admin_issue_notes: string | null;
   admin_issue_updated_at: string | null;
+  stripe_refund_id: string | null;
+  refunded_at: string | null;
+  refund_amount: number | null;
+  refund_reason: string | null;
   listing: AdminOrderListing | null;
 };
 
@@ -123,6 +127,10 @@ function makeEditForm(listing: Listing): EditForm {
 }
 
 function getOrderStatusBadgeClasses(status: string) {
+  if (status === "refunded") {
+    return "bg-red-100 text-red-900";
+  }
+
   if (status === "shipped") {
     return "bg-blue-100 text-blue-900";
   }
@@ -135,6 +143,10 @@ function getOrderStatusBadgeClasses(status: string) {
 }
 
 function getTransferStatusBadgeClasses(status: string | null) {
+  if (status === "refunded") {
+    return "bg-red-100 text-red-900";
+  }
+
   if (status === "released") {
     return "bg-emerald-100 text-emerald-900";
   }
@@ -147,6 +159,10 @@ function getTransferStatusBadgeClasses(status: string | null) {
 }
 
 function getAdminOrderStatusLabel(order: AdminOrder) {
+  if (order.status === "refunded") {
+    return "Refunded";
+  }
+
   if (order.transfer_status === "released") {
     return "Seller Paid";
   }
@@ -167,6 +183,10 @@ function getAdminOrderStatusLabel(order: AdminOrder) {
 }
 
 function getAdminTransferStatusLabel(status: string | null) {
+  if (status === "refunded") {
+    return "Refunded";
+  }
+
   if (status === "released") {
     return "Payout Released";
   }
@@ -251,6 +271,7 @@ export default function AdminPage() {
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [ordersErrorMessage, setOrdersErrorMessage] = useState("");
   const [releasingOrderId, setReleasingOrderId] = useState<string | null>(null);
+  const [refundingOrderId, setRefundingOrderId] = useState<string | null>(null);
   const [adminTab, setAdminTab] = useState<AdminTab>("ready");
   const [orderSearchText, setOrderSearchText] = useState("");
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
@@ -400,6 +421,107 @@ export default function AdminPage() {
     }
 
     setSavingIssueOrderId(null);
+  }
+
+  async function refundBuyer(order: AdminOrder) {
+    const listingTitle = order.listing?.title || "this order";
+
+    if (order.transfer_status === "released" || order.stripe_transfer_id) {
+      setOrdersErrorMessage(
+        "Seller payout was already released. This refund tool only supports refunds before payout release."
+      );
+      return;
+    }
+
+    if (order.status === "refunded" || order.stripe_refund_id) {
+      setOrdersErrorMessage("This order already appears to be refunded.");
+      return;
+    }
+
+    const refundReason = window.prompt(
+      `Why are you refunding the buyer for "${listingTitle}"?\n\nExample: Seller did not ship. Buyer refund approved.`
+    );
+
+    if (refundReason === null) {
+      return;
+    }
+
+    const cleanedRefundReason = refundReason.trim();
+
+    if (!cleanedRefundReason) {
+      setOrdersErrorMessage("A refund reason is required.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Refund the buyer for "${listingTitle}"?\n\nRefund amount: ${formatMoney(
+        order.total_amount
+      )}\n\nThis should only be used when seller payout has NOT been released.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setActionMessage("");
+    setErrorMessage("");
+    setOrdersErrorMessage("");
+    setRefundingOrderId(order.id);
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.access_token) {
+        setOrdersErrorMessage(
+          "Please sign in with your admin account before refunding the buyer."
+        );
+        setRefundingOrderId(null);
+        return;
+      }
+
+      const response = await fetch("/api/admin/orders/refund-buyer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+          refundReason: cleanedRefundReason,
+        }),
+      });
+
+      const result = (await response.json()) as {
+        success?: boolean;
+        refundId?: string;
+        refundAmount?: number;
+        error?: string;
+      };
+
+      if (!response.ok || !result.success) {
+        setOrdersErrorMessage(result.error || "Buyer refund could not be issued.");
+        setRefundingOrderId(null);
+        return;
+      }
+
+      setActionMessage(
+        `Buyer refunded for "${listingTitle}". Stripe refund: ${result.refundId}`
+      );
+
+      await loadAdminOrders();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while refunding the buyer.";
+
+      setOrdersErrorMessage(message);
+    }
+
+    setRefundingOrderId(null);
   }
 
   async function releaseSellerPayment(order: AdminOrder) {
@@ -675,6 +797,7 @@ export default function AdminPage() {
     setOrdersErrorMessage("");
     setIsLoadingOrders(false);
     setReleasingOrderId(null);
+    setRefundingOrderId(null);
     setSavingIssueOrderId(null);
     setIssueStatusByOrderId({});
     setIssueNotesByOrderId({});
@@ -1025,6 +1148,9 @@ export default function AdminPage() {
       order.stripe_transfer_id || "",
       order.admin_issue_status || "",
       order.admin_issue_notes || "",
+      order.stripe_refund_id || "",
+      order.refund_reason || "",
+      order.refunded_at || "",
     ]
       .join(" ")
       .toLowerCase();
@@ -1750,7 +1876,21 @@ export default function AdminPage() {
                         <p className="break-all">
                           Transfer: {order.stripe_transfer_id || "Missing"}
                         </p>
+                        <p className="break-all">
+                          Refund: {order.stripe_refund_id || "Missing"}
+                        </p>
                       </div>
+
+                      {order.refunded_at || order.refund_amount || order.refund_reason ? (
+                        <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold leading-6 text-red-900">
+                          <p className="font-black">Refund record</p>
+                          <p>Refunded: {formatDate(order.refunded_at)}</p>
+                          <p>Amount: {formatMoney(order.refund_amount)}</p>
+                          <p className="break-words">
+                            Reason: {order.refund_reason || "Not provided"}
+                          </p>
+                        </div>
+                      ) : null}
 
                       <div className="mt-3 rounded-xl border border-stone-300 bg-stone-50 p-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1907,6 +2047,23 @@ export default function AdminPage() {
                       >
                         View Listing
                       </Link>
+
+                      {order.transfer_status !== "released" &&
+                      !order.stripe_transfer_id &&
+                      order.status !== "refunded" &&
+                      !order.stripe_refund_id &&
+                      (order.status === "paid" || order.status === "shipped") ? (
+                        <button
+                          type="button"
+                          onClick={() => refundBuyer(order)}
+                          disabled={refundingOrderId === order.id}
+                          className="rounded-xl border border-red-300 bg-red-50 px-4 py-2 text-center text-sm font-black text-red-800 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {refundingOrderId === order.id
+                            ? "Refunding..."
+                            : "Refund Buyer"}
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 ))}

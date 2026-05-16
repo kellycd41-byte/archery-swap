@@ -33,6 +33,10 @@ type AdminOrder = {
   admin_issue_status: string;
   admin_issue_notes: string | null;
   admin_issue_updated_at: string | null;
+  stripe_refund_id: string | null;
+  refunded_at: string | null;
+  refund_amount: number | null;
+  refund_reason: string | null;
   listing: ListingForAdminOrder | ListingForAdminOrder[] | null;
 };
 
@@ -55,7 +59,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabaseAdmin
       .from("orders")
       .select(
-        "id,listing_id,buyer_id,buyer_phone,seller_id,item_amount,shipping_amount,platform_fee_amount,seller_payout_amount,total_amount,status,transfer_status,stripe_connected_account_id,stripe_payment_intent_id,stripe_charge_id,stripe_transfer_id,shipping_carrier,tracking_number,shipped_at,seller_payout_released_at,paid_at,created_at,admin_issue_status,admin_issue_notes,admin_issue_updated_at,listing:listings(id,title)"
+        "id,listing_id,buyer_id,buyer_phone,seller_id,item_amount,shipping_amount,platform_fee_amount,seller_payout_amount,total_amount,status,transfer_status,stripe_connected_account_id,stripe_payment_intent_id,stripe_charge_id,stripe_transfer_id,shipping_carrier,tracking_number,shipped_at,seller_payout_released_at,paid_at,created_at,admin_issue_status,admin_issue_notes,admin_issue_updated_at,stripe_refund_id,refunded_at,refund_amount,refund_reason,listing:listings(id,title)"
       )
       .order("created_at", { ascending: false });
 
