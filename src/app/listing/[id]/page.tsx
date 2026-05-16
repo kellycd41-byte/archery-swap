@@ -34,6 +34,13 @@ type Listing = {
   offers_allowed: boolean | null;
 };
 
+type SellerReview = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+};
+
 type ListingDetailPageProps = {
   params: Promise<{
     id: string;
@@ -81,6 +88,38 @@ function formatMoney(value: number) {
   })}`;
 }
 
+function formatReviewDate(dateValue: string) {
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Recently";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function averageRating(reviews: SellerReview[]) {
+  if (reviews.length === 0) {
+    return null;
+  }
+
+  const total = reviews.reduce((sum, review) => sum + Number(review.rating), 0);
+
+  return total / reviews.length;
+}
+
+function formatRating(value: number | null) {
+  if (value === null) {
+    return "No reviews yet";
+  }
+
+  return `${value.toFixed(1)} / 5`;
+}
+
 export default async function ListingDetailPage({
   params,
 }: ListingDetailPageProps) {
@@ -102,6 +141,25 @@ export default async function ListingDetailPage({
     notFound();
   }
 
+  const { data: sellerReviewData } = item.user_id
+    ? await supabase
+        .from("seller_reviews")
+        .select("id,rating,comment,created_at")
+        .eq("seller_id", item.user_id)
+        .order("created_at", { ascending: false })
+        .limit(3)
+    : { data: [] };
+
+  const { count: sellerReviewCount } = item.user_id
+    ? await supabase
+        .from("seller_reviews")
+        .select("id", { count: "exact", head: true })
+        .eq("seller_id", item.user_id)
+    : { count: 0 };
+
+  const sellerReviews = (sellerReviewData || []) as SellerReview[];
+  const sellerAverageRating = averageRating(sellerReviews);
+  const sellerTotalReviews = sellerReviewCount || 0;
   const photos = buildPhotoList(item);
   const postedDate = formatPostedDate(item.created_at);
   const isSold = item.status === "sold";
@@ -389,11 +447,53 @@ export default async function ListingDetailPage({
                 </div>
               </div>
 
-              <p className="mt-4 text-sm font-bold leading-6 text-stone-600">
-                Seller profiles, ratings, checkout, and shipping tools will be
-                added later. Use caution with payment and shipping
-                arrangements.
-              </p>
+              <div className="mt-5 rounded-2xl border border-stone-300 bg-white p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-stone-500">
+                      Seller Rating
+                    </p>
+                    <p className="mt-1 text-2xl font-black text-stone-950">
+                      {formatRating(sellerAverageRating)}
+                    </p>
+                  </div>
+
+                  <span className="rounded-full bg-stone-950 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-white">
+                    {sellerTotalReviews} review
+                    {sellerTotalReviews === 1 ? "" : "s"}
+                  </span>
+                </div>
+
+                {sellerReviews.length > 0 ? (
+                  <div className="mt-4 grid gap-3">
+                    {sellerReviews.map((review) => (
+                      <div
+                        key={review.id}
+                        className="rounded-xl border border-stone-200 bg-stone-50 p-3"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-black">
+                            {review.rating} / 5 stars
+                          </p>
+                          <p className="text-xs font-bold text-stone-500">
+                            {formatReviewDate(review.created_at)}
+                          </p>
+                        </div>
+
+                        {review.comment ? (
+                          <p className="mt-2 text-sm font-bold leading-6 text-stone-700">
+                            “{review.comment}”
+                          </p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-4 text-sm font-bold leading-6 text-stone-600">
+                    This seller does not have reviews yet.
+                  </p>
+                )}
+              </div>
             </div>
           </section>
         </div>
@@ -423,8 +523,8 @@ export default async function ListingDetailPage({
             <ul className="mt-4 space-y-2 text-stone-300">
               <li>• Review photos, specs, price, and description carefully.</li>
               <li>• Ask the seller questions if anything is unclear.</li>
-              <li>• Be careful with payment and shipping arrangements.</li>
-              <li>• Do not send payment outside a method you trust.</li>
+              <li>• Check the seller rating and recent reviews.</li>
+              <li>• Complete checkout through Archery Outlet when buying.</li>
               <li>• Report suspicious listings to the Archery Outlet team.</li>
             </ul>
           </section>
