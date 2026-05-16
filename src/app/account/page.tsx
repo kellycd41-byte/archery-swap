@@ -6,6 +6,7 @@ import { User } from "@supabase/supabase-js";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AccountOrdersBox from "./AccountOrdersBox";
+import AccountReviewsBox from "./AccountReviewsBox";
 import PayoutSetupBox from "./PayoutSetupBox";
 import { supabase } from "@/lib/supabase";
 
@@ -1078,6 +1079,8 @@ export default function AccountPage() {
                 <PayoutSetupBox />
 
                 <AccountOrdersBox user={user} />
+
+                <AccountReviewsBox user={user} />
 
                 <section className="rounded-3xl border border-stone-300 bg-white p-5 shadow-sm sm:p-6">
                   <button
