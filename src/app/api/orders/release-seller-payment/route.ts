@@ -3,6 +3,12 @@ import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAdminUser } from "@/lib/requireAdminUser";
+import { sendEmail } from "@/lib/email";
+
+type OrderListingForRelease = {
+  id: string;
+  title: string;
+};
 
 type OrderForRelease = {
   id: string;
@@ -17,7 +23,16 @@ type OrderForRelease = {
   shipping_carrier: string | null;
   tracking_number: string | null;
   shipped_at: string | null;
+  listing: OrderListingForRelease | OrderListingForRelease[] | null;
 };
+
+function getOrderListing(order: OrderForRelease) {
+  if (Array.isArray(order.listing)) {
+    return order.listing[0] || null;
+  }
+
+  return order.listing;
+}
 
 function dollarsToCents(value: number) {
   return Math.round(value * 100);
@@ -55,7 +70,7 @@ export async function POST(request: NextRequest) {
     const { data: orderData, error: orderError } = await supabaseAdmin
       .from("orders")
       .select(
-        "id,seller_id,status,transfer_status,stripe_connected_account_id,stripe_payment_intent_id,stripe_charge_id,stripe_transfer_id,seller_payout_amount,shipping_carrier,tracking_number,shipped_at"
+        "id,seller_id,status,transfer_status,stripe_connected_account_id,stripe_payment_intent_id,stripe_charge_id,stripe_transfer_id,seller_payout_amount,shipping_carrier,tracking_number,shipped_at,listing:listings(id,title)"
       )
       .eq("id", orderId)
       .maybeSingle();
@@ -179,6 +194,53 @@ export async function POST(request: NextRequest) {
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    const {
+      data: { user: sellerUser },
+      error: sellerUserError,
+    } = await supabaseAdmin.auth.admin.getUserById(order.seller_id);
+
+    if (sellerUserError) {
+      console.error("Could not load seller email:", sellerUserError.message);
+    }
+
+    const sellerEmail = sellerUser?.email || "";
+    const listing = getOrderListing(order);
+    const listingTitle = listing?.title || "your sold item";
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL || "https://archeryoutlet.net";
+    const accountUrl = `${siteUrl}/account`;
+    const payoutText = `$${sellerPayoutAmount.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+
+    if (sellerEmail) {
+      try {
+        await sendEmail({
+          to: sellerEmail,
+          subject: `Your Archery Outlet payout was released: ${listingTitle}`,
+          text: `Your seller payout was released for ${listingTitle}. Payout amount: ${payoutText}. Stripe and your bank may take additional time to make funds available. You can view your order here: ${accountUrl}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1c1917;">
+              <h2 style="margin: 0 0 12px;">Your seller payout was released</h2>
+              <p>Your payout for <strong>${listingTitle}</strong> has been released.</p>
+              <p><strong>Payout amount:</strong> ${payoutText}</p>
+              <p>
+                <a href="${accountUrl}" style="display: inline-block; background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 10px; text-decoration: none; font-weight: bold;">
+                  Open My Orders
+                </a>
+              </p>
+              <p style="font-size: 13px; color: #57534e;">
+                Stripe and your bank may take additional time to make funds available in your account.
+              </p>
+            </div>
+          `,
+        });
+      } catch (emailError) {
+        console.error("Seller payout released email failed:", emailError);
+      }
     }
 
     return NextResponse.json({
