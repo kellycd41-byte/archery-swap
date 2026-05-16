@@ -74,7 +74,7 @@ export default function BuyNowBox({ listingId, listingTitle }: BuyNowBoxProps) {
         </div>
 
         <span className="rounded-full bg-emerald-200 px-3 py-1 text-xs font-black text-emerald-950">
-          Stripe Test Mode
+          Stripe Secure Checkout
         </span>
       </div>
 
@@ -99,8 +99,8 @@ export default function BuyNowBox({ listingId, listingTitle }: BuyNowBoxProps) {
       ) : null}
 
       <p className="mt-3 text-xs font-bold leading-5 text-stone-600">
-        Checkout is currently being tested in Stripe sandbox mode. The listing
-        will not be marked sold until payment confirmation is connected.
+        Your payment is processed securely through Stripe. Seller payout stays
+        held until shipment is reviewed.
       </p>
     </div>
   );
