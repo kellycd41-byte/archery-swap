@@ -8,7 +8,10 @@ import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabase";
 
 const categories = [
-  "Bows",
+  "Compound Bows",
+  "Competition Bows",
+  "Recurve Bows",
+  "Traditional Bows",
   "Crossbows",
   "Sights",
   "Releases",

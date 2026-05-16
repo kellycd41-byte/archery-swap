@@ -5,7 +5,10 @@ import { supabase } from "@/lib/supabase";
 
 const categories = [
   "All",
-  "Bows",
+  "Compound Bows",
+  "Competition Bows",
+  "Recurve Bows",
+  "Traditional Bows",
   "Crossbows",
   "Sights",
   "Releases",
@@ -24,6 +27,17 @@ const sortOptions = [
 ];
 
 const handednessOptions = ["Right Hand", "Left Hand", "Ambidextrous"];
+
+const bowCategories = [
+  "Compound Bows",
+  "Competition Bows",
+  "Recurve Bows",
+  "Traditional Bows",
+];
+
+function isBowCategory(category: string) {
+  return bowCategories.includes(category);
+}
 
 type Listing = {
   id: string;
@@ -118,7 +132,7 @@ function buildBrowseHref(options: BrowseHrefOptions) {
     params.set("sort", options.sort);
   }
 
-  if (options.category === "Bows") {
+  if (isBowCategory(options.category)) {
     if (options.drawWeight.trim()) {
       params.set("drawWeight", options.drawWeight.trim());
     }
@@ -237,11 +251,11 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const selectedSort = getSelectedSort(params.sort);
   const searchTerm = params.search?.trim() || "";
   const selectedDrawWeight =
-    selectedCategory === "Bows" ? params.drawWeight?.trim() || "" : "";
+    isBowCategory(selectedCategory) ? params.drawWeight?.trim() || "" : "";
   const selectedDrawLength =
-    selectedCategory === "Bows" ? params.drawLength?.trim() || "" : "";
+    isBowCategory(selectedCategory) ? params.drawLength?.trim() || "" : "";
   const selectedHandedness =
-    selectedCategory === "Bows"
+    isBowCategory(selectedCategory)
       ? getSelectedHandedness(params.handedness)
       : "";
 
@@ -264,15 +278,15 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     );
   }
 
-  if (selectedCategory === "Bows" && selectedDrawWeight) {
+  if (isBowCategory(selectedCategory) && selectedDrawWeight) {
     query = query.ilike("draw_weight", `%${selectedDrawWeight}%`);
   }
 
-  if (selectedCategory === "Bows" && selectedDrawLength) {
+  if (isBowCategory(selectedCategory) && selectedDrawLength) {
     query = query.ilike("draw_length", `%${selectedDrawLength}%`);
   }
 
-  if (selectedCategory === "Bows" && selectedHandedness) {
+  if (isBowCategory(selectedCategory) && selectedHandedness) {
     query = query.eq("handedness", selectedHandedness);
   }
 
@@ -369,7 +383,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                 <input type="hidden" name="sort" value={selectedSort} />
               ) : null}
 
-              {selectedCategory === "Bows" && selectedDrawWeight ? (
+              {isBowCategory(selectedCategory) && selectedDrawWeight ? (
                 <input
                   type="hidden"
                   name="drawWeight"
@@ -377,7 +391,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                 />
               ) : null}
 
-              {selectedCategory === "Bows" && selectedDrawLength ? (
+              {isBowCategory(selectedCategory) && selectedDrawLength ? (
                 <input
                   type="hidden"
                   name="drawLength"
@@ -385,7 +399,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                 />
               ) : null}
 
-              {selectedCategory === "Bows" && selectedHandedness ? (
+              {isBowCategory(selectedCategory) && selectedHandedness ? (
                 <input
                   type="hidden"
                   name="handedness"
@@ -609,12 +623,12 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               ) : null}
             </div>
 
-            {selectedCategory === "Bows" ? (
+            {isBowCategory(selectedCategory) ? (
               <form
                 action="/browse"
                 className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
               >
-                <input type="hidden" name="category" value="Bows" />
+                <input type="hidden" name="category" value={selectedCategory} />
 
                 {selectedConditions.length > 0 ? (
                   <input
@@ -761,7 +775,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                     <input type="hidden" name="search" value={searchTerm} />
                   ) : null}
 
-                  {selectedCategory === "Bows" && selectedDrawWeight ? (
+                  {isBowCategory(selectedCategory) && selectedDrawWeight ? (
                     <input
                       type="hidden"
                       name="drawWeight"
@@ -769,7 +783,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                     />
                   ) : null}
 
-                  {selectedCategory === "Bows" && selectedDrawLength ? (
+                  {isBowCategory(selectedCategory) && selectedDrawLength ? (
                     <input
                       type="hidden"
                       name="drawLength"
@@ -777,7 +791,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                     />
                   ) : null}
 
-                  {selectedCategory === "Bows" && selectedHandedness ? (
+                  {isBowCategory(selectedCategory) && selectedHandedness ? (
                     <input
                       type="hidden"
                       name="handedness"
