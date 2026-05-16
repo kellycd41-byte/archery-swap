@@ -275,6 +275,7 @@ export default function AdminPage() {
   const [refundingOrderId, setRefundingOrderId] = useState<string | null>(null);
   const [adminTab, setAdminTab] = useState<AdminTab>("ready");
   const [orderSearchText, setOrderSearchText] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
   const [issueStatusByOrderId, setIssueStatusByOrderId] = useState<
     Record<string, string>
@@ -1203,6 +1204,18 @@ export default function AdminPage() {
   const filteredAdminOrders = visibleAdminOrders.filter((order) => {
     const search = orderSearchText.trim().toLowerCase();
 
+    const matchesOrderStatus =
+      orderStatusFilter === "all" ||
+      (orderStatusFilter === "completed" &&
+        (order.status === "completed" ||
+          order.transfer_status === "released")) ||
+      (orderStatusFilter === "refunded" &&
+        (order.status === "refunded" || Boolean(order.stripe_refund_id)));
+
+    if (!matchesOrderStatus) {
+      return false;
+    }
+
     if (!search) {
       return true;
     }
@@ -1841,7 +1854,7 @@ export default function AdminPage() {
               Search Orders
             </label>
 
-            <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-2 grid gap-3 lg:grid-cols-[1fr_220px_auto]">
               <input
                 id="admin-order-search"
                 type="text"
@@ -1851,10 +1864,23 @@ export default function AdminPage() {
                 placeholder="Search listing, order ID, buyer ID, phone, seller ID, tracking, Stripe ID, issue status, or notes..."
               />
 
+              <select
+                value={orderStatusFilter}
+                onChange={(event) => setOrderStatusFilter(event.target.value)}
+                className="w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-bold outline-none focus:border-emerald-600"
+              >
+                <option value="all">All orders</option>
+                <option value="completed">Completed orders</option>
+                <option value="refunded">Refunded orders</option>
+              </select>
+
               <button
                 type="button"
-                onClick={() => setOrderSearchText("")}
-                disabled={!orderSearchText.trim()}
+                onClick={() => {
+                  setOrderSearchText("");
+                  setOrderStatusFilter("all");
+                }}
+                disabled={!orderSearchText.trim() && orderStatusFilter === "all"}
                 className="rounded-xl border border-stone-400 px-4 py-3 text-sm font-black hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Clear
@@ -2228,6 +2254,7 @@ export default function AdminPage() {
                 <option value="all">All statuses</option>
                 <option value="pending">Pending only</option>
                 <option value="active">Active only</option>
+                <option value="sold">Sold only</option>
                 <option value="denied">Denied only</option>
                 <option value="inactive">Inactive only</option>
               </select>
