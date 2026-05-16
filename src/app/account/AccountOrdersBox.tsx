@@ -31,6 +31,17 @@ type UserOrder = {
   listing: OrderListing | OrderListing[] | null;
 };
 
+type SellerReview = {
+  id: string;
+  order_id: string;
+  listing_id: string;
+  seller_id: string;
+  buyer_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+};
+
 type AccountOrdersBoxProps = {
   user: User;
 };
@@ -135,6 +146,20 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
   const [shippingActionMessage, setShippingActionMessage] = useState("");
   const [shippingActionErrorMessage, setShippingActionErrorMessage] =
     useState("");
+  const [reviewsByOrderId, setReviewsByOrderId] = useState<
+    Record<string, SellerReview>
+  >({});
+  const [reviewRatingByOrderId, setReviewRatingByOrderId] = useState<
+    Record<string, string>
+  >({});
+  const [reviewCommentByOrderId, setReviewCommentByOrderId] = useState<
+    Record<string, string>
+  >({});
+  const [savingReviewOrderId, setSavingReviewOrderId] = useState<string | null>(
+    null
+  );
+  const [reviewActionMessage, setReviewActionMessage] = useState("");
+  const [reviewActionErrorMessage, setReviewActionErrorMessage] = useState("");
 
   const boughtOrders = orders.filter((order) => order.buyer_id === user.id);
   const soldOrders = orders.filter((order) => order.seller_id === user.id);
@@ -147,9 +172,41 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
   const hasSellerOrdersNeedingShipment =
     sellerOrdersNeedingShipment.length > 0;
 
+  async function loadReviewsForOrders(userOrders: UserOrder[]) {
+    const boughtOrderIds = userOrders
+      .filter((order) => order.buyer_id === user.id)
+      .map((order) => order.id);
+
+    if (boughtOrderIds.length === 0) {
+      setReviewsByOrderId({});
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("seller_reviews")
+      .select("id,order_id,listing_id,seller_id,buyer_id,rating,comment,created_at")
+      .eq("buyer_id", user.id)
+      .in("order_id", boughtOrderIds);
+
+    if (error) {
+      setReviewActionErrorMessage(error.message);
+      setReviewsByOrderId({});
+      return;
+    }
+
+    const nextReviewsByOrderId: Record<string, SellerReview> = {};
+
+    ((data || []) as SellerReview[]).forEach((review) => {
+      nextReviewsByOrderId[review.order_id] = review;
+    });
+
+    setReviewsByOrderId(nextReviewsByOrderId);
+  }
+
   async function loadOrders() {
     setIsLoadingOrders(true);
     setOrdersErrorMessage("");
+    setReviewActionErrorMessage("");
 
     const { data, error } = await supabase
       .from("orders")
@@ -165,15 +222,82 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
     if (error) {
       setOrdersErrorMessage(error.message);
       setOrders([]);
+      setReviewsByOrderId({});
       return;
     }
 
-    setOrders((data || []) as UserOrder[]);
+    const nextOrders = (data || []) as UserOrder[];
+
+    setOrders(nextOrders);
+    await loadReviewsForOrders(nextOrders);
   }
 
   useEffect(() => {
     loadOrders();
   }, [user.id]);
+
+  async function handleSubmitReview(
+    event: FormEvent<HTMLFormElement>,
+    order: UserOrder
+  ) {
+    event.preventDefault();
+
+    setReviewActionMessage("");
+    setReviewActionErrorMessage("");
+
+    const ratingValue = Number(reviewRatingByOrderId[order.id] || "5");
+    const commentValue = (reviewCommentByOrderId[order.id] || "").trim();
+
+    if (!Number.isInteger(ratingValue) || ratingValue < 1 || ratingValue > 5) {
+      setReviewActionErrorMessage("Please choose a rating from 1 to 5.");
+      return;
+    }
+
+    if (order.transfer_status !== "released") {
+      setReviewActionErrorMessage(
+        "You can leave a review after the order is complete."
+      );
+      return;
+    }
+
+    setSavingReviewOrderId(order.id);
+
+    const { data, error } = await supabase
+      .from("seller_reviews")
+      .insert({
+        order_id: order.id,
+        listing_id: order.listing_id,
+        seller_id: order.seller_id,
+        buyer_id: user.id,
+        rating: ratingValue,
+        comment: commentValue || null,
+      })
+      .select("id,order_id,listing_id,seller_id,buyer_id,rating,comment,created_at")
+      .single();
+
+    if (error) {
+      setReviewActionErrorMessage(error.message);
+      setSavingReviewOrderId(null);
+      return;
+    }
+
+    const newReview = data as SellerReview;
+
+    setReviewsByOrderId((currentReviews) => ({
+      ...currentReviews,
+      [newReview.order_id]: newReview,
+    }));
+    setReviewRatingByOrderId((currentValues) => ({
+      ...currentValues,
+      [order.id]: "5",
+    }));
+    setReviewCommentByOrderId((currentValues) => ({
+      ...currentValues,
+      [order.id]: "",
+    }));
+    setReviewActionMessage("Review saved. Thank you for helping other buyers.");
+    setSavingReviewOrderId(null);
+  }
 
   async function handleMarkShipped(
     event: FormEvent<HTMLFormElement>,
@@ -282,6 +406,11 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
       !order.shipped_at;
     const hasTracking =
       Boolean(order.shipping_carrier) || Boolean(order.tracking_number);
+    const existingReview = reviewsByOrderId[order.id];
+    const canReviewSeller =
+      kind === "bought" &&
+      order.transfer_status === "released" &&
+      !existingReview;
 
     return (
       <div
@@ -442,6 +571,96 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
             </div>
           ) : null}
 
+          {kind === "bought" && existingReview ? (
+            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold leading-6 text-emerald-950">
+              <p className="font-black">Your seller review</p>
+              <p className="mt-2">Rating: {existingReview.rating} / 5</p>
+              {existingReview.comment ? (
+                <p className="mt-1 text-emerald-900">
+                  “{existingReview.comment}”
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {canReviewSeller ? (
+            <form
+              onSubmit={(event) => handleSubmitReview(event, order)}
+              className="mt-4 rounded-2xl border border-stone-300 bg-stone-50 p-4"
+            >
+              <div className="rounded-xl border border-stone-200 bg-white p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-stone-500">
+                      Seller Review
+                    </p>
+                    <h5 className="mt-1 text-base font-black text-stone-950">
+                      Leave a review
+                    </h5>
+                    <p className="mt-2 max-w-2xl text-sm font-bold leading-6 text-stone-600">
+                      This order is complete. Rate your buying experience to help
+                      other Archery Outlet buyers.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid items-start gap-4 sm:grid-cols-[180px_1fr]">
+                  <label className="block">
+                    <span className="text-sm font-black text-stone-950">
+                      Rating
+                    </span>
+                    <select
+                      value={reviewRatingByOrderId[order.id] || "5"}
+                      onChange={(event) =>
+                        setReviewRatingByOrderId((currentValues) => ({
+                          ...currentValues,
+                          [order.id]: event.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-stone-700"
+                    >
+                      <option value="5">5 stars</option>
+                      <option value="4">4 stars</option>
+                      <option value="3">3 stars</option>
+                      <option value="2">2 stars</option>
+                      <option value="1">1 star</option>
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="text-sm font-black text-stone-950">
+                      Comment
+                    </span>
+                    <textarea
+                      value={reviewCommentByOrderId[order.id] || ""}
+                      onChange={(event) =>
+                        setReviewCommentByOrderId((currentValues) => ({
+                          ...currentValues,
+                          [order.id]: event.target.value,
+                        }))
+                      }
+                      placeholder="Example: Fast shipping and the bow matched the description."
+                      rows={3}
+                      className="mt-2 min-h-24 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-stone-700"
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={savingReviewOrderId === order.id}
+                    className="w-full cursor-pointer rounded-xl bg-stone-950 px-5 py-3 text-sm font-black text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                  >
+                    {savingReviewOrderId === order.id
+                      ? "Saving..."
+                      : "Save Review"}
+                  </button>
+                </div>
+              </div>
+            </form>
+          ) : null}
+
           <div className="mt-4 grid gap-3 sm:flex sm:flex-wrap">
             {listing ? (
               <Link
@@ -574,6 +793,18 @@ export default function AccountOrdersBox({ user }: AccountOrdersBoxProps) {
           {shippingActionErrorMessage ? (
             <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
               {shippingActionErrorMessage}
+            </div>
+          ) : null}
+
+          {reviewActionMessage ? (
+            <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
+              {reviewActionMessage}
+            </div>
+          ) : null}
+
+          {reviewActionErrorMessage ? (
+            <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+              {reviewActionErrorMessage}
             </div>
           ) : null}
 
