@@ -113,6 +113,8 @@ export default function HowItWorksPage() {
             Sellers can focus on listing good gear. Buyers can shop with a clear
             checkout and order flow. Archery Outlet reviews listings before they
             go live and holds seller payout until shipment details are reviewed.
+            Buyers and sellers also receive email updates when orders are placed,
+            shipped, and seller payouts are released.
           </p>
         </div>
       </section>
