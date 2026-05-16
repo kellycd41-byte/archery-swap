@@ -493,6 +493,15 @@ export default async function ListingDetailPage({
                     This seller does not have reviews yet.
                   </p>
                 )}
+
+                {sellerTotalReviews > 3 ? (
+                  <Link
+                    href={`/seller/${item.user_id}/reviews`}
+                    className="mt-4 inline-block rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-stone-800"
+                  >
+                    View all seller reviews
+                  </Link>
+                ) : null}
               </div>
             </div>
           </section>
