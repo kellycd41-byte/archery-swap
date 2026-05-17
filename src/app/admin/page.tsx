@@ -76,7 +76,7 @@ type EditForm = {
   denial_reason: string;
 };
 
-type AdminTab = "ready" | "released" | "allOrders" | "listings";
+type AdminTab = "ready" | "released" | "allOrders" | "listings" | "pendingApproval";
 
 const adminIssueStatusOptions = [
   { value: "no_issue", label: "No issue" },
@@ -1275,6 +1275,11 @@ export default function AdminPage() {
       label: "All Listings",
       count: listings.length,
     },
+    {
+      id: "pendingApproval",
+      label: "Pending Approval",
+      count: pendingListings.length,
+    },
   ];
 
   if (!isAdminUnlocked) {
@@ -1482,12 +1487,22 @@ export default function AdminPage() {
         </div>
 
         <div className="mt-8 rounded-3xl border border-stone-300 bg-white p-4 shadow-sm">
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-5">
             {adminTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setAdminTab(tab.id)}
+                onClick={() => {
+                  setAdminTab(tab.id);
+
+                  if (tab.id === "pendingApproval") {
+                    setStatusFilter("pending");
+                  }
+
+                  if (tab.id === "listings") {
+                    setStatusFilter("all");
+                  }
+                }}
                 className={getAdminTabButtonClasses(adminTab === tab.id)}
               >
                 {tab.label}
@@ -2176,12 +2191,16 @@ export default function AdminPage() {
 
         ) : null}
 
-        {adminTab === "listings" ? (
+        {adminTab === "listings" || adminTab === "pendingApproval" ? (
           <>
         <div className="mt-8 rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
-              <h3 className="text-2xl font-black">Find listings</h3>
+              <h3 className="text-2xl font-black">
+                {adminTab === "pendingApproval"
+                  ? "Find pending listings"
+                  : "Find listings"}
+              </h3>
               <p className="text-stone-600">
                 Search by listing details, seller name, seller email, status,
                 photos, or category.
@@ -2314,7 +2333,11 @@ export default function AdminPage() {
         <div className="mt-8 rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
-              <h3 className="text-2xl font-black">All listings</h3>
+              <h3 className="text-2xl font-black">
+                {adminTab === "pendingApproval"
+                  ? "Pending Approval"
+                  : "All listings"}
+              </h3>
               <p className="text-stone-600">
                 Pending listings can be approved or denied. Active listings can
                 be removed from Browse. Inactive and denied listings can be
