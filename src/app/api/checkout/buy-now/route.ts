@@ -15,6 +15,7 @@ type Listing = {
   price: number;
   shipping_cost: number | null;
   status: string;
+  created_at: string | null;
 };
 
 type SellerPayoutAccount = {
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
 
     const { data: listingData, error: listingError } = await supabase
       .from("listings")
-      .select("id, user_id, title, price, shipping_cost, status")
+      .select("id, user_id, title, price, shipping_cost, status, created_at")
       .eq("id", listingId)
       .single();
 
@@ -181,7 +182,7 @@ export async function POST(request: NextRequest) {
       Number(listing.shipping_cost) || 0
     );
     const totalAmountCents = itemAmountCents + shippingAmountCents;
-    const platformFeeCents = calculatePlatformFeeCents(itemAmountCents);
+    const platformFeeCents = calculatePlatformFeeCents(itemAmountCents, listing.created_at, totalAmountCents);
     const sellerPayoutCents = totalAmountCents - platformFeeCents;
     const shipByDate = new Date();
     shipByDate.setDate(shipByDate.getDate() + 5);
