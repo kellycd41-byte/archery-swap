@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -85,6 +85,77 @@ async function readFilePreview(file: File) {
   });
 }
 
+function loadImageFromBlob(blob: Blob) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(blob);
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("The photo could not be loaded for compression."));
+    };
+
+    image.src = objectUrl;
+  });
+}
+
+function canvasToJpegBlob(canvas: HTMLCanvasElement, quality: number) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("The photo could not be compressed."));
+          return;
+        }
+
+        resolve(blob);
+      },
+      "image/jpeg",
+      quality
+    );
+  });
+}
+
+async function compressPhotoToJpeg(file: File, fileName: string) {
+  const image = await loadImageFromBlob(file);
+  const maxSide = 2200;
+  const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+  const width = Math.max(1, Math.round(image.width * scale));
+  const height = Math.max(1, Math.round(image.height * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("The photo could not be prepared for upload.");
+  }
+
+  context.drawImage(image, 0, 0, width, height);
+
+  const qualitySteps = [0.82, 0.72, 0.62, 0.52, 0.42];
+
+  for (const quality of qualitySteps) {
+    const compressedBlob = await canvasToJpegBlob(canvas, quality);
+
+    if (compressedBlob.size <= maxPhotoSizeInBytes || quality === qualitySteps[qualitySteps.length - 1]) {
+      return new File([compressedBlob], fileName, {
+        type: "image/jpeg",
+        lastModified: Date.now(),
+      });
+    }
+  }
+
+  throw new Error("The photo could not be compressed.");
+}
+
 export default function SellPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -117,6 +188,20 @@ export default function SellPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    function stopBrowserFromOpeningDroppedFiles(event: globalThis.DragEvent) {
+      event.preventDefault();
+    }
+
+    window.addEventListener("dragover", stopBrowserFromOpeningDroppedFiles);
+    window.addEventListener("drop", stopBrowserFromOpeningDroppedFiles);
+
+    return () => {
+      window.removeEventListener("dragover", stopBrowserFromOpeningDroppedFiles);
+      window.removeEventListener("drop", stopBrowserFromOpeningDroppedFiles);
+    };
+  }, []);
 
   useEffect(() => {
     async function loadSession() {
@@ -191,7 +276,7 @@ export default function SellPage() {
         throw new Error("The HEIC photo could not be converted.");
       }
 
-      const convertedFile = new File(
+      let convertedFile = new File(
         [convertedPhoto],
         getConvertedHeicName(file.name),
         {
@@ -199,6 +284,13 @@ export default function SellPage() {
           lastModified: Date.now(),
         }
       );
+
+      if (convertedFile.size > maxPhotoSizeInBytes) {
+        convertedFile = await compressPhotoToJpeg(
+          convertedFile,
+          getConvertedHeicName(file.name)
+        );
+      }
 
       const finalPhotoError = validateFinalPhoto(convertedFile);
 
@@ -260,11 +352,19 @@ export default function SellPage() {
     resetFileInput();
   }
 
-  async function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
+  async function addPhotoFiles(files: File[]) {
     setSuccessMessage("");
     setErrorMessage("");
 
-    const newFiles = Array.from(event.target.files || []);
+    const newFiles = files.filter((file) => isSupportedPhoto(file));
+
+    if (files.length > 0 && newFiles.length === 0) {
+      setErrorMessage(
+        "Please choose JPG, PNG, WEBP, GIF, HEIC, or HEIF image files only."
+      );
+      resetFileInput();
+      return;
+    }
 
     if (newFiles.length === 0) {
       resetFileInput();
@@ -322,6 +422,22 @@ export default function SellPage() {
 
     setIsConvertingPhotos(false);
     resetFileInput();
+  }
+
+  async function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
+    await addPhotoFiles(Array.from(event.target.files || []));
+  }
+
+  function handlePhotoDrag(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  async function handlePhotoDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    await addPhotoFiles(Array.from(event.dataTransfer.files || []));
   }
 
   async function uploadListingPhotos() {
@@ -1009,11 +1125,16 @@ export default function SellPage() {
                       </p>
                     </div>
 
-                    <label className="mt-2 block cursor-pointer rounded-3xl border-2 border-dashed border-stone-300 bg-white p-6 text-center hover:border-emerald-700 hover:bg-emerald-50">
+                    <label
+                      onDragEnter={handlePhotoDrag}
+                      onDragOver={handlePhotoDrag}
+                      onDrop={handlePhotoDrop}
+                      className="mt-2 block cursor-pointer rounded-3xl border-2 border-dashed border-stone-300 bg-white p-6 text-center hover:border-emerald-700 hover:bg-emerald-50"
+                    >
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
+                        accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
                         multiple
                         onChange={handlePhotoChange}
                         className="sr-only"
@@ -1027,7 +1148,7 @@ export default function SellPage() {
 
                       <span className="mt-3 block text-sm font-bold text-stone-700">
                         Add up to {maxPhotoCount} photos. You can choose more
-                        than one photo at a time.
+                        than one photo at a time or drag photos here.
                       </span>
 
                       <span className="mt-1 block text-xs leading-5 text-stone-500">
