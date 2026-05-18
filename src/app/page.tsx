@@ -272,6 +272,47 @@ export default async function Home() {
         </div>
       </section>
 
+      <section className="bg-emerald-950 px-4 py-8 text-white sm:px-6">
+        <div className="mx-auto max-w-7xl rounded-3xl border border-emerald-700 bg-emerald-900/70 p-6 shadow-sm sm:p-8">
+          <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-200">
+                Early Launch Offer
+              </p>
+
+              <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
+                List before August 1, 2026 and only pay Stripe’s processing fee.
+              </h2>
+
+              <p className="mt-4 max-w-3xl text-base leading-7 text-emerald-50 sm:text-lg">
+                For listings created before August 1, 2026, sellers only pay
+                Stripe’s processing fee of 2.9% + $0.30 when the item sells.
+                After August 1, 2026, the standard seller fee is 8%.
+              </p>
+            </div>
+
+            <div className="shrink-0 rounded-2xl border border-emerald-500 bg-white p-5 text-stone-950 shadow-sm">
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-800">
+                Seller Fee
+              </p>
+
+              <p className="mt-2 text-4xl font-black">2.9% + $0.30</p>
+
+              <p className="mt-2 text-sm font-bold text-stone-600">
+                Launch pricing for eligible listings.
+              </p>
+
+              <Link
+                href="/sell"
+                className="mt-4 inline-block rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-500"
+              >
+                List Your Gear
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="browse" className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
