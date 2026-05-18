@@ -52,12 +52,58 @@ function isHeicPhoto(file: File) {
 }
 
 function isDirectUploadPhoto(file: File) {
+  const fileName = file.name.toLowerCase();
+
   return (
     file.type === "image/jpeg" ||
     file.type === "image/png" ||
     file.type === "image/webp" ||
-    file.type === "image/gif"
+    file.type === "image/gif" ||
+    fileName.endsWith(".jpg") ||
+    fileName.endsWith(".jpeg") ||
+    fileName.endsWith(".png") ||
+    fileName.endsWith(".webp") ||
+    fileName.endsWith(".gif")
   );
+}
+
+function getPhotoMimeType(file: File) {
+  const fileName = file.name.toLowerCase();
+
+  if (file.type) {
+    return file.type;
+  }
+
+  if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
+    return "image/jpeg";
+  }
+
+  if (fileName.endsWith(".png")) {
+    return "image/png";
+  }
+
+  if (fileName.endsWith(".webp")) {
+    return "image/webp";
+  }
+
+  if (fileName.endsWith(".gif")) {
+    return "image/gif";
+  }
+
+  return "";
+}
+
+function normalizeDirectPhotoFile(file: File) {
+  const photoMimeType = getPhotoMimeType(file);
+
+  if (!photoMimeType || file.type === photoMimeType) {
+    return file;
+  }
+
+  return new File([file], file.name, {
+    type: photoMimeType,
+    lastModified: file.lastModified || Date.now(),
+  });
 }
 
 function isSupportedPhoto(file: File) {
@@ -123,37 +169,41 @@ function canvasToJpegBlob(canvas: HTMLCanvasElement, quality: number) {
 
 async function compressPhotoToJpeg(file: File, fileName: string) {
   const image = await loadImageFromBlob(file);
-  const maxSide = 2200;
-  const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
-  const width = Math.max(1, Math.round(image.width * scale));
-  const height = Math.max(1, Math.round(image.height * scale));
+  const maxSides = [2200, 1800, 1400, 1100, 900];
+  const qualitySteps = [0.82, 0.72, 0.62, 0.52, 0.42, 0.32];
 
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
+  for (const maxSide of maxSides) {
+    const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
 
-  const context = canvas.getContext("2d");
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
 
-  if (!context) {
-    throw new Error("The photo could not be prepared for upload.");
-  }
+    const context = canvas.getContext("2d");
 
-  context.drawImage(image, 0, 0, width, height);
+    if (!context) {
+      throw new Error("The photo could not be prepared for upload.");
+    }
 
-  const qualitySteps = [0.82, 0.72, 0.62, 0.52, 0.42];
+    context.drawImage(image, 0, 0, width, height);
 
-  for (const quality of qualitySteps) {
-    const compressedBlob = await canvasToJpegBlob(canvas, quality);
+    for (const quality of qualitySteps) {
+      const compressedBlob = await canvasToJpegBlob(canvas, quality);
 
-    if (compressedBlob.size <= maxPhotoSizeInBytes || quality === qualitySteps[qualitySteps.length - 1]) {
-      return new File([compressedBlob], fileName, {
-        type: "image/jpeg",
-        lastModified: Date.now(),
-      });
+      if (compressedBlob.size <= maxPhotoSizeInBytes) {
+        return new File([compressedBlob], fileName, {
+          type: "image/jpeg",
+          lastModified: Date.now(),
+        });
+      }
     }
   }
 
-  throw new Error("The photo could not be compressed.");
+  throw new Error(
+    "The photo is still larger than 5 MB after compression. Please crop it or send a smaller version."
+  );
 }
 
 export default function SellPage() {
@@ -243,10 +293,6 @@ export default function SellPage() {
       return "Please choose JPG, PNG, WEBP, GIF, HEIC, or HEIF image files only.";
     }
 
-    if (!isHeicPhoto(file) && file.size > maxPhotoSizeInBytes) {
-      return "Each photo must be smaller than 5 MB.";
-    }
-
     return "";
   }
 
@@ -319,13 +365,22 @@ export default function SellPage() {
       return convertHeicPhoto(file);
     }
 
-    const finalPhotoError = validateFinalPhoto(file);
+    let normalizedFile = normalizeDirectPhotoFile(file);
+
+    if (normalizedFile.size > maxPhotoSizeInBytes) {
+      normalizedFile = await compressPhotoToJpeg(
+        normalizedFile,
+        getConvertedHeicName(normalizedFile.name)
+      );
+    }
+
+    const finalPhotoError = validateFinalPhoto(normalizedFile);
 
     if (finalPhotoError) {
       throw new Error(finalPhotoError);
     }
 
-    return file;
+    return normalizedFile;
   }
 
   function resetFileInput() {
@@ -1152,8 +1207,8 @@ export default function SellPage() {
                       </span>
 
                       <span className="mt-1 block text-xs leading-5 text-stone-500">
-                        JPG, PNG, WEBP, GIF, HEIC, or HEIF. iPhone photos will
-                        be converted to JPG. Max final size: 5 MB each.
+                        JPG, PNG, WEBP, GIF, HEIC, or HEIF. iPhone photos and
+                        larger images will be converted/compressed to JPG when needed.
                       </span>
                     </label>
 
