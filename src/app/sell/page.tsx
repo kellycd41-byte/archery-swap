@@ -633,8 +633,14 @@ export default function SellPage() {
       }
 
       setSuccessMessage(
-        "Your listing was submitted successfully and is waiting for approval."
+        "Listing submitted successfully! Your listing has been sent for review. Once approved, it will appear on Archery Outlet."
       );
+
+      setTimeout(() => {
+        document
+          .getElementById("listing-success-message")
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
 
       setTitle("");
       setCategory("");
@@ -820,8 +826,16 @@ export default function SellPage() {
               </div>
 
               {successMessage ? (
-                <div className="mb-6 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">
-                  {successMessage}
+                <div
+                  id="listing-success-message"
+                  className="mb-8 rounded-3xl border-2 border-emerald-500 bg-emerald-50 p-6 shadow-md"
+                >
+                  <p className="text-lg font-black text-emerald-900">
+                    Listing submitted successfully!
+                  </p>
+                  <p className="mt-2 text-sm font-bold leading-6 text-emerald-800">
+                    Your listing has been sent for review. Once approved, it will appear on Archery Outlet.
+                  </p>
                 </div>
               ) : null}
 
