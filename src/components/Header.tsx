@@ -24,6 +24,7 @@ export default function Header({ activePage }: HeaderProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingReceivedOfferCount, setPendingReceivedOfferCount] = useState(0);
   const [acceptedSentOfferCount, setAcceptedSentOfferCount] = useState(0);
+  const [declinedSentOfferCount, setDeclinedSentOfferCount] = useState(0);
   const [sellerOrdersNeedingShipmentCount, setSellerOrdersNeedingShipmentCount] =
     useState(0);
 
@@ -35,6 +36,7 @@ export default function Header({ activePage }: HeaderProps) {
       setUnreadCount(0);
       setPendingReceivedOfferCount(0);
       setAcceptedSentOfferCount(0);
+      setDeclinedSentOfferCount(0);
       setSellerOrdersNeedingShipmentCount(0);
       return;
     }
@@ -79,6 +81,19 @@ export default function Header({ activePage }: HeaderProps) {
       setAcceptedSentOfferCount(0);
     } else {
       setAcceptedSentOfferCount(acceptedOfferCount || 0);
+    }
+
+    const { count: declinedOfferCount, error: declinedOfferError } =
+      await supabase
+        .from("offers")
+        .select("id", { count: "exact", head: true })
+        .eq("buyer_id", signedInUser.id)
+        .eq("status", "declined");
+
+    if (declinedOfferError) {
+      setDeclinedSentOfferCount(0);
+    } else {
+      setDeclinedSentOfferCount(declinedOfferCount || 0);
     }
 
     const { count: orderCount, error: orderError } = await supabase
@@ -129,17 +144,21 @@ export default function Header({ activePage }: HeaderProps) {
   const hasUnreadMessages = unreadCount > 0;
   const hasPendingReceivedOffers = pendingReceivedOfferCount > 0;
   const hasAcceptedSentOffers = acceptedSentOfferCount > 0;
+  const hasDeclinedSentOffers = declinedSentOfferCount > 0;
   const hasSellerOrdersNeedingShipment =
     sellerOrdersNeedingShipmentCount > 0;
   const hasAccountAlert =
     hasPendingReceivedOffers ||
     hasAcceptedSentOffers ||
+    hasDeclinedSentOffers ||
     hasSellerOrdersNeedingShipment;
   const accountAlertLabel = hasSellerOrdersNeedingShipment
     ? "Paid order needs shipping"
     : hasAcceptedSentOffers
       ? "Accepted offer ready for payment"
-      : "Pending received offers";
+      : hasDeclinedSentOffers
+        ? "Offer declined"
+        : "Pending received offers";
 
   return (
     <header className="border-b border-stone-800 bg-stone-950 text-white">

@@ -224,7 +224,12 @@ export default function AccountPage() {
     return offer.status === "accepted" && listing?.status === "active";
   });
 
-  const hasOfferAlert = hasPendingReceivedOffers || hasAcceptedSentOffers;
+  const hasDeclinedSentOffers = sentOffers.some(
+    (offer) => offer.status === "declined"
+  );
+
+  const hasOfferAlert =
+    hasPendingReceivedOffers || hasAcceptedSentOffers || hasDeclinedSentOffers;
 
   const sortedSentOffers = sortPendingOffersFirst(sentOffers);
   const sortedReceivedOffers = sortPendingOffersFirst(receivedOffers);
@@ -1104,7 +1109,9 @@ export default function AccountPage() {
                             title={
                               hasAcceptedSentOffers
                                 ? "Accepted offer ready for payment"
-                                : "Pending received offers"
+                                : hasDeclinedSentOffers
+                                  ? "Offer declined"
+                                  : "Pending received offers"
                             }
                           />
                         ) : null}
