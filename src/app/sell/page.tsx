@@ -33,6 +33,13 @@ type PhotoPreview = {
   url: string;
 };
 
+type PayoutStatus = {
+  hasAccount: boolean;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  detailsSubmitted: boolean;
+};
+
 function makeSafeFileName(fileName: string) {
   return fileName
     .toLowerCase()
@@ -238,6 +245,15 @@ export default function SellPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isCheckingPayoutStatus, setIsCheckingPayoutStatus] = useState(false);
+  const [payoutStatus, setPayoutStatus] = useState<PayoutStatus | null>(null);
+  const [payoutErrorMessage, setPayoutErrorMessage] = useState("");
+
+  const isSellerPayoutReady =
+    Boolean(payoutStatus?.hasAccount) &&
+    payoutStatus?.chargesEnabled &&
+    payoutStatus?.payoutsEnabled &&
+    payoutStatus?.detailsSubmitted;
 
   useEffect(() => {
     function stopBrowserFromOpeningDroppedFiles(event: globalThis.DragEvent) {
@@ -275,6 +291,8 @@ export default function SellPage() {
       const signedInUser = session?.user ?? null;
 
       setUser(signedInUser);
+      setPayoutStatus(null);
+      setPayoutErrorMessage("");
 
       if (signedInUser?.email) {
         setSellerEmail(signedInUser.email);
@@ -287,6 +305,60 @@ export default function SellPage() {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    async function loadPayoutStatus() {
+      if (!user) {
+        setPayoutStatus(null);
+        setPayoutErrorMessage("");
+        setIsCheckingPayoutStatus(false);
+        return;
+      }
+
+      setIsCheckingPayoutStatus(true);
+      setPayoutErrorMessage("");
+
+      try {
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (sessionError || !session?.access_token) {
+          throw new Error("Please sign in again before checking seller payouts.");
+        }
+
+        const response = await fetch("/api/stripe/connect/status", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || "Something went wrong while checking seller payouts."
+          );
+        }
+
+        setPayoutStatus(data as PayoutStatus);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Something went wrong while checking seller payouts.";
+
+        setPayoutStatus(null);
+        setPayoutErrorMessage(message);
+      } finally {
+        setIsCheckingPayoutStatus(false);
+      }
+    }
+
+    loadPayoutStatus();
+  }, [user]);
 
   function validateOriginalPhoto(file: File) {
     if (!isSupportedPhoto(file)) {
@@ -597,6 +669,13 @@ export default function SellPage() {
       return;
     }
 
+    if (!isSellerPayoutReady) {
+      setErrorMessage(
+        "Please finish seller payout setup before submitting a listing."
+      );
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -747,6 +826,59 @@ export default function SellPage() {
                   className="rounded-2xl bg-emerald-600 px-5 py-4 text-center text-sm font-black text-white hover:bg-emerald-500"
                 >
                   Sign In or Create Account
+                </Link>
+
+                <Link
+                  href="/browse"
+                  className="rounded-2xl bg-stone-950 px-5 py-4 text-center text-sm font-black text-white hover:bg-stone-800"
+                >
+                  Browse Gear
+                </Link>
+              </div>
+            </div>
+          </div>
+        ) : isCheckingPayoutStatus ? (
+          <div className="rounded-3xl border border-stone-300 bg-white p-6 shadow-sm">
+            <p className="font-black">Checking seller payout status...</p>
+            <p className="mt-2 text-sm font-bold leading-6 text-stone-600">
+              We are making sure your account is ready to receive payouts before
+              unlocking the listing form.
+            </p>
+          </div>
+        ) : !isSellerPayoutReady ? (
+          <div className="rounded-3xl border border-stone-300 bg-white p-6 shadow-sm sm:p-8">
+            <div className="rounded-3xl border border-amber-200 bg-amber-50 p-6 sm:p-8">
+              <p className="text-sm font-black uppercase tracking-[0.25em] text-amber-800">
+                Seller Payout Required
+              </p>
+
+              <h3 className="mt-4 text-3xl font-black tracking-tight text-stone-950">
+                Set up seller payouts before listing gear.
+              </h3>
+
+              <p className="mt-4 max-w-2xl text-base font-bold leading-7 text-stone-700">
+                Before you can list an item for sale, you need to finish seller
+                payout setup so you can get paid when your item sells.
+              </p>
+
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-stone-700">
+                Go to your Account page and complete the Set Up Seller Payouts
+                step. Once your payout account is ready, come back to Sell Gear
+                and the listing form will unlock.
+              </p>
+
+              {payoutErrorMessage ? (
+                <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+                  {payoutErrorMessage}
+                </div>
+              ) : null}
+
+              <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                <Link
+                  href="/account"
+                  className="rounded-2xl bg-emerald-600 px-5 py-4 text-center text-sm font-black text-white hover:bg-emerald-500"
+                >
+                  Go to Account / Set Up Payouts
                 </Link>
 
                 <Link
