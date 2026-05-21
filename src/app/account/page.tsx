@@ -26,7 +26,23 @@ type OfferListing = {
   title: string;
   price: number;
   status: string;
+  category: string | null;
 };
+
+const bowLawNoticeCategories = [
+  "Compound Bows",
+  "Competition Bows",
+  "Recurve Bows",
+  "Traditional Bows",
+  "Crossbows",
+];
+
+const bowLawNoticeMessage =
+  "Before continuing, you confirm that you are responsible for checking and following all applicable local, state, and federal laws related to buying, selling, shipping, transferring, owning, or using bows and crossbows.\n\nDo you want to continue?";
+
+function needsBowLawNotice(categoryName: string | null | undefined) {
+  return bowLawNoticeCategories.includes(categoryName || "");
+}
 
 type UserOffer = {
   id: string;
@@ -271,7 +287,7 @@ export default function AccountPage() {
     const { data: sentData, error: sentError } = await supabase
       .from("offers")
       .select(
-        "id,listing_id,buyer_id,seller_id,amount,message,status,created_at,listing:listings(id,title,price,status)"
+        "id,listing_id,buyer_id,seller_id,amount,message,status,created_at,listing:listings(id,title,price,status,category)"
       )
       .eq("buyer_id", currentUser.id)
       .order("created_at", { ascending: false });
@@ -287,7 +303,7 @@ export default function AccountPage() {
     const { data: receivedData, error: receivedError } = await supabase
       .from("offers")
       .select(
-        "id,listing_id,buyer_id,seller_id,amount,message,status,created_at,listing:listings(id,title,price,status)"
+        "id,listing_id,buyer_id,seller_id,amount,message,status,created_at,listing:listings(id,title,price,status,category)"
       )
       .eq("seller_id", currentUser.id)
       .order("created_at", { ascending: false });
@@ -645,6 +661,15 @@ export default function AccountPage() {
   }
 
   async function handlePayAcceptedOffer(offer: UserOffer) {
+    const listing = getOfferListing(offer);
+
+    if (
+      needsBowLawNotice(listing?.category) &&
+      !window.confirm(bowLawNoticeMessage)
+    ) {
+      return;
+    }
+
     setOfferActionMessage("");
     setOfferActionErrorMessage("");
     setPayingAcceptedOfferId(offer.id);

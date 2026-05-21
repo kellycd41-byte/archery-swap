@@ -32,6 +32,13 @@ const sections = [
     ],
   },
   {
+    title: "Bows, crossbows, and legal compliance",
+    body: [
+      "Buyers and sellers are responsible for checking, understanding, and following all applicable local, state, and federal laws before buying, selling, listing, shipping, transferring, owning, or using bows, crossbows, and related archery equipment.",
+      "Archery Outlet does not guarantee that an item can legally be bought, sold, shipped, transferred, owned, or used in every location. Users should not list, buy, sell, ship, transfer, or possess any item in a way that violates applicable laws, rules, or regulations.",
+    ],
+  },
+  {
     title: "Offers",
     body: [
       "Sellers may allow buyers to make offers on listings. If a seller accepts an offer, the buyer must still complete checkout before the listing is marked sold.",

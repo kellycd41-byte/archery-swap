@@ -25,6 +25,21 @@ const conditions = ["New", "Excellent", "Very Good", "Good", "Fair"];
 
 const handednessOptions = ["Right Hand", "Left Hand", "Ambidextrous", "N/A"];
 
+const bowLawNoticeCategories = [
+  "Compound Bows",
+  "Competition Bows",
+  "Recurve Bows",
+  "Traditional Bows",
+  "Crossbows",
+];
+
+const bowLawNoticeMessage =
+  "Before continuing, you confirm that you are responsible for checking and following all applicable local, state, and federal laws related to buying, selling, listing, shipping, transferring, owning, or using bows and crossbows.\n\nDo you want to continue?";
+
+function needsBowLawNotice(categoryName: string | null | undefined) {
+  return bowLawNoticeCategories.includes(categoryName || "");
+}
+
 const maxPhotoSizeInBytes = 5 * 1024 * 1024;
 const maxPhotoCount = 8;
 
@@ -666,6 +681,10 @@ export default function SellPage() {
 
     if (!cleanedSellerEmail.includes("@")) {
       setErrorMessage("Your signed-in account email is not valid.");
+      return;
+    }
+
+    if (needsBowLawNotice(category) && !window.confirm(bowLawNoticeMessage)) {
       return;
     }
 

@@ -6,13 +6,40 @@ import { supabase } from "@/lib/supabase";
 type BuyNowBoxProps = {
   listingId: string;
   listingTitle: string;
+  listingCategory: string | null;
 };
 
-export default function BuyNowBox({ listingId, listingTitle }: BuyNowBoxProps) {
+const bowLawNoticeCategories = [
+  "Compound Bows",
+  "Competition Bows",
+  "Recurve Bows",
+  "Traditional Bows",
+  "Crossbows",
+];
+
+const bowLawNoticeMessage =
+  "Before continuing, you confirm that you are responsible for checking and following all applicable local, state, and federal laws related to buying, selling, shipping, transferring, owning, or using bows and crossbows.\n\nDo you want to continue?";
+
+function needsBowLawNotice(categoryName: string | null | undefined) {
+  return bowLawNoticeCategories.includes(categoryName || "");
+}
+
+export default function BuyNowBox({
+  listingId,
+  listingTitle,
+  listingCategory,
+}: BuyNowBoxProps) {
   const [isStartingCheckout, setIsStartingCheckout] = useState(false);
   const [message, setMessage] = useState("");
 
   async function handleBuyNow() {
+    if (
+      needsBowLawNotice(listingCategory) &&
+      !window.confirm(bowLawNoticeMessage)
+    ) {
+      return;
+    }
+
     setIsStartingCheckout(true);
     setMessage("");
 
