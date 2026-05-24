@@ -1,7 +1,7 @@
 export default function Archery3DScorecardPrivacyPolicyPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12 text-slate-900">
-      <div className="mb-8">
+    <main className="min-h-screen bg-white px-6 py-12 text-slate-900">
+      <div className="mx-auto mb-8 max-w-3xl">
         <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
           Archery &amp; 3D Scorecard
         </p>
@@ -13,7 +13,7 @@ export default function Archery3DScorecardPrivacyPolicyPage() {
         </p>
       </div>
 
-      <div className="space-y-8 text-base leading-7 text-slate-700">
+      <div className="mx-auto max-w-3xl space-y-8 text-base leading-7 text-slate-700">
         <section>
           <p>
             Archery &amp; 3D Scorecard respects your privacy. This Privacy
