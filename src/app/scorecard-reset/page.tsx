@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { scorecardSupabase } from "@/lib/scorecardSupabase";
 
 type PageState = "checking" | "ready" | "invalid" | "saving" | "success";
 
@@ -16,41 +16,45 @@ export default function ScorecardResetPage() {
   useEffect(() => {
     let isMounted = true;
 
-    async function checkRecoverySession() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    async function confirmRecoveryLink() {
+      const hashParams = new URLSearchParams(
+        window.location.hash.replace(/^#/, "")
+      );
 
-      if (!isMounted) return;
+      const isRecoveryLink = hashParams.get("type") === "recovery";
 
-      if (session) {
-        setPageState("ready");
-        setMessage("");
+      if (!isRecoveryLink) {
+        if (!isMounted) return;
+
+        setPageState("invalid");
+        setMessage(
+          "This password reset link is invalid, expired, already used, or was not opened from a reset email. Please return to the app and request a new password reset email."
+        );
         return;
       }
 
-      setPageState("invalid");
-      setMessage(
-        "This password reset link is invalid, expired, or has already been used. Please return to the app and request a new password reset email."
-      );
-    }
+      const {
+        data: { session },
+      } = await scorecardSupabase.auth.getSession();
 
-    void checkRecoverySession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return;
 
-      if (event === "PASSWORD_RECOVERY" && session) {
-        setPageState("ready");
-        setMessage("");
+      if (!session) {
+        setPageState("invalid");
+        setMessage(
+          "This password reset link is invalid, expired, or has already been used. Please return to the app and request a new password reset email."
+        );
+        return;
       }
-    });
+
+      setPageState("ready");
+      setMessage("");
+    }
+
+    void confirmRecoveryLink();
 
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
     };
   }, []);
 
@@ -70,7 +74,7 @@ export default function ScorecardResetPage() {
     setPageState("saving");
     setMessage("");
 
-    const { error } = await supabase.auth.updateUser({
+    const { error } = await scorecardSupabase.auth.updateUser({
       password,
     });
 
